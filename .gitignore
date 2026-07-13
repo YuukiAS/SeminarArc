@@ -1,0 +1,68 @@
+# Android and Gradle build outputs
+*.apk
+*.ap_
+*.aab
+*.aar
+*.dex
+*.class
+*.hprof
+build/
+*/build/
+app/build/
+captures/
+.gradle/
+.cxx/
+.externalNativeBuild/
+
+# Local SDK and machine-specific configuration
+local.properties
+keystore.properties
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# IDE and editor metadata
+.idea/
+*.iml
+*.ipr
+*.iws
+.fleet/
+.vscode/
+
+# Kotlin and Java tool caches
+out/
+bin/
+tmp/
+gen/
+.kotlin/
+.ksp/
+*.kotlin_module
+
+# Tests and instrumentation artifacts
+test-output/
+test-results/
+connected/
+reports/
+
+# OS and filesystem noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+ehthumbs.db
+
+# Logs and runtime leftovers
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Android Studio navigation and profiling
+.navigation/
+profiling/
+
+# Keep wrapper files, placeholder structure, and checked-in assets
+!gradle/wrapper/
+!gradle/wrapper/**
+!.gitkeep
