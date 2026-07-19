@@ -138,7 +138,7 @@ fun SeminarDetailScreenContent(
                     SeminarHeadline(detail = uiState.detail, onRatingSelected = onRatingSelected)
                     SeminarAbstractSection(detail = uiState.detail)
                     SeminarRecordingSection(detail = uiState.detail)
-                    SeminarTimelinePreview(detail.timelinePreview)
+                    SeminarTimelinePreview(uiState.detail.timelinePreview)
                     TextButton(
                         onClick = { onDeleteDialogChanged(true) },
                         enabled = !uiState.isDeleting,

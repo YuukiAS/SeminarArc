@@ -34,7 +34,7 @@ class SeminarRepositoryImpl @Inject constructor(
         }
         val favoritesOnly = if (filter == SeminarListFilter.FAVORITES) 1 else 0
         return seminarDao.observeSeminarList(statusFilter, favoritesOnly, query.trim()).map { rows ->
-            rows.map(SeminarListRow::toDomain)
+            rows.map { row -> row.toDomain() }
         }
     }
 
@@ -43,7 +43,7 @@ class SeminarRepositoryImpl @Inject constructor(
             seminarDao.observeSeminarDetail(seminarId),
             seminarDao.observeTimelinePreview(seminarId, limit = 3),
         ) { detail, preview ->
-            detail?.toDomain(preview.map(TimelinePreviewRow::toDomain))
+            detail?.toDomain(preview.map { row -> row.toDomain() })
         }
     }
 
@@ -68,7 +68,7 @@ class SeminarRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveSeminar(input: SeminarDraftInput): Long {
-        val existing = input.id?.let(seminarDao::getSeminar)
+        val existing = input.id?.let { seminarId -> seminarDao.getSeminar(seminarId) }
         val now = clockProvider.now()
         val entity = SeminarEntity(
             id = existing?.id ?: 0L,
@@ -98,7 +98,9 @@ class SeminarRepositoryImpl @Inject constructor(
 
     override suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): AbstractAttachment {
         val existingPath = seminarDao.getSeminar(seminarId)?.abstractPdfPath
-        existingPath?.let(mediaStorageManager::deleteRelativeFile)
+        if (existingPath != null) {
+            mediaStorageManager.deleteRelativeFile(existingPath)
+        }
 
         val stored = mediaStorageManager.importAbstractPdf(seminarId, sourceUri)
         seminarDao.updateAbstractPath(seminarId, stored.relativePath, clockProvider.now())
@@ -121,7 +123,9 @@ class SeminarRepositoryImpl @Inject constructor(
 
     override suspend fun deleteSeminar(seminarId: Long) {
         val existing = seminarDao.getSeminar(seminarId) ?: return
-        existing.abstractPdfPath?.let(mediaStorageManager::deleteRelativeFile)
+        if (existing.abstractPdfPath != null) {
+            mediaStorageManager.deleteRelativeFile(existing.abstractPdfPath)
+        }
         mediaStorageManager.deleteSeminarMedia(seminarId)
         seminarDao.deleteSeminar(seminarId)
     }

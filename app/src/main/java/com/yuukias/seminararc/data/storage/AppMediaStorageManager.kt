@@ -31,14 +31,14 @@ class AppMediaStorageManager @Inject constructor(
         )
     }
 
-    override suspend fun deleteRelativeFile(relativePath: String) = withContext(Dispatchers.IO) {
+    override suspend fun deleteRelativeFile(relativePath: String): Unit = withContext(Dispatchers.IO) {
         val file = File(context.filesDir, relativePath)
         if (file.exists()) {
             file.delete()
         }
     }
 
-    override suspend fun deleteSeminarMedia(seminarId: Long) = withContext(Dispatchers.IO) {
+    override suspend fun deleteSeminarMedia(seminarId: Long): Unit = withContext(Dispatchers.IO) {
         seminarMediaDir(seminarId).deleteRecursively()
     }
 

@@ -38,7 +38,9 @@ class SeminarEditorViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val existing = route.seminarId?.let(seminarRepository::getSeminarEditorData)
+            val existing = route.seminarId?.let { seminarId ->
+                seminarRepository.getSeminarEditorData(seminarId)
+            }
             _uiState.value = SeminarEditorUiState.Editing(
                 seminarId = route.seminarId,
                 title = existing?.draft?.title.orEmpty(),
