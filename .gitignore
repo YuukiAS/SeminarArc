@@ -6,21 +6,31 @@
 *.dex
 *.class
 *.hprof
+*.idsig
+*.profm
 build/
 */build/
 app/build/
+app/release/
 captures/
 .gradle/
 .cxx/
 .externalNativeBuild/
+.m2/
 
 # Local SDK and machine-specific configuration
 local.properties
 keystore.properties
+signing.properties
+release.properties
 *.jks
 *.keystore
 *.p12
 *.pem
+*.mobileprovision
+.env
+.env.*
+!.env.example
 
 # IDE and editor metadata
 .idea/
@@ -37,6 +47,7 @@ tmp/
 gen/
 .kotlin/
 .ksp/
+.gradle-cache/
 *.kotlin_module
 
 # Tests and instrumentation artifacts
@@ -44,6 +55,8 @@ test-output/
 test-results/
 connected/
 reports/
+lint-results*.html
+lint-results*.xml
 
 # OS and filesystem noise
 .DS_Store
@@ -57,10 +70,16 @@ ehthumbs.db
 *.tmp
 *.swp
 *.swo
+*.bak
+*.orig
 
 # Android Studio navigation and profiling
 .navigation/
 profiling/
+
+# Local private exports and manual release staging
+exports/private/
+release/
 
 # Keep wrapper files, placeholder structure, and checked-in assets
 !gradle/wrapper/

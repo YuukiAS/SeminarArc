@@ -1,5 +1,12 @@
 # AGENTS.md
 
+## 语言与文档规则
+
+- 面向用户、协作说明、计划、结果、review 和 changelog 默认使用简体中文。
+- `CHANGELOG.md` 必须使用中文维护。
+- 代码、API 名、Gradle 配置、Kotlin 类型、文件路径和英文模板字段保持原文。
+- README、计划文档和 handoff 文档应优先说明真实仓库状态，不得把未来能力写成已完成能力。
+
 ## SeminarArc Project Skills
 
 Use the project-local skills in `.agents/skills/` for Android and Jetpack Compose work in this repository.
@@ -30,6 +37,35 @@ Load supporting references from:
 - Prefer `android-lead` for product architecture and app-level decisions.
 - Prefer `compose-expert` for composable APIs, state/effect choices, navigation patterns, and performance-sensitive UI behavior.
 - Before making non-trivial Compose decisions, consult the relevant reference files instead of relying on memory.
+
+## Roadmap 与计划文件
+
+- 产品级入口是 `TODO.md`。
+- `docs/plans/0.1.x-mvp-implementation-plan.md` 是 `0.1.x` 本地采集核心的详细实现合同。
+- `docs/plans/0.1.x-development-plan-index.md` 是后续分阶段开发计划索引。
+- `docs/plans/0.1.x-mvp-execution-batch-01.md` 只记录已经完成的 `0.1.1` 基础批次，不定义未来完整产品范围。
+- 新增阶段计划应放在 `docs/plans/`，并写清目标、范围、禁止事项、验证门槛和建议 task 拆分。
+- 可执行任务仍必须写成 `prompts/tasks/<id>_task.md`，计划文件本身不是 Codex 默认执行入口。
+
+## 0.1.x Scope Rules
+
+- `0.1.x` 只做本地 seminar 管理、录音、拍照、时间线、clip、Markdown/ZIP 导出和本地 MVP 验收。
+- 不要在 `0.1.x` 中加入 OCR、转写、AI 总结、Notion、云同步、登录、广告、订阅或支付。
+- 每个素材都必须归属于明确的 `seminarId`。
+- 同时最多只能有一场 `ACTIVE` seminar。
+- 录音状态必须来自 foreground service 和 Room 持久状态，不能依赖 Activity 内存。
+- Timeline event 必须记录可恢复的 offset。
+- Clip 只有在真实生成并处于 `READY` 后才可播放；`PENDING`、`PROCESSING`、`FAILED` 必须有清晰 fallback。
+- 删除 seminar 或 event 时，Room 记录和 app-owned 文件必须一致清理。
+
+## Android / Compose 实现约束
+
+- 保持单模块 Android app，除非计划文档和 task 明确授权拆模块。
+- UI 遵循 `design/` 的 `Academic Archive` 方向：列表优先、安静、专业、Material 3 token-backed。
+- 不要用静态 Compose 页面、假按钮或内存假数据冒充 MVP 完成。
+- ViewModel 使用 `StateFlow` 表示状态，one-shot event 使用 `SharedFlow(replay = 0)`。
+- UI 通过 repository/use case 访问数据；composable 不直接读写 Room 或平台 recorder/camera API。
+- 所有交互目标至少 48dp，并为图标按钮、时间线播放、删除、重试等动作提供清晰无障碍语义。
 
 <!-- ai-bridge-kit:start -->
 # Handoff Protocol
