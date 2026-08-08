@@ -18,6 +18,7 @@
 
 ### 文档
 
+- 新增 `docs/notes/2026-08-08-remote-wsl-codex-handoff.md`，记录远端 WSL Codex 开发环境、Android Studio 安装判断、已完成线程上下文和后续开发入口。
 - 明确 changelog 后续使用中文维护。
 - 完善 README，说明当前仓库状态、文档入口、开发顺序和本地构建命令。
 - 完善 AGENTS 规则，补充 changelog、计划文件、任务拆分和执行边界要求。
