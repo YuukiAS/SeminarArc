@@ -6,7 +6,7 @@ status: reference
 
 ## 背景
 
-本 note 记录本轮 Codex 线程已经完成的仓库整理、roadmap 明确、远端 WSL 环境配置和后续开发入口。它用于让 `/home/yuukias/Code/SeminarArc` 这份远端 clone 在后续开发时能直接看到上下文。
+本 note 记录本轮 Codex 线程已经完成的仓库整理、roadmap 明确、远端 WSL 环境配置和后续开发入口。它用于让 `/home/yuukias/code/SeminarArc` 这份远端 clone 在后续开发时能直接看到上下文。
 
 这篇 note 不是执行入口。需要开始实现时，应先从 `docs/plans/` 选定阶段，再创建或读取对应的 `prompts/tasks/<id>_task.md`。
 
@@ -47,12 +47,12 @@ status: reference
 
 ```bash
 ssh CUHK_Workstation_WSL_Codex
-cd /home/yuukias/Code/SeminarArc
+cd /home/yuukias/code/SeminarArc
 ```
 
 远端已配置：
 
-- repo：`/home/yuukias/Code/SeminarArc`
+- repo：`/home/yuukias/code/SeminarArc`
 - JDK：`/home/yuukias/opt/jdk-17`
 - Android SDK：`/home/yuukias/Android/Sdk`
 - `local.properties`：`sdk.dir=/home/yuukias/Android/Sdk`
@@ -66,7 +66,7 @@ export JAVA_HOME="$HOME/opt/jdk-17"
 export ANDROID_HOME="$HOME/Android/Sdk"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export PATH="$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
-cd "$HOME/Code/SeminarArc"
+cd "$HOME/code/SeminarArc"
 ./gradlew assembleDebug testDebugUnitTest
 ```
 
@@ -112,7 +112,7 @@ cd "$HOME/Code/SeminarArc"
 - 如果需要远端拉取最新代码，优先使用：
 
 ```powershell
-C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -Command "ssh CUHK_Workstation_WSL_Codex 'cd /home/yuukias/Code/SeminarArc && git pull --ff-only && git status --short --branch'"
+C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -Command "ssh CUHK_Workstation_WSL_Codex 'cd /home/yuukias/code/SeminarArc && git pull --ff-only && git status --short --branch'"
 ```
 
 ## 相关材料
