@@ -23,6 +23,10 @@
 - 完善 AGENTS 规则，补充 changelog、计划文件、任务拆分和执行边界要求。
 - 完善 `.gitignore`，补充 Android/Gradle、本地凭据、发布包和临时产物忽略规则。
 
+### 修复
+
+- 修复 `gradlew` 在 Linux/WSL 远程开发环境中的可执行位，避免 `./gradlew: Permission denied`。
+
 ## 0.1.1-dev
 
 ### 已有基础
