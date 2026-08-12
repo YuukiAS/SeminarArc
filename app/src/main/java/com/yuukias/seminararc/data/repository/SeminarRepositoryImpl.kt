@@ -98,12 +98,18 @@ class SeminarRepositoryImpl @Inject constructor(
 
     override suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): AbstractAttachment {
         val existingPath = seminarDao.getSeminar(seminarId)?.abstractPdfPath
-        if (existingPath != null) {
+        val stored = mediaStorageManager.importAbstractPdf(seminarId, sourceUri)
+        try {
+            seminarDao.updateAbstractPath(seminarId, stored.relativePath, clockProvider.now())
+        } catch (throwable: Throwable) {
+            if (existingPath != stored.relativePath) {
+                mediaStorageManager.deleteRelativeFile(stored.relativePath)
+            }
+            throw throwable
+        }
+        if (existingPath != null && existingPath != stored.relativePath) {
             mediaStorageManager.deleteRelativeFile(existingPath)
         }
-
-        val stored = mediaStorageManager.importAbstractPdf(seminarId, sourceUri)
-        seminarDao.updateAbstractPath(seminarId, stored.relativePath, clockProvider.now())
         return attachmentFromPath(stored.relativePath, stored.displayName)
     }
 

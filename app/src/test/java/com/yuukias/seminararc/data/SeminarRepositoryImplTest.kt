@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class SeminarRepositoryImplTest {
@@ -87,6 +88,55 @@ class SeminarRepositoryImplTest {
     }
 
     @Test
+    fun importAbstractPdf_whenImportFails_preservesOldFileAndPath() = runTest {
+        val dao = FakeSeminarDao().apply {
+            stored[5L] = seminar(id = 5L, abstractPath = "seminars/5/abstract/old.pdf")
+        }
+        val storage = FakeMediaStorageManager().apply {
+            importFailure = IllegalStateException("copy failed")
+        }
+        val repository = SeminarRepositoryImpl(
+            seminarDao = dao,
+            mediaStorageManager = storage,
+            clockProvider = ClockProvider { Instant.parse("2026-07-13T10:00:00Z") },
+        )
+
+        try {
+            repository.importAbstractPdf(5L, "content://sample/new")
+            fail("Expected import failure")
+        } catch (expected: IllegalStateException) {
+            assertEquals("copy failed", expected.message)
+        }
+
+        assertEquals(emptyList<String>(), storage.deletedFiles)
+        assertEquals("seminars/5/abstract/old.pdf", dao.stored.getValue(5L).abstractPdfPath)
+    }
+
+    @Test
+    fun importAbstractPdf_whenDatabaseUpdateFails_deletesNewFileAndPreservesOldPath() = runTest {
+        val dao = FakeSeminarDao().apply {
+            stored[5L] = seminar(id = 5L, abstractPath = "seminars/5/abstract/old.pdf")
+            updateAbstractPathFailure = IllegalStateException("db failed")
+        }
+        val storage = FakeMediaStorageManager()
+        val repository = SeminarRepositoryImpl(
+            seminarDao = dao,
+            mediaStorageManager = storage,
+            clockProvider = ClockProvider { Instant.parse("2026-07-13T10:00:00Z") },
+        )
+
+        try {
+            repository.importAbstractPdf(5L, "content://sample/new")
+            fail("Expected database update failure")
+        } catch (expected: IllegalStateException) {
+            assertEquals("db failed", expected.message)
+        }
+
+        assertEquals(listOf("seminars/5/abstract/new.pdf"), storage.deletedFiles)
+        assertEquals("seminars/5/abstract/old.pdf", dao.stored.getValue(5L).abstractPdfPath)
+    }
+
+    @Test
     fun deleteSeminar_cleansAbstractAndSeminarMedia() = runTest {
         val dao = FakeSeminarDao().apply {
             stored[11L] = seminar(id = 11L, abstractPath = "seminars/11/abstract/paper.pdf")
@@ -108,6 +158,7 @@ class SeminarRepositoryImplTest {
 
 private class FakeSeminarDao : SeminarDao {
     val stored = linkedMapOf<Long, SeminarEntity>()
+    var updateAbstractPathFailure: RuntimeException? = null
     private var nextId = 100L
     private val listRows = MutableStateFlow<List<SeminarListRow>>(emptyList())
 
@@ -142,6 +193,7 @@ private class FakeSeminarDao : SeminarDao {
     }
 
     override suspend fun updateAbstractPath(seminarId: Long, path: String?, updatedAt: Instant) {
+        updateAbstractPathFailure?.let { throw it }
         stored[seminarId] = stored.getValue(seminarId).copy(abstractPdfPath = path, updatedAt = updatedAt)
     }
 
@@ -153,8 +205,10 @@ private class FakeSeminarDao : SeminarDao {
 private class FakeMediaStorageManager : MediaStorageManager {
     val deletedFiles = mutableListOf<String>()
     val deletedSeminarIds = mutableListOf<Long>()
+    var importFailure: RuntimeException? = null
 
     override suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): StoredFile {
+        importFailure?.let { throw it }
         return StoredFile(
             displayName = "new.pdf",
             relativePath = "seminars/$seminarId/abstract/new.pdf",

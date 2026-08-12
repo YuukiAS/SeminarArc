@@ -62,8 +62,8 @@ design/
 
 ## 使用方式
 
-- 先读 [`UI_SPEC.md`](C:/Code/SeminarArc/design/UI_SPEC.md) 确认页面目的、导航关系和不可擅改项。
-- 再读 [`DESIGN_TOKENS.md`](C:/Code/SeminarArc/design/DESIGN_TOKENS.md) 映射为 Compose Theme 与扩展令牌。
+- 先读 [`UI_SPEC.md`](UI_SPEC.md) 确认页面目的、导航关系和不可擅改项。
+- 再读 [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) 映射为 Compose Theme 与扩展令牌。
 - 实现阶段必须把状态图和主图一起看，不能只照主界面实现。
 
 ## 交付边界

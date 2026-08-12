@@ -7,6 +7,20 @@
 - 代码、API 名、Gradle 配置、Kotlin 类型、文件路径和英文模板字段保持原文。
 - README、计划文档和 handoff 文档应优先说明真实仓库状态，不得把未来能力写成已完成能力。
 
+## 远端 WSL 环境记录
+
+- 远端 repo 固定位置：`/home/yuukias/code/SeminarArc`，注意 `code` 为小写；不要使用旧的 `/home/yuukias/Code/SeminarArc`。
+- JDK 位置：`/home/yuukias/opt/jdk-17`；当前 `JAVA_HOME=/home/yuukias/opt/jdk-17`。
+- Android SDK 位置：`/home/yuukias/Android/Sdk`；当前 `ANDROID_HOME` 和 `ANDROID_SDK_ROOT` 都指向该目录。
+- `local.properties` 应保持 `sdk.dir=/home/yuukias/Android/Sdk`。
+- `~/.bashrc` 已写入 JDK、Android SDK 和 scrcpy PATH：`$JAVA_HOME/bin`、`$ANDROID_HOME/cmdline-tools/latest/bin`、`$ANDROID_HOME/platform-tools`、`$SCRCPY_HOME`。
+- Gradle 使用仓库内 wrapper：`./gradlew`；当前 wrapper 为 Gradle `8.10.2`，不要假设系统级 `gradle` 已安装。
+- ADB 位置：`/home/yuukias/Android/Sdk/platform-tools/adb`。
+- Android command-line tools 已在 `PATH`：`sdkmanager` 和 `avdmanager` 位于 `/home/yuukias/Android/Sdk/cmdline-tools/latest/bin/`。
+- scrcpy 位置：`/home/yuukias/Android/scrcpy-linux-x86_64-v4.1`；当前 `SCRCPY_HOME=/home/yuukias/Android/scrcpy-linux-x86_64-v4.1`，版本为 `scrcpy 4.1`。
+- 当前 WSL 未安装或未暴露到 `PATH`：Android emulator。需要 GUI emulator 或 Layout Inspector 时，应先确认 Windows 侧工具或再单独安装；本项目日常 headless 开发不需要 Android Studio GUI。
+- 当前 Android SDK 已安装 `platforms;android-36`、`build-tools;36.0.0`、`platform-tools 37.0.1`，与项目 `compileSdk = 36` 对齐。
+
 ## SeminarArc Project Skills
 
 Use the project-local skills in `.agents/skills/` for Android and Jetpack Compose work in this repository.

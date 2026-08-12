@@ -6,6 +6,9 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,10 +23,17 @@ class AppMediaStorageManager @Inject constructor(
         val safeName = if (sourceName.endsWith(".pdf", ignoreCase = true)) sourceName else "$sourceName.pdf"
         val targetDir = seminarMediaDir(seminarId, "abstract").apply { mkdirs() }
         val targetFile = File(targetDir, safeName)
+        val tempFile = File(targetDir, ".$safeName.tmp-${System.nanoTime()}")
 
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            targetFile.outputStream().use { output -> input.copyTo(output) }
-        } ?: error("Unable to open PDF URI: $sourceUri")
+        try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output -> input.copyTo(output) }
+            } ?: error("Unable to open PDF URI: $sourceUri")
+            moveReplacing(tempFile, targetFile)
+        } catch (throwable: Throwable) {
+            tempFile.delete()
+            throw throwable
+        }
 
         StoredFile(
             displayName = safeName,
@@ -49,5 +59,22 @@ class AppMediaStorageManager @Inject constructor(
 
     private fun resolveDisplayName(uri: Uri): String? {
         return DocumentFile.fromSingleUri(context, uri)?.name ?: uri.lastPathSegment
+    }
+
+    private fun moveReplacing(source: File, target: File) {
+        try {
+            Files.move(
+                source.toPath(),
+                target.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.ATOMIC_MOVE,
+            )
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(
+                source.toPath(),
+                target.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+            )
+        }
     }
 }

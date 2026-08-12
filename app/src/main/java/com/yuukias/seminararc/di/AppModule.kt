@@ -30,7 +30,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "seminararc.db",
-        ).fallbackToDestructiveMigration().build()
+        ).build()
     }
 
     @Provides
