@@ -1,11 +1,13 @@
 package com.yuukias.seminararc.domain.repository
 
 import com.yuukias.seminararc.domain.model.AbstractAttachment
+import com.yuukias.seminararc.domain.model.ActiveSeminarSessionState
 import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarDraftInput
 import com.yuukias.seminararc.domain.model.SeminarEditorData
 import com.yuukias.seminararc.domain.model.SeminarListFilter
 import com.yuukias.seminararc.domain.model.SeminarSummary
+import com.yuukias.seminararc.domain.model.StartSeminarSessionResult
 import kotlinx.coroutines.flow.Flow
 
 interface SeminarRepository {
@@ -19,6 +21,10 @@ interface SeminarRepository {
     suspend fun getSeminarEditorData(seminarId: Long): SeminarEditorData?
 
     suspend fun saveSeminar(input: SeminarDraftInput): Long
+
+    suspend fun getActiveSeminarSessionState(): ActiveSeminarSessionState
+
+    suspend fun startSeminarSession(seminarId: Long): StartSeminarSessionResult
 
     suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): AbstractAttachment
 

@@ -4,14 +4,20 @@ import com.yuukias.seminararc.data.local.dao.SeminarDao
 import com.yuukias.seminararc.data.local.dao.SeminarDetailRow
 import com.yuukias.seminararc.data.local.dao.SeminarListRow
 import com.yuukias.seminararc.data.local.dao.TimelinePreviewRow
+import com.yuukias.seminararc.data.local.DatabaseTransactionRunner
 import com.yuukias.seminararc.data.local.entity.SeminarEntity
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.model.AbstractAttachment
+import com.yuukias.seminararc.domain.model.ActiveSeminarSession
+import com.yuukias.seminararc.domain.model.ActiveSeminarSessionState
 import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarDraftInput
 import com.yuukias.seminararc.domain.model.SeminarEditorData
 import com.yuukias.seminararc.domain.model.SeminarListFilter
+import com.yuukias.seminararc.domain.model.SeminarSessionRecoveryReason
+import com.yuukias.seminararc.domain.model.SeminarStatus
 import com.yuukias.seminararc.domain.model.SeminarSummary
+import com.yuukias.seminararc.domain.model.StartSeminarSessionResult
 import com.yuukias.seminararc.domain.model.TimelinePreviewItem
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.util.ClockProvider
@@ -22,6 +28,7 @@ import kotlinx.coroutines.flow.map
 
 class SeminarRepositoryImpl @Inject constructor(
     private val seminarDao: SeminarDao,
+    private val transactionRunner: DatabaseTransactionRunner,
     private val mediaStorageManager: MediaStorageManager,
     private val clockProvider: ClockProvider,
 ) : SeminarRepository {
@@ -29,8 +36,8 @@ class SeminarRepositoryImpl @Inject constructor(
     override fun observeSeminars(filter: SeminarListFilter, query: String): Flow<List<SeminarSummary>> {
         val statusFilter = when (filter) {
             SeminarListFilter.ALL, SeminarListFilter.FAVORITES -> null
-            SeminarListFilter.DRAFT -> com.yuukias.seminararc.domain.model.SeminarStatus.DRAFT
-            SeminarListFilter.COMPLETED -> com.yuukias.seminararc.domain.model.SeminarStatus.COMPLETED
+            SeminarListFilter.DRAFT -> SeminarStatus.DRAFT
+            SeminarListFilter.COMPLETED -> SeminarStatus.COMPLETED
         }
         val favoritesOnly = if (filter == SeminarListFilter.FAVORITES) 1 else 0
         return seminarDao.observeSeminarList(statusFilter, favoritesOnly, query.trim()).map { rows ->
@@ -93,6 +100,38 @@ class SeminarRepositoryImpl @Inject constructor(
         } else {
             seminarDao.updateSeminar(entity)
             existing.id
+        }
+    }
+
+    override suspend fun getActiveSeminarSessionState(): ActiveSeminarSessionState {
+        return transactionRunner.withTransaction {
+            seminarDao.getSeminarsByStatus(SeminarStatus.ACTIVE).toActiveSeminarSessionState()
+        }
+    }
+
+    override suspend fun startSeminarSession(seminarId: Long): StartSeminarSessionResult {
+        return transactionRunner.withTransaction {
+            val requested = seminarDao.getSeminar(seminarId) ?: return@withTransaction StartSeminarSessionResult.NotFound(
+                seminarId = seminarId,
+            )
+            when (val activeState = seminarDao.getSeminarsByStatus(SeminarStatus.ACTIVE).toActiveSeminarSessionState()) {
+                ActiveSeminarSessionState.None -> startInactiveSeminar(requested)
+                is ActiveSeminarSessionState.Active -> {
+                    if (activeState.session.seminarId == seminarId) {
+                        StartSeminarSessionResult.AlreadyActive(activeState.session)
+                    } else {
+                        StartSeminarSessionResult.AnotherSeminarActive(
+                            requestedSeminarId = seminarId,
+                            activeSession = activeState.session,
+                        )
+                    }
+                }
+                is ActiveSeminarSessionState.RecoveryRequired -> StartSeminarSessionResult.RecoveryRequired(
+                    requestedSeminarId = seminarId,
+                    activeSessions = activeState.activeSessions,
+                    reason = activeState.reason,
+                )
+            }
         }
     }
 
@@ -179,6 +218,74 @@ class SeminarRepositoryImpl @Inject constructor(
             text = text,
             photoPath = photoPath,
             clipState = null,
+        )
+    }
+
+    private suspend fun startInactiveSeminar(requested: SeminarEntity): StartSeminarSessionResult {
+        if (requested.status != SeminarStatus.DRAFT) {
+            return StartSeminarSessionResult.CannotStart(
+                seminarId = requested.id,
+                status = requested.status,
+            )
+        }
+        val now = clockProvider.now()
+        val changedRows = seminarDao.markDraftSeminarActive(
+            seminarId = requested.id,
+            draftStatus = SeminarStatus.DRAFT,
+            activeStatus = SeminarStatus.ACTIVE,
+            startedAt = now,
+            updatedAt = now,
+        )
+        return if (changedRows == 1) {
+            StartSeminarSessionResult.Started(
+                ActiveSeminarSession(
+                    seminarId = requested.id,
+                    title = requested.title,
+                    startedAt = now,
+                ),
+            )
+        } else {
+            StartSeminarSessionResult.RecoveryRequired(
+                requestedSeminarId = requested.id,
+                activeSessions = seminarDao.getSeminarsByStatus(SeminarStatus.ACTIVE).map { entity ->
+                    entity.toActiveSeminarSession()
+                },
+                reason = SeminarSessionRecoveryReason.LOST_UPDATE,
+            )
+        }
+    }
+
+    private fun List<SeminarEntity>.toActiveSeminarSessionState(): ActiveSeminarSessionState {
+        if (isEmpty()) {
+            return ActiveSeminarSessionState.None
+        }
+        if (size > 1) {
+            return ActiveSeminarSessionState.RecoveryRequired(
+                activeSessions = map { entity -> entity.toActiveSeminarSession() },
+                reason = SeminarSessionRecoveryReason.MULTIPLE_ACTIVE_SEMINARS,
+            )
+        }
+        val active = first()
+        val reason = when {
+            active.sessionStartedAt == null -> SeminarSessionRecoveryReason.ACTIVE_WITHOUT_START_TIME
+            active.sessionEndedAt != null -> SeminarSessionRecoveryReason.ACTIVE_WITH_END_TIME
+            else -> null
+        }
+        return if (reason == null) {
+            ActiveSeminarSessionState.Active(active.toActiveSeminarSession())
+        } else {
+            ActiveSeminarSessionState.RecoveryRequired(
+                activeSessions = listOf(active.toActiveSeminarSession()),
+                reason = reason,
+            )
+        }
+    }
+
+    private fun SeminarEntity.toActiveSeminarSession(): ActiveSeminarSession {
+        return ActiveSeminarSession(
+            seminarId = id,
+            title = title,
+            startedAt = sessionStartedAt,
         )
     }
 

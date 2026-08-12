@@ -3,6 +3,8 @@ package com.yuukias.seminararc.di
 import android.content.Context
 import androidx.room.Room
 import com.yuukias.seminararc.data.local.AppDatabase
+import com.yuukias.seminararc.data.local.DatabaseTransactionRunner
+import com.yuukias.seminararc.data.local.RoomDatabaseTransactionRunner
 import com.yuukias.seminararc.data.local.dao.ClipDao
 import com.yuukias.seminararc.data.local.dao.RecordingDao
 import com.yuukias.seminararc.data.local.dao.SeminarDao
@@ -56,6 +58,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindMediaStorageManager(impl: AppMediaStorageManager): MediaStorageManager
+
+    @Binds
+    @Singleton
+    abstract fun bindDatabaseTransactionRunner(impl: RoomDatabaseTransactionRunner): DatabaseTransactionRunner
 
     @Binds
     @Singleton

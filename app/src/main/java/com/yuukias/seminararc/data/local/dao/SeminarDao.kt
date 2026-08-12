@@ -127,6 +127,9 @@ interface SeminarDao {
     @Query("SELECT * FROM seminars WHERE id = :seminarId")
     suspend fun getSeminar(seminarId: Long): SeminarEntity?
 
+    @Query("SELECT * FROM seminars WHERE status = :status ORDER BY sessionStartedAt DESC, updatedAt DESC")
+    suspend fun getSeminarsByStatus(status: SeminarStatus): List<SeminarEntity>
+
     @Insert
     suspend fun insertSeminar(entity: SeminarEntity): Long
 
@@ -141,6 +144,25 @@ interface SeminarDao {
 
     @Query("UPDATE seminars SET abstractPdfPath = :path, updatedAt = :updatedAt WHERE id = :seminarId")
     suspend fun updateAbstractPath(seminarId: Long, path: String?, updatedAt: Instant)
+
+    @Query(
+        """
+        UPDATE seminars
+        SET
+            status = :activeStatus,
+            sessionStartedAt = :startedAt,
+            sessionEndedAt = NULL,
+            updatedAt = :updatedAt
+        WHERE id = :seminarId AND status = :draftStatus
+        """
+    )
+    suspend fun markDraftSeminarActive(
+        seminarId: Long,
+        draftStatus: SeminarStatus,
+        activeStatus: SeminarStatus,
+        startedAt: Instant,
+        updatedAt: Instant,
+    ): Int
 
     @Query("DELETE FROM seminars WHERE id = :seminarId")
     suspend fun deleteSeminar(seminarId: Long)
