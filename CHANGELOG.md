@@ -8,6 +8,9 @@
 
 ### 新增
 
+- 完成 `0.1.2` 第一阶段 one-active-seminar invariant：新增 session start 结果语义、事务边界和 repository unit tests。
+- 新增 `0.1.2` foreground recording service 基础：microphone foreground service、`MediaRecorder` 本地 `.m4a` backend、recording notification channel、ongoing notification、seminar-owned recording file 和 `RecordingEntity` durable lifecycle。
+- 新增最小 recording start use case，让详情页可以在麦克风权限允许后通过 repository/session 语义启动 foreground service。
 - 新增 `0.1.x` 分阶段开发计划索引：`docs/plans/0.1.x-development-plan-index.md`。
 - 新增 `0.1.1` 收口计划，覆盖当前基础批次的构建、CI、Room、UI、PDF 生命周期和文档校验。
 - 新增 `0.1.2` 录音服务计划，覆盖 foreground service、active seminar invariant、恢复流程和完整录音回放。
@@ -18,6 +21,7 @@
 
 ### 文档
 
+- 更新 README、架构和隐私说明，准确记录 `0.1.2-dev` 已具备本地录音基础设施，但尚未完成 Active Session UI、CameraX、timeline、clip 或 playback UI。
 - 新增 `docs/notes/2026-08-08-remote-wsl-codex-handoff.md`，记录远端 WSL Codex 开发环境、Android Studio 安装判断、已完成线程上下文和后续开发入口。
 - 明确 changelog 后续使用中文维护。
 - 完善 README，说明当前仓库状态、文档入口、开发顺序和本地构建命令。

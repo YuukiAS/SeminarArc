@@ -8,6 +8,7 @@ import com.yuukias.seminararc.data.local.DatabaseTransactionRunner
 import com.yuukias.seminararc.data.local.entity.SeminarEntity
 import com.yuukias.seminararc.data.repository.SeminarRepositoryImpl
 import com.yuukias.seminararc.data.storage.MediaStorageManager
+import com.yuukias.seminararc.data.storage.RecordingOutputFile
 import com.yuukias.seminararc.data.storage.StoredFile
 import com.yuukias.seminararc.domain.model.SeminarSessionRecoveryReason
 import com.yuukias.seminararc.domain.model.SeminarDraftInput
@@ -387,6 +388,14 @@ private class FakeMediaStorageManager : MediaStorageManager {
         return StoredFile(
             displayName = "new.pdf",
             relativePath = "seminars/$seminarId/abstract/new.pdf",
+        )
+    }
+
+    override suspend fun createRecordingOutputFile(seminarId: Long, startedAt: Instant): RecordingOutputFile {
+        return RecordingOutputFile(
+            displayName = "recording.m4a",
+            relativePath = "seminars/$seminarId/recordings/recording.m4a",
+            file = java.io.File("/tmp/seminararc-test/seminars/$seminarId/recordings/recording.m4a"),
         )
     }
 

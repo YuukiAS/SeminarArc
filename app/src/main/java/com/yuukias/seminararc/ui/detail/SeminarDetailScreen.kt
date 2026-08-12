@@ -1,5 +1,10 @@
 package com.yuukias.seminararc.ui.detail
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,8 +32,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yuukias.seminararc.domain.model.SeminarDetail
@@ -46,6 +54,36 @@ fun SeminarDetailScreen(
     viewModel: SeminarDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) {
+        viewModel.onStartRecordingClicked()
+    }
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                viewModel.onStartRecordingClicked()
+            }
+        } else {
+            viewModel.onStartRecordingClicked()
+        }
+    }
+    val startRecording: () -> Unit = remember(context) {
+        {
+            if (!context.hasPermission(Manifest.permission.RECORD_AUDIO)) {
+                audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                viewModel.onStartRecordingClicked()
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
@@ -63,6 +101,7 @@ fun SeminarDetailScreen(
         onRatingSelected = viewModel::onRatingSelected,
         onDeleteDialogChanged = viewModel::onDeleteDialogChanged,
         onDeleteConfirmed = viewModel::onDeleteConfirmed,
+        onStartRecording = startRecording,
         modifier = modifier,
     )
 }
@@ -77,6 +116,7 @@ fun SeminarDetailScreenContent(
     onRatingSelected: (Int) -> Unit,
     onDeleteDialogChanged: (Boolean) -> Unit,
     onDeleteConfirmed: () -> Unit,
+    onStartRecording: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
@@ -137,7 +177,12 @@ fun SeminarDetailScreenContent(
                 ) {
                     SeminarHeadline(detail = uiState.detail, onRatingSelected = onRatingSelected)
                     SeminarAbstractSection(detail = uiState.detail)
-                    SeminarRecordingSection(detail = uiState.detail)
+                    SeminarRecordingSection(
+                        detail = uiState.detail,
+                        isStartingRecording = uiState.isStartingRecording,
+                        recordingMessage = uiState.recordingMessage,
+                        onStartRecording = onStartRecording,
+                    )
                     SeminarTimelinePreview(uiState.detail.timelinePreview)
                     TextButton(
                         onClick = { onDeleteDialogChanged(true) },
@@ -225,7 +270,13 @@ private fun SeminarAbstractSection(detail: SeminarDetail, modifier: Modifier = M
 }
 
 @Composable
-private fun SeminarRecordingSection(detail: SeminarDetail, modifier: Modifier = Modifier) {
+private fun SeminarRecordingSection(
+    detail: SeminarDetail,
+    isStartingRecording: Boolean,
+    recordingMessage: String?,
+    onStartRecording: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val spacing = SeminarArcThemeTokens.spacing
     Card(modifier = modifier.fillMaxWidth()) {
         Column(
@@ -235,15 +286,30 @@ private fun SeminarRecordingSection(detail: SeminarDetail, modifier: Modifier = 
             Text("Recording summary", style = MaterialTheme.typography.titleMedium)
             Text("${detail.photoCount} photos - ${detail.clipCount} clips", style = MaterialTheme.typography.bodyMedium)
             Text(
-                "Start / Resume seminar will be implemented in batch 0.1.2 with the foreground recording service.",
+                "Start / Resume creates one active seminar session and starts the foreground microphone recording service.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                Text("Start seminar (0.1.2)")
+            recordingMessage?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Button(
+                onClick = onStartRecording,
+                enabled = !isStartingRecording,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (isStartingRecording) "Starting recording..." else "Start / Resume recording")
             }
         }
     }
+}
+
+private fun android.content.Context.hasPermission(permission: String): Boolean {
+    return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 }
 
 @Composable

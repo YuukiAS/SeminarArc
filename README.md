@@ -10,7 +10,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 ## 当前状态
 
-仓库当前处于 `0.1.1-dev` 基础批次。
+仓库当前处于 `0.1.2-dev` 录音基础设施批次。
 
 已经具备：
 
@@ -19,15 +19,17 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - Room-backed seminar 容器模型。
 - Seminar list、editor、detail 基础流程。
 - Abstract PDF import / replace / remove 的本地文件生命周期基础。
+- One-active-seminar invariant 与 session start 语义。
+- Microphone foreground service、本地 `.m4a` recording backend、ongoing notification 和 `RecordingEntity` durable lifecycle。
 - `0.1.x` 到 `0.2.x` 的分阶段计划文档。
 
 尚未声明完成：
 
-- 真实 foreground recording service。
 - Active session 恢复流程。
 - CameraX slide capture。
 - 录音中 timeline event 写入。
 - Clip generation、retry 和 full-recording fallback。
+- Full recording playback UI。
 - Markdown/ZIP 导出和最终本地 MVP 验收。
 
 ## 文档入口

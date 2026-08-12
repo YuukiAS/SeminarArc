@@ -9,10 +9,18 @@ import com.yuukias.seminararc.data.local.dao.ClipDao
 import com.yuukias.seminararc.data.local.dao.RecordingDao
 import com.yuukias.seminararc.data.local.dao.SeminarDao
 import com.yuukias.seminararc.data.local.dao.TimelineDao
+import com.yuukias.seminararc.data.repository.RecordingRepositoryImpl
 import com.yuukias.seminararc.data.repository.SeminarRepositoryImpl
 import com.yuukias.seminararc.data.storage.AppMediaStorageManager
 import com.yuukias.seminararc.data.storage.MediaStorageManager
+import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.recording.controller.AndroidMediaRecorderControllerFactory
+import com.yuukias.seminararc.recording.controller.RecorderControllerFactory
+import com.yuukias.seminararc.recording.service.AndroidRecordingPermissionChecker
+import com.yuukias.seminararc.recording.service.AndroidRecordingServiceStarter
+import com.yuukias.seminararc.recording.service.RecordingPermissionChecker
+import com.yuukias.seminararc.recording.service.RecordingServiceStarter
 import com.yuukias.seminararc.util.ClockProvider
 import dagger.Binds
 import dagger.Module
@@ -62,6 +70,22 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindDatabaseTransactionRunner(impl: RoomDatabaseTransactionRunner): DatabaseTransactionRunner
+
+    @Binds
+    @Singleton
+    abstract fun bindRecordingRepository(impl: RecordingRepositoryImpl): RecordingRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRecorderControllerFactory(impl: AndroidMediaRecorderControllerFactory): RecorderControllerFactory
+
+    @Binds
+    @Singleton
+    abstract fun bindRecordingPermissionChecker(impl: AndroidRecordingPermissionChecker): RecordingPermissionChecker
+
+    @Binds
+    @Singleton
+    abstract fun bindRecordingServiceStarter(impl: AndroidRecordingServiceStarter): RecordingServiceStarter
 
     @Binds
     @Singleton

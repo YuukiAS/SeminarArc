@@ -42,6 +42,8 @@ class SeminarDetailScreenTest {
                         ),
                         isDeleting = false,
                         showDeleteDialog = false,
+                        isStartingRecording = false,
+                        recordingMessage = null,
                     ),
                     onBack = {},
                     onEdit = { _ -> },
@@ -49,6 +51,7 @@ class SeminarDetailScreenTest {
                     onRatingSelected = { _ -> },
                     onDeleteDialogChanged = { _ -> },
                     onDeleteConfirmed = {},
+                    onStartRecording = {},
                 )
             }
         }

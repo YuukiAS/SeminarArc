@@ -9,6 +9,9 @@ import java.io.File
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,6 +44,20 @@ class AppMediaStorageManager @Inject constructor(
         )
     }
 
+    override suspend fun createRecordingOutputFile(
+        seminarId: Long,
+        startedAt: Instant,
+    ): RecordingOutputFile = withContext(Dispatchers.IO) {
+        val targetDir = seminarMediaDir(seminarId, "recordings").apply { mkdirs() }
+        val timestamp = RECORDING_FILE_TIMESTAMP_FORMATTER.format(startedAt)
+        val targetFile = uniqueFile(targetDir, "recording-$timestamp", "m4a")
+        RecordingOutputFile(
+            displayName = targetFile.name,
+            relativePath = targetFile.relativeTo(context.filesDir).invariantSeparatorsPath,
+            file = targetFile,
+        )
+    }
+
     override suspend fun deleteRelativeFile(relativePath: String): Unit = withContext(Dispatchers.IO) {
         val file = File(context.filesDir, relativePath)
         if (file.exists()) {
@@ -55,6 +72,18 @@ class AppMediaStorageManager @Inject constructor(
     private fun seminarMediaDir(seminarId: Long, child: String? = null): File {
         val base = File(context.filesDir, "seminars/$seminarId")
         return if (child == null) base else File(base, child)
+    }
+
+    private fun uniqueFile(directory: File, baseName: String, extension: String): File {
+        var index = 0
+        while (true) {
+            val suffix = if (index == 0) "" else "-$index"
+            val candidate = File(directory, "$baseName$suffix.$extension")
+            if (!candidate.exists()) {
+                return candidate
+            }
+            index += 1
+        }
     }
 
     private fun resolveDisplayName(uri: Uri): String? {
@@ -76,5 +105,11 @@ class AppMediaStorageManager @Inject constructor(
                 StandardCopyOption.REPLACE_EXISTING,
             )
         }
+    }
+
+    private companion object {
+        val RECORDING_FILE_TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter
+            .ofPattern("yyyyMMdd-HHmmss-SSS")
+            .withZone(ZoneOffset.UTC)
     }
 }
