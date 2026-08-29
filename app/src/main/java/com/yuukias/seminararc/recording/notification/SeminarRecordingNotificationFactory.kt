@@ -39,6 +39,10 @@ class SeminarRecordingNotificationFactory @Inject constructor(
         return build(specFactory.recording(seminarId, seminarTitle))
     }
 
+    fun cancelRecordingNotification() {
+        notificationManager.cancel(SeminarRecordingNotificationContract.NOTIFICATION_ID)
+    }
+
     private fun build(spec: SeminarRecordingNotificationSpec): Notification {
         return NotificationCompat.Builder(context, spec.channelId)
             .setSmallIcon(R.drawable.ic_stat_recording)
@@ -70,4 +74,3 @@ class SeminarRecordingNotificationFactory @Inject constructor(
         private const val REQUEST_CODE_OPEN_APP = 2101
     }
 }
-

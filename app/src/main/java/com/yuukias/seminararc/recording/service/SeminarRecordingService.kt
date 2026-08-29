@@ -49,6 +49,7 @@ class SeminarRecordingService : Service() {
                 )
             }
         }
+        removeForegroundNotification()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -119,8 +120,13 @@ class SeminarRecordingService : Service() {
     }
 
     private fun stopForegroundAndSelf() {
-        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        removeForegroundNotification()
         stopSelf()
+    }
+
+    private fun removeForegroundNotification() {
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        notificationFactory.cancelRecordingNotification()
     }
 
     private fun hasRecordAudioPermission(): Boolean {

@@ -21,6 +21,17 @@
 - 当前 WSL 未安装或未暴露到 `PATH`：Android emulator。需要 GUI emulator 或 Layout Inspector 时，应先确认 Windows 侧工具或再单独安装；本项目日常 headless 开发不需要 Android Studio GUI。
 - 当前 Android SDK 已安装 `platforms;android-36`、`build-tools;36.0.0`、`platform-tools 37.0.1`，与项目 `compileSdk = 36` 对齐。
 
+## 真机解锁与设备操作安全
+
+- 当前常用本地测试机：serial `8cc54656`，型号 `GM1910` / OnePlus 7 Pro，Android 10 / API 29；每次真机验收前仍必须用 `adb devices -l` 和 `adb shell getprop` 复核，不要把这些信息当成永久不变。
+- 不得把真机 PIN、密码或任何解锁 secret 写入本仓库、task、result、日志、截图说明、commit message 或 `AGENTS.md`。PIN 只能保存在用户本机私有 secret store、受权限保护的本地配置或专门 harness 的加密 secret 文件中。
+- 如需自动短暂解锁，优先复用 EchoSelect 的 WSL 本地 harness 流程：`/home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py`。默认 PIN secret 文件为 `~/.config/echoselect/device-secrets/8cc54656.pin.wsl`，该文件不是仓库内容，不得复制进 SeminarArc。
+- 可用的只读锁屏检查命令：`python /home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py check-lock-state --serial 8cc54656`。
+- 可用的短暂解锁命令：`python /home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py unlock --serial 8cc54656 --evidence-root /tmp/seminararc-device-evidence`。该流程只允许 wake/swipe/text/keyevent 这类解锁输入，并通过 `deviceLocked=0` 验证成功；输出证据不得包含 PIN。
+- 真机验收期间禁止执行会断开、重置或改变连接形态的命令，包括但不限于 `adb disconnect`、`adb kill-server`、`adb reboot`、`adb tcpip`、USB detach/unbind 或等价操作。
+- 真机验收期间禁止卸载 app、清空 app data、删除或移动设备上的用户文件/媒体/数据库，除非用户对该具体动作给出明确授权。本项目调试产生的 app-owned 测试数据可以保留到用户手动清理。
+- `scrcpy -S` 或黑屏只算显示隐私措施，不等于安全锁屏；如果某项验收要求锁屏状态，必须用 `dumpsys trust` / `dumpsys window policy` 或 harness 的 `check-lock-state` 明确验证。
+
 ## SeminarArc Project Skills
 
 Use the project-local skills in `.agents/skills/` for Android and Jetpack Compose work in this repository.
