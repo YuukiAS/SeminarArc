@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "cf19c5231452ca1034ae015f2a7b91e1",
+    "identityHash": "d03e0121ae6e28da76f582c82f1f272b",
     "entities": [
       {
         "tableName": "seminars",
@@ -308,7 +308,7 @@
       },
       {
         "tableName": "audio_clips",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `seminarId` INTEGER NOT NULL, `recordingId` INTEGER NOT NULL, `sourceEventId` INTEGER NOT NULL, `startOffsetMs` INTEGER NOT NULL, `endOffsetMs` INTEGER NOT NULL, `filePath` TEXT, `state` TEXT NOT NULL, `errorMessage` TEXT, FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`recordingId`) REFERENCES `recordings`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`sourceEventId`) REFERENCES `timeline_events`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `seminarId` INTEGER NOT NULL, `recordingId` INTEGER NOT NULL, `sourceEventId` INTEGER NOT NULL, `startOffsetMs` INTEGER NOT NULL, `endOffsetMs` INTEGER NOT NULL, `filePath` TEXT, `state` TEXT NOT NULL, `errorMessage` TEXT, `retryCount` INTEGER NOT NULL, FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`recordingId`) REFERENCES `recordings`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`sourceEventId`) REFERENCES `timeline_events`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -363,6 +363,12 @@
             "columnName": "errorMessage",
             "affinity": "TEXT",
             "notNull": false
+          },
+          {
+            "fieldPath": "retryCount",
+            "columnName": "retryCount",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -440,7 +446,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'cf19c5231452ca1034ae015f2a7b91e1')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd03e0121ae6e28da76f582c82f1f272b')"
     ]
   }
 }

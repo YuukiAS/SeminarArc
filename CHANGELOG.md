@@ -14,6 +14,7 @@
 - 新增 `0.1.2` Active Session route 与现场录音闭环：详情页 start/resume 导航现场页、live recorder 与 durable recording recovery 区分、权限拒绝状态、notification 返回现场页、以及 End Seminar stop/finalize 后完成 seminar。
 - 新增 `0.1.2` 完整录音回放：Seminar Detail 使用 Media3 页面内播放器播放已完成 `.m4a`，支持 Play/Pause/Seek、duration/position、缺失文件和失败录音状态。
 - 新增 `0.1.3` Capture + Timeline：CameraX 幻灯片拍照、photos-only seminar session、MARK/PHOTO/QUESTION/NOTE 事件写入、统一 timeline review route、photo missing state、last-photo undo/retake 和 `Play from here` 回放入口。
+- 新增 `0.1.4` clip 韧性基础：MARK 自动创建 `PENDING` clip、WorkManager 生成任务、Android `MediaExtractor`/`MediaMuxer` 本地 `.m4a` 裁剪、`READY` clip 播放入口、failed retry、完整录音 fallback 和 clip-owned 文件清理。
 - 新增 `0.1.x` 分阶段开发计划索引：`docs/plans/0.1.x-development-plan-index.md`。
 - 新增 `0.1.1` 收口计划，覆盖当前基础批次的构建、CI、Room、UI、PDF 生命周期和文档校验。
 - 新增 `0.1.2` 录音服务计划，覆盖 foreground service、active seminar invariant、恢复流程和完整录音回放。

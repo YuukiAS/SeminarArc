@@ -17,6 +17,7 @@ import com.yuukias.seminararc.domain.model.TimelineEvent
 import com.yuukias.seminararc.domain.model.TimelineEventType
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
 import com.yuukias.seminararc.domain.usecase.CaptureOffsetAnchor
 import com.yuukias.seminararc.domain.usecase.CaptureOffsetCalculator
@@ -24,6 +25,7 @@ import com.yuukias.seminararc.domain.usecase.EndSeminarUseCase
 import com.yuukias.seminararc.domain.usecase.StartSeminarRecordingUseCase
 import com.yuukias.seminararc.recording.service.RecordingPermissionChecker
 import com.yuukias.seminararc.recording.service.RecordingRuntimeStateProvider
+import com.yuukias.seminararc.media.clip.ClipWorkScheduler
 import com.yuukias.seminararc.ui.navigation.ActiveSessionRoute
 import com.yuukias.seminararc.util.ClockProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,6 +49,8 @@ class ActiveSessionViewModel @Inject constructor(
     private val seminarRepository: SeminarRepository,
     private val recordingRepository: RecordingRepository,
     private val timelineRepository: TimelineRepository,
+    private val clipRepository: ClipRepository,
+    private val clipWorkScheduler: ClipWorkScheduler,
     private val mediaStorageManager: MediaStorageManager,
     private val runtimeStateProvider: RecordingRuntimeStateProvider,
     private val startSeminarRecordingUseCase: StartSeminarRecordingUseCase,
@@ -173,11 +177,14 @@ class ActiveSessionViewModel @Inject constructor(
     private fun addMark() {
         viewModelScope.launch {
             val anchor = currentCaptureAnchor() ?: return@launch
-            timelineRepository.addMark(
+            val mark = timelineRepository.addMark(
                 seminarId = seminarId,
                 recordingId = anchor.recordingId,
                 offsetMs = offsetCalculator.offsetFrom(anchor, clockProvider.now()),
             )
+            clipRepository.createPendingClipForMark(mark)?.let { clip ->
+                clipWorkScheduler.enqueueClipGeneration(clip.id)
+            }
             actionMessage.value = "Mark saved."
         }
     }

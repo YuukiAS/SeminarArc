@@ -9,11 +9,15 @@ import com.yuukias.seminararc.domain.model.RecordingSession
 import com.yuukias.seminararc.domain.model.RecordingState
 import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.TimelineEvent
+import com.yuukias.seminararc.domain.model.AudioClip
+import com.yuukias.seminararc.domain.model.ClipState
+import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackControllerState
+import com.yuukias.seminararc.media.clip.ClipWorkScheduler
 import com.yuukias.seminararc.ui.navigation.SeminarTimelineRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
@@ -35,6 +39,8 @@ class SeminarTimelineViewModel @Inject constructor(
     private val seminarRepository: SeminarRepository,
     private val recordingRepository: RecordingRepository,
     private val timelineRepository: TimelineRepository,
+    private val clipRepository: ClipRepository,
+    private val clipWorkScheduler: ClipWorkScheduler,
     private val mediaStorageManager: MediaStorageManager,
     private val playbackController: RecordingPlaybackController,
 ) : ViewModel() {
@@ -49,10 +55,11 @@ class SeminarTimelineViewModel @Inject constructor(
     val uiState = combine(
         seminarRepository.observeSeminarDetail(seminarId),
         timelineRepository.observeTimelineEvents(seminarId),
+        clipRepository.observeClipsForSeminar(seminarId),
         recordingRepository.observeRecordingsForSeminar(seminarId),
         playbackController.state,
-    ) { detail, events, recordings, playback ->
-        TimelineInputs(detail, events, recordings, playback)
+    ) { detail, events, clips, recordings, playback ->
+        TimelineInputs(detail, events, clips, recordings, playback)
     }
         .mapLatest { inputs -> inputs.toUiState() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SeminarTimelineUiState.Loading)
@@ -66,6 +73,30 @@ class SeminarTimelineViewModel @Inject constructor(
         playbackController.prepare(playable.file, playable.recording.durationMs)
         playbackController.seekTo(event.offsetMs)
         playbackController.play()
+    }
+
+    fun onPlayClip(item: TimelineEventUiItem) {
+        val path = item.absoluteClipPath
+        val clip = item.clip
+        if (path == null || clip == null || clip.state != ClipState.READY) {
+            viewModelScope.launch { _events.emit(SeminarTimelineEvent.ShowMessage("Clip is not ready for playback.")) }
+            return
+        }
+        val file = File(path)
+        playbackController.prepare(file, clip.endOffsetMs - clip.startOffsetMs)
+        playbackController.play()
+    }
+
+    fun onRetryClip(clip: AudioClip) {
+        viewModelScope.launch {
+            val pending = clipRepository.retryClip(clip.id)
+            if (pending == null) {
+                _events.emit(SeminarTimelineEvent.ShowMessage("Clip was not found."))
+            } else {
+                clipWorkScheduler.enqueueClipGeneration(pending.id)
+                _events.emit(SeminarTimelineEvent.ShowMessage("Clip retry queued."))
+            }
+        }
     }
 
     fun onDeleteEvent(event: TimelineEvent) {
@@ -94,19 +125,24 @@ class SeminarTimelineViewModel @Inject constructor(
                 }
             }
         currentPlayable = playable
+        val clipsByEvent = clips.associateBy { clip -> clip.sourceEventId }
         return SeminarTimelineUiState.Ready(
             detail = currentDetail,
-            items = events.map { event -> event.toUiItem() },
+            items = events.map { event -> event.toUiItem(clipsByEvent[event.id]) },
             canPlayFromTimeline = playable != null,
             playbackLabel = playback.toPlaybackLabel(playable?.file),
         )
     }
 
-    private suspend fun TimelineEvent.toUiItem(): TimelineEventUiItem {
+    private suspend fun TimelineEvent.toUiItem(clip: AudioClip?): TimelineEventUiItem {
         val path = photoPath
         val file = path?.let { mediaStorageManager.resolveReadableRelativeFile(it) }
+        val clipFile = clip?.filePath?.let { mediaStorageManager.resolveReadableRelativeFile(it) }
         return TimelineEventUiItem(
             event = this,
+            clip = clip,
+            absoluteClipPath = clipFile?.absolutePath,
+            clipMissing = clip?.filePath != null && clipFile == null,
             absolutePhotoPath = file?.absolutePath,
             photoMissing = path != null && file == null,
         )
@@ -127,6 +163,7 @@ class SeminarTimelineViewModel @Inject constructor(
     private data class TimelineInputs(
         val detail: SeminarDetail?,
         val events: List<TimelineEvent>,
+        val clips: List<AudioClip>,
         val recordings: List<RecordingSession>,
         val playback: RecordingPlaybackControllerState,
     )

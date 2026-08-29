@@ -8,6 +8,7 @@ import com.yuukias.seminararc.data.storage.PhotoOutputFile
 import com.yuukias.seminararc.data.storage.RecordingOutputFile
 import com.yuukias.seminararc.data.storage.StoredFile
 import com.yuukias.seminararc.domain.model.TimelineEventType
+import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.DeleteTimelineEventResult
 import com.yuukias.seminararc.util.ClockProvider
 import java.io.File
@@ -76,6 +77,7 @@ class TimelineRepositoryImplTest {
             timelineDao = dao,
             mediaStorageManager = storage,
             clockProvider = ClockProvider { now },
+            clipRepository = FakeClipRepository(),
         )
     }
 }
@@ -127,6 +129,18 @@ private class FakeTimelineStorage : MediaStorageManager {
         )
     }
 
+    override suspend fun createClipOutputFile(
+        seminarId: Long,
+        clipId: Long,
+    ): com.yuukias.seminararc.data.storage.ClipOutputFile {
+        val path = "seminars/$seminarId/clips/clip-$clipId.m4a"
+        return com.yuukias.seminararc.data.storage.ClipOutputFile(
+            displayName = "clip-$clipId.m4a",
+            relativePath = path,
+            file = File("/tmp/seminararc-test/$path"),
+        )
+    }
+
     override suspend fun resolveReadableRelativeFile(relativePath: String): File? = null
 
     override suspend fun deleteRelativeFile(relativePath: String) {
@@ -134,4 +148,16 @@ private class FakeTimelineStorage : MediaStorageManager {
     }
 
     override suspend fun deleteSeminarMedia(seminarId: Long) = Unit
+}
+
+private class FakeClipRepository : ClipRepository {
+    override fun observeClipsForSeminar(seminarId: Long): Flow<List<com.yuukias.seminararc.domain.model.AudioClip>> = kotlinx.coroutines.flow.flowOf(emptyList())
+    override suspend fun createPendingClipForMark(mark: com.yuukias.seminararc.domain.model.TimelineEvent): com.yuukias.seminararc.domain.model.AudioClip? = null
+    override suspend fun getClip(clipId: Long): com.yuukias.seminararc.domain.model.AudioClip? = null
+    override suspend fun getRecordingForClip(clip: com.yuukias.seminararc.domain.model.AudioClip): com.yuukias.seminararc.domain.model.RecordingSession? = null
+    override suspend fun markProcessing(clipId: Long): com.yuukias.seminararc.domain.model.AudioClip? = null
+    override suspend fun markReady(clipId: Long, filePath: String): com.yuukias.seminararc.domain.model.AudioClip? = null
+    override suspend fun markFailed(clipId: Long, message: String): com.yuukias.seminararc.domain.model.AudioClip? = null
+    override suspend fun retryClip(clipId: Long): com.yuukias.seminararc.domain.model.AudioClip? = null
+    override suspend fun deleteClipForEvent(eventId: Long) = Unit
 }

@@ -6,6 +6,7 @@ import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.model.TimelineEvent
 import com.yuukias.seminararc.domain.model.TimelineEventType
 import com.yuukias.seminararc.domain.repository.DeleteTimelineEventResult
+import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
 import com.yuukias.seminararc.util.ClockProvider
 import javax.inject.Inject
@@ -16,6 +17,7 @@ class TimelineRepositoryImpl @Inject constructor(
     private val timelineDao: TimelineDao,
     private val mediaStorageManager: MediaStorageManager,
     private val clockProvider: ClockProvider,
+    private val clipRepository: ClipRepository,
 ) : TimelineRepository {
 
     override fun observeTimelineEvents(seminarId: Long): Flow<List<TimelineEvent>> {
@@ -85,6 +87,7 @@ class TimelineRepositoryImpl @Inject constructor(
 
     override suspend fun deleteEvent(eventId: Long): DeleteTimelineEventResult {
         val existing = timelineDao.getEvent(eventId) ?: return DeleteTimelineEventResult.NotFound(eventId)
+        clipRepository.deleteClipForEvent(eventId)
         val deletedRows = timelineDao.deleteEvent(eventId)
         if (deletedRows != 1) {
             return DeleteTimelineEventResult.NotFound(eventId)

@@ -9,6 +9,7 @@ import com.yuukias.seminararc.data.storage.StoredFile
 import com.yuukias.seminararc.domain.model.AbstractAttachment
 import com.yuukias.seminararc.domain.model.ActiveSeminarSession
 import com.yuukias.seminararc.domain.model.ActiveSeminarSessionState
+import com.yuukias.seminararc.domain.model.AudioClip
 import com.yuukias.seminararc.domain.model.BeginRecordingResult
 import com.yuukias.seminararc.domain.model.CompleteRecordingResult
 import com.yuukias.seminararc.domain.model.CompleteSeminarResult
@@ -30,6 +31,7 @@ import com.yuukias.seminararc.domain.model.TimelineEventType
 import com.yuukias.seminararc.domain.repository.DeleteTimelineEventResult
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
 import com.yuukias.seminararc.domain.usecase.CaptureOffsetCalculator
 import com.yuukias.seminararc.domain.usecase.EndSeminarUseCase
@@ -43,6 +45,7 @@ import com.yuukias.seminararc.recording.service.RecordingServiceStarter
 import com.yuukias.seminararc.ui.session.ActiveSessionAction
 import com.yuukias.seminararc.ui.session.ActiveSessionUiState
 import com.yuukias.seminararc.ui.session.ActiveSessionViewModel
+import com.yuukias.seminararc.media.clip.ClipWorkScheduler
 import com.yuukias.seminararc.util.ClockProvider
 import java.io.File
 import java.time.Instant
@@ -202,6 +205,8 @@ private fun viewModel(
         seminarRepository = seminarRepository,
         recordingRepository = recordingRepository,
         timelineRepository = ActiveFakeTimelineRepository(),
+        clipRepository = ActiveFakeClipRepository(),
+        clipWorkScheduler = ActiveFakeClipWorkScheduler(),
         mediaStorageManager = ActiveFakeMediaStorageManager(),
         runtimeStateProvider = runtime,
         startSeminarRecordingUseCase = StartSeminarRecordingUseCase(
@@ -338,6 +343,18 @@ private class ActiveFakeMediaStorageManager : MediaStorageManager {
         )
     }
 
+    override suspend fun createClipOutputFile(
+        seminarId: Long,
+        clipId: Long,
+    ): com.yuukias.seminararc.data.storage.ClipOutputFile {
+        val path = "seminars/$seminarId/clips/clip-$clipId.m4a"
+        return com.yuukias.seminararc.data.storage.ClipOutputFile(
+            displayName = "clip-$clipId.m4a",
+            relativePath = path,
+            file = File("/tmp/seminararc-test/$path"),
+        )
+    }
+
     override suspend fun resolveReadableRelativeFile(relativePath: String): File? {
         return File("/tmp/seminararc-test/$relativePath")
     }
@@ -345,6 +362,22 @@ private class ActiveFakeMediaStorageManager : MediaStorageManager {
     override suspend fun deleteRelativeFile(relativePath: String) = Unit
 
     override suspend fun deleteSeminarMedia(seminarId: Long) = Unit
+}
+
+private class ActiveFakeClipRepository : ClipRepository {
+    override fun observeClipsForSeminar(seminarId: Long): Flow<List<AudioClip>> = flowOf(emptyList())
+    override suspend fun createPendingClipForMark(mark: TimelineEvent): AudioClip? = null
+    override suspend fun getClip(clipId: Long): AudioClip? = null
+    override suspend fun getRecordingForClip(clip: AudioClip): RecordingSession? = null
+    override suspend fun markProcessing(clipId: Long): AudioClip? = null
+    override suspend fun markReady(clipId: Long, filePath: String): AudioClip? = null
+    override suspend fun markFailed(clipId: Long, message: String): AudioClip? = null
+    override suspend fun retryClip(clipId: Long): AudioClip? = null
+    override suspend fun deleteClipForEvent(eventId: Long) = Unit
+}
+
+private class ActiveFakeClipWorkScheduler : ClipWorkScheduler {
+    override fun enqueueClipGeneration(clipId: Long) = Unit
 }
 
 private class ActiveFakeSeminarRepository(

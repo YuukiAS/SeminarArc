@@ -47,6 +47,19 @@ data class TimelineEvent(
     val photoPath: String?,
 )
 
+data class AudioClip(
+    val id: Long,
+    val seminarId: Long,
+    val recordingId: Long,
+    val sourceEventId: Long,
+    val startOffsetMs: Long,
+    val endOffsetMs: Long,
+    val filePath: String?,
+    val state: ClipState,
+    val errorMessage: String?,
+    val retryCount: Int,
+)
+
 data class SeminarDetail(
     val id: Long,
     val title: String,

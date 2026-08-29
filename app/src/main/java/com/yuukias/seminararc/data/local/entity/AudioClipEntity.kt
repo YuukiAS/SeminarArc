@@ -45,4 +45,5 @@ data class AudioClipEntity(
     val filePath: String?,
     val state: ClipState,
     val errorMessage: String?,
+    val retryCount: Int = 0,
 )

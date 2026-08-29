@@ -300,6 +300,18 @@ private class FakeMediaStorageManager : MediaStorageManager {
         )
     }
 
+    override suspend fun createClipOutputFile(
+        seminarId: Long,
+        clipId: Long,
+    ): com.yuukias.seminararc.data.storage.ClipOutputFile {
+        val path = "seminars/$seminarId/clips/clip-$clipId.m4a"
+        return com.yuukias.seminararc.data.storage.ClipOutputFile(
+            displayName = "clip-$clipId.m4a",
+            relativePath = path,
+            file = File("/tmp/seminararc-test/$path"),
+        )
+    }
+
     override suspend fun resolveReadableRelativeFile(relativePath: String): File? = null
 
     override suspend fun deleteRelativeFile(relativePath: String) {

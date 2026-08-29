@@ -11,12 +11,18 @@ import com.yuukias.seminararc.data.local.dao.SeminarDao
 import com.yuukias.seminararc.data.local.dao.TimelineDao
 import com.yuukias.seminararc.data.repository.RecordingRepositoryImpl
 import com.yuukias.seminararc.data.repository.SeminarRepositoryImpl
+import com.yuukias.seminararc.data.repository.ClipRepositoryImpl
 import com.yuukias.seminararc.data.repository.TimelineRepositoryImpl
 import com.yuukias.seminararc.data.storage.AppMediaStorageManager
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
+import com.yuukias.seminararc.media.clip.AndroidM4aClipGenerator
+import com.yuukias.seminararc.media.clip.ClipGenerator
+import com.yuukias.seminararc.media.clip.ClipWorkScheduler
+import com.yuukias.seminararc.media.clip.WorkManagerClipWorkScheduler
 import com.yuukias.seminararc.media.playback.Media3RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
 import com.yuukias.seminararc.recording.controller.AndroidMediaRecorderControllerFactory
@@ -110,6 +116,18 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindTimelineRepository(impl: TimelineRepositoryImpl): TimelineRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindClipRepository(impl: ClipRepositoryImpl): ClipRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindClipGenerator(impl: AndroidM4aClipGenerator): ClipGenerator
+
+    @Binds
+    @Singleton
+    abstract fun bindClipWorkScheduler(impl: WorkManagerClipWorkScheduler): ClipWorkScheduler
 }
 
 @Module

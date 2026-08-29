@@ -361,6 +361,7 @@ private class DetailFakeMediaStorageManager(
     override suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): StoredFile = error("Not used")
     override suspend fun createRecordingOutputFile(seminarId: Long, startedAt: Instant): RecordingOutputFile = error("Not used")
     override suspend fun createPhotoOutputFile(seminarId: Long, capturedAt: Instant): com.yuukias.seminararc.data.storage.PhotoOutputFile = error("Not used")
+    override suspend fun createClipOutputFile(seminarId: Long, clipId: Long): com.yuukias.seminararc.data.storage.ClipOutputFile = error("Not used")
     override suspend fun resolveReadableRelativeFile(relativePath: String): File? {
         return if (relativePath in readablePaths) File("/fake/files/$relativePath") else null
     }

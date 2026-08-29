@@ -45,6 +45,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yuukias.seminararc.domain.model.TimelineEvent
 import com.yuukias.seminararc.domain.model.TimelineEventType
+import com.yuukias.seminararc.domain.model.AudioClip
+import com.yuukias.seminararc.domain.model.ClipState
 import com.yuukias.seminararc.ui.theme.SeminarArcThemeTokens
 
 @Composable
@@ -73,6 +75,8 @@ fun SeminarTimelineScreen(
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onPlayFromHere = viewModel::onPlayFromHere,
+        onPlayClip = viewModel::onPlayClip,
+        onRetryClip = viewModel::onRetryClip,
         onDeleteEvent = viewModel::onDeleteEvent,
         modifier = modifier,
     )
@@ -85,6 +89,8 @@ fun SeminarTimelineScreenContent(
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onPlayFromHere: (TimelineEvent) -> Unit,
+    onPlayClip: (TimelineEventUiItem) -> Unit,
+    onRetryClip: (AudioClip) -> Unit,
     onDeleteEvent: (TimelineEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -123,6 +129,8 @@ fun SeminarTimelineScreenContent(
             is SeminarTimelineUiState.Ready -> TimelineReadyContent(
                 state = uiState,
                 onPlayFromHere = onPlayFromHere,
+                onPlayClip = onPlayClip,
+                onRetryClip = onRetryClip,
                 onDeleteEvent = onDeleteEvent,
                 modifier = Modifier.padding(innerPadding),
             )
@@ -134,6 +142,8 @@ fun SeminarTimelineScreenContent(
 private fun TimelineReadyContent(
     state: SeminarTimelineUiState.Ready,
     onPlayFromHere: (TimelineEvent) -> Unit,
+    onPlayClip: (TimelineEventUiItem) -> Unit,
+    onRetryClip: (AudioClip) -> Unit,
     onDeleteEvent: (TimelineEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -167,6 +177,8 @@ private fun TimelineReadyContent(
                     item = item,
                     canPlayFromTimeline = state.canPlayFromTimeline,
                     onPlayFromHere = onPlayFromHere,
+                    onPlayClip = onPlayClip,
+                    onRetryClip = onRetryClip,
                     onDeleteEvent = onDeleteEvent,
                 )
             }
@@ -179,6 +191,8 @@ private fun TimelineEventCard(
     item: TimelineEventUiItem,
     canPlayFromTimeline: Boolean,
     onPlayFromHere: (TimelineEvent) -> Unit,
+    onPlayClip: (TimelineEventUiItem) -> Unit,
+    onRetryClip: (AudioClip) -> Unit,
     onDeleteEvent: (TimelineEvent) -> Unit,
 ) {
     val event = item.event
@@ -199,7 +213,18 @@ private fun TimelineEventCard(
                 Text(it, style = MaterialTheme.typography.bodyMedium)
             }
             PhotoPreview(item)
+            ClipStatePanel(item)
             Row(horizontalArrangement = Arrangement.spacedBy(spacing.space3)) {
+                if (item.clip?.state == ClipState.READY) {
+                    Button(
+                        onClick = { onPlayClip(item) },
+                        enabled = item.absoluteClipPath != null,
+                        modifier = Modifier.heightIn(min = 48.dp),
+                    ) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                        Text("Play clip")
+                    }
+                }
                 Button(
                     onClick = { onPlayFromHere(event) },
                     enabled = canPlayFromTimeline,
@@ -207,6 +232,14 @@ private fun TimelineEventCard(
                 ) {
                     Icon(Icons.Filled.PlayArrow, contentDescription = null)
                     Text("Play from here")
+                }
+                if (item.clip?.state == ClipState.FAILED) {
+                    OutlinedButton(
+                        onClick = { onRetryClip(item.clip) },
+                        modifier = Modifier.heightIn(min = 48.dp),
+                    ) {
+                        Text("Retry")
+                    }
                 }
                 OutlinedButton(
                     onClick = { onDeleteEvent(event) },
@@ -218,6 +251,26 @@ private fun TimelineEventCard(
             }
         }
     }
+}
+
+@Composable
+private fun ClipStatePanel(item: TimelineEventUiItem) {
+    val clip = item.clip ?: return
+    val message = when (clip.state) {
+        ClipState.PENDING -> "Clip pending"
+        ClipState.PROCESSING -> "Clip processing"
+        ClipState.READY -> if (item.clipMissing) "Clip file is missing or unreadable." else "Clip ready"
+        ClipState.FAILED -> "Clip failed: ${clip.errorMessage ?: "Unknown error"}"
+    }
+    Text(
+        text = message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (clip.state == ClipState.FAILED || item.clipMissing) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+    )
 }
 
 @Composable

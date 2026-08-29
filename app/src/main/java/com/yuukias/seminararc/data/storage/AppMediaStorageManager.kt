@@ -72,6 +72,19 @@ class AppMediaStorageManager @Inject constructor(
         )
     }
 
+    override suspend fun createClipOutputFile(
+        seminarId: Long,
+        clipId: Long,
+    ): ClipOutputFile = withContext(Dispatchers.IO) {
+        val targetDir = seminarMediaDir(seminarId, "clips").apply { mkdirs() }
+        val targetFile = uniqueFile(targetDir, "clip-$clipId", "m4a")
+        ClipOutputFile(
+            displayName = targetFile.name,
+            relativePath = targetFile.relativeTo(context.filesDir).invariantSeparatorsPath,
+            file = targetFile,
+        )
+    }
+
     override suspend fun resolveReadableRelativeFile(relativePath: String): File? = withContext(Dispatchers.IO) {
         val trimmedPath = relativePath.trim()
         if (trimmedPath.isBlank()) {
