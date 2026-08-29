@@ -17,6 +17,7 @@ data class RecordingOutputFile(
 interface MediaStorageManager {
     suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): StoredFile
     suspend fun createRecordingOutputFile(seminarId: Long, startedAt: Instant): RecordingOutputFile
+    suspend fun resolveReadableRelativeFile(relativePath: String): File?
     suspend fun deleteRelativeFile(relativePath: String)
     suspend fun deleteSeminarMedia(seminarId: Long)
 }

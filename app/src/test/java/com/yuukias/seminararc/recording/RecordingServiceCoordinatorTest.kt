@@ -288,6 +288,8 @@ private class FakeMediaStorageManager : MediaStorageManager {
         )
     }
 
+    override suspend fun resolveReadableRelativeFile(relativePath: String): File? = null
+
     override suspend fun deleteRelativeFile(relativePath: String) {
         deletedRelativePaths += relativePath
     }

@@ -58,6 +58,21 @@ class AppMediaStorageManager @Inject constructor(
         )
     }
 
+    override suspend fun resolveReadableRelativeFile(relativePath: String): File? = withContext(Dispatchers.IO) {
+        val trimmedPath = relativePath.trim()
+        if (trimmedPath.isBlank()) {
+            return@withContext null
+        }
+        val root = context.filesDir.canonicalFile
+        val candidate = File(root, trimmedPath).canonicalFile
+        val isInsideAppFiles = candidate.path == root.path ||
+            candidate.path.startsWith(root.path + File.separator)
+        if (!isInsideAppFiles || candidate.isAbsolutePathFromInput(trimmedPath)) {
+            return@withContext null
+        }
+        candidate.takeIf { file -> file.isFile && file.canRead() }
+    }
+
     override suspend fun deleteRelativeFile(relativePath: String): Unit = withContext(Dispatchers.IO) {
         val file = File(context.filesDir, relativePath)
         if (file.exists()) {
@@ -105,6 +120,10 @@ class AppMediaStorageManager @Inject constructor(
                 StandardCopyOption.REPLACE_EXISTING,
             )
         }
+    }
+
+    private fun File.isAbsolutePathFromInput(input: String): Boolean {
+        return File(input).isAbsolute
     }
 
     private companion object {

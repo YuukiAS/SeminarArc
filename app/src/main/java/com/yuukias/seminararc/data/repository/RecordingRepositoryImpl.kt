@@ -29,6 +29,12 @@ class RecordingRepositoryImpl @Inject constructor(
         return recordingDao.observeLatestRecordingForSeminar(seminarId).map { entity -> entity?.toDomain() }
     }
 
+    override fun observeRecordingsForSeminar(seminarId: Long): Flow<List<RecordingSession>> {
+        return recordingDao.observeRecordingsForSeminar(seminarId).map { entities ->
+            entities.map { entity -> entity.toDomain() }
+        }
+    }
+
     override suspend fun beginRecordingForActiveSeminar(
         seminarId: Long,
         filePath: String,

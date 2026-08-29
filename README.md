@@ -22,6 +22,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - One-active-seminar invariant 与 session start 语义。
 - Microphone foreground service、本地 `.m4a` recording backend、ongoing notification 和 `RecordingEntity` durable lifecycle。
 - Active Session route、录音状态恢复 UI、权限拒绝状态、notification 返回现场页、以及 End Seminar 的 stop/finalize 后完成 seminar 流程。
+- Seminar Detail 的完整录音回放：Media3 页面内播放器、Play/Pause/Seek、duration/position、文件缺失和失败录音状态。
 - `0.1.x` 到 `0.2.x` 的分阶段计划文档。
 
 尚未声明完成：
@@ -29,7 +30,6 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - CameraX slide capture。
 - 录音中 timeline event 写入。
 - Clip generation、retry 和 full-recording fallback。
-- Full recording playback UI。
 - Markdown/ZIP 导出和最终本地 MVP 验收。
 
 ## 文档入口
@@ -48,7 +48,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 后续不要直接执行整个 `TODO.md`。默认按以下顺序把计划拆成小 task：
 
 1. `0.1.1` closeout：构建、CI、Room、UI、PDF 生命周期和文档收口。
-2. `0.1.2` recording：foreground service、active seminar invariant、恢复和完整录音回放。
+2. `0.1.2` recording validation：真机/设备录音、notification、完成后 `.m4a` 播放和文档收口验收。
 3. `0.1.3` capture/timeline：CameraX、photo-only、offset、现场交互和统一 timeline。
 4. `0.1.4` clip：WorkManager、clip 状态、retry 和 full-recording fallback。
 5. `0.1.5` local MVP：Markdown/ZIP 导出、数据清理、验收、README/隐私/CI 收口。

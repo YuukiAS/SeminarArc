@@ -22,6 +22,9 @@ interface RecordingDao {
     @Query("SELECT * FROM recordings WHERE seminarId = :seminarId ORDER BY startedAt DESC LIMIT 1")
     fun observeLatestRecordingForSeminar(seminarId: Long): Flow<RecordingEntity?>
 
+    @Query("SELECT * FROM recordings WHERE seminarId = :seminarId ORDER BY startedAt DESC, id DESC")
+    fun observeRecordingsForSeminar(seminarId: Long): Flow<List<RecordingEntity>>
+
     @Query(
         """
         SELECT * FROM recordings

@@ -15,6 +15,8 @@ import com.yuukias.seminararc.data.storage.AppMediaStorageManager
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.media.playback.Media3RecordingPlaybackController
+import com.yuukias.seminararc.media.playback.RecordingPlaybackController
 import com.yuukias.seminararc.recording.controller.AndroidMediaRecorderControllerFactory
 import com.yuukias.seminararc.recording.controller.RecorderControllerFactory
 import com.yuukias.seminararc.recording.service.AndroidRecordingPermissionChecker
@@ -30,6 +32,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -101,4 +104,13 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindSeminarRepository(impl: SeminarRepositoryImpl): SeminarRepository
+}
+
+@Module
+@InstallIn(ViewModelComponent::class)
+abstract class PlaybackModule {
+    @Binds
+    abstract fun bindRecordingPlaybackController(
+        impl: Media3RecordingPlaybackController,
+    ): RecordingPlaybackController
 }

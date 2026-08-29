@@ -11,8 +11,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -26,16 +29,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -96,6 +104,10 @@ fun SeminarDetailScreen(
         }
     }
 
+    DisposableEffect(Unit) {
+        onDispose { viewModel.onPlaybackSurfaceDisposed() }
+    }
+
     SeminarDetailScreenContent(
         uiState = uiState,
         onBack = onBack,
@@ -105,6 +117,8 @@ fun SeminarDetailScreen(
         onDeleteDialogChanged = viewModel::onDeleteDialogChanged,
         onDeleteConfirmed = viewModel::onDeleteConfirmed,
         onStartRecording = startRecording,
+        onPlaybackPlayPause = viewModel::onPlaybackPlayPauseClicked,
+        onPlaybackSeek = viewModel::onPlaybackSeek,
         modifier = modifier,
     )
 }
@@ -120,6 +134,8 @@ fun SeminarDetailScreenContent(
     onDeleteDialogChanged: (Boolean) -> Unit,
     onDeleteConfirmed: () -> Unit,
     onStartRecording: () -> Unit,
+    onPlaybackPlayPause: () -> Unit,
+    onPlaybackSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
@@ -184,7 +200,10 @@ fun SeminarDetailScreenContent(
                         detail = uiState.detail,
                         isStartingRecording = uiState.isStartingRecording,
                         recordingErrorMessage = uiState.recordingErrorMessage,
+                        playback = uiState.recordingPlayback,
                         onStartRecording = onStartRecording,
+                        onPlaybackPlayPause = onPlaybackPlayPause,
+                        onPlaybackSeek = onPlaybackSeek,
                     )
                     SeminarTimelinePreview(uiState.detail.timelinePreview)
                     TextButton(
@@ -277,7 +296,10 @@ private fun SeminarRecordingSection(
     detail: SeminarDetail,
     isStartingRecording: Boolean,
     recordingErrorMessage: String?,
+    playback: RecordingPlaybackUiState,
     onStartRecording: () -> Unit,
+    onPlaybackPlayPause: () -> Unit,
+    onPlaybackSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
@@ -292,6 +314,11 @@ private fun SeminarRecordingSection(
                 detail.status.toRecordingSummaryText(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            RecordingPlaybackSummary(
+                playback = playback,
+                onPlayPause = onPlaybackPlayPause,
+                onSeek = onPlaybackSeek,
             )
             recordingErrorMessage?.let {
                 Text(
@@ -323,7 +350,174 @@ private fun SeminarStatus.toRecordingSummaryText(): String {
     return when (this) {
         SeminarStatus.DRAFT -> "Start seminar creates one active local session and starts foreground microphone recording."
         SeminarStatus.ACTIVE -> "Resume returns to the active session or its recovery state without creating a second seminar."
-        SeminarStatus.COMPLETED -> "This seminar is completed. Full recording playback is planned for the next task."
+        SeminarStatus.COMPLETED -> "This seminar is completed. Full recording playback is available when its local recording file is present."
+    }
+}
+
+@Composable
+private fun RecordingPlaybackSummary(
+    playback: RecordingPlaybackUiState,
+    onPlayPause: () -> Unit,
+    onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    when (playback) {
+        RecordingPlaybackUiState.NoRecording -> Text(
+            text = "No recording has been completed for this seminar.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier,
+        )
+        RecordingPlaybackUiState.Loading -> Text(
+            text = "Checking recording file...",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier,
+        )
+        is RecordingPlaybackUiState.RecordingInProgress -> Text(
+            text = "Recording is still in progress. Return to Active Session for live controls.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier,
+        )
+        is RecordingPlaybackUiState.FailedRecording -> Text(
+            text = "Recording did not finish normally. ${playback.message}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier = modifier,
+        )
+        is RecordingPlaybackUiState.MissingFile -> Text(
+            text = playback.message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier = modifier,
+        )
+        is RecordingPlaybackUiState.Ready -> FullRecordingPlayer(
+            label = "Recording ready",
+            durationMs = playback.durationMs,
+            positionMs = playback.positionMs,
+            isPlaying = false,
+            onPlayPause = onPlayPause,
+            onSeek = onSeek,
+            modifier = modifier,
+        )
+        is RecordingPlaybackUiState.Preparing -> FullRecordingPlayer(
+            label = "Preparing recording",
+            durationMs = playback.durationMs,
+            positionMs = playback.positionMs,
+            isPlaying = false,
+            onPlayPause = onPlayPause,
+            onSeek = onSeek,
+            enabled = false,
+            modifier = modifier,
+        )
+        is RecordingPlaybackUiState.Playing -> FullRecordingPlayer(
+            label = "Recording playing",
+            durationMs = playback.durationMs,
+            positionMs = playback.positionMs,
+            isPlaying = true,
+            onPlayPause = onPlayPause,
+            onSeek = onSeek,
+            modifier = modifier,
+        )
+        is RecordingPlaybackUiState.Ended -> FullRecordingPlayer(
+            label = "Recording ended",
+            durationMs = playback.durationMs,
+            positionMs = playback.positionMs,
+            isPlaying = false,
+            onPlayPause = onPlayPause,
+            onSeek = onSeek,
+            modifier = modifier,
+        )
+        is RecordingPlaybackUiState.PlaybackError -> {
+            Column(
+                modifier = modifier,
+                verticalArrangement = Arrangement.spacedBy(spacing.space2),
+            ) {
+                FullRecordingPlayer(
+                    label = "Playback error",
+                    durationMs = playback.durationMs,
+                    positionMs = playback.positionMs,
+                    isPlaying = false,
+                    onPlayPause = onPlayPause,
+                    onSeek = onSeek,
+                )
+                Text(
+                    text = playback.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullRecordingPlayer(
+    label: String,
+    durationMs: Long?,
+    positionMs: Long,
+    isPlaying: Boolean,
+    onPlayPause: () -> Unit,
+    onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    val safeDuration = durationMs?.coerceAtLeast(0L) ?: 0L
+    val safePosition = positionMs.coerceIn(0L, safeDuration.takeIf { it > 0L } ?: positionMs.coerceAtLeast(0L))
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(spacing.space2),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(spacing.space3),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            IconButton(
+                onClick = onPlayPause,
+                enabled = enabled,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause recording" else "Play recording",
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = "${formatDuration(safePosition)} / ${formatDuration(durationMs)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Slider(
+            value = safePosition.toFloat(),
+            onValueChange = { value -> onSeek(value.toLong()) },
+            valueRange = 0f..safeDuration.coerceAtLeast(1L).toFloat(),
+            enabled = enabled && safeDuration > 0L,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription = "Recording position ${formatDuration(safePosition)} of ${formatDuration(durationMs)}"
+                },
+        )
+    }
+}
+
+private fun formatDuration(durationMs: Long?): String {
+    val totalSeconds = (durationMs ?: 0L).coerceAtLeast(0L) / 1000L
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    val seconds = totalSeconds % 60L
+    return if (hours > 0L) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
     }
 }
 

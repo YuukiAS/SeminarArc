@@ -5,10 +5,17 @@ import com.yuukias.seminararc.domain.model.CompleteRecordingResult
 import com.yuukias.seminararc.domain.model.FailRecordingResult
 import com.yuukias.seminararc.domain.model.RecordingSession
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.time.Instant
 
 interface RecordingRepository {
     fun observeLatestRecordingForSeminar(seminarId: Long): Flow<RecordingSession?>
+
+    fun observeRecordingsForSeminar(seminarId: Long): Flow<List<RecordingSession>> {
+        return observeLatestRecordingForSeminar(seminarId).map { recording ->
+            if (recording == null) emptyList() else listOf(recording)
+        }
+    }
 
     suspend fun beginRecordingForActiveSeminar(
         seminarId: Long,
