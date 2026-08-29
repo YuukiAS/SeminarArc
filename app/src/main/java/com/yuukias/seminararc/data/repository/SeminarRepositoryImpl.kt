@@ -10,6 +10,7 @@ import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.model.AbstractAttachment
 import com.yuukias.seminararc.domain.model.ActiveSeminarSession
 import com.yuukias.seminararc.domain.model.ActiveSeminarSessionState
+import com.yuukias.seminararc.domain.model.CompleteSeminarResult
 import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarDraftInput
 import com.yuukias.seminararc.domain.model.SeminarEditorData
@@ -135,6 +136,46 @@ class SeminarRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun completeActiveSeminar(seminarId: Long): CompleteSeminarResult {
+        return transactionRunner.withTransaction {
+            val requested = seminarDao.getSeminar(seminarId)
+                ?: return@withTransaction CompleteSeminarResult.NotFound(seminarId)
+            when (requested.status) {
+                SeminarStatus.COMPLETED -> return@withTransaction CompleteSeminarResult.AlreadyCompleted(seminarId)
+                SeminarStatus.DRAFT -> return@withTransaction CompleteSeminarResult.NotActive(seminarId, requested.status)
+                SeminarStatus.ACTIVE -> Unit
+            }
+
+            when (val activeState = seminarDao.getSeminarsByStatus(SeminarStatus.ACTIVE).toActiveSeminarSessionState()) {
+                is ActiveSeminarSessionState.Active -> {
+                    if (activeState.session.seminarId != seminarId) {
+                        return@withTransaction CompleteSeminarResult.NotActive(seminarId, SeminarStatus.DRAFT)
+                    }
+                }
+                ActiveSeminarSessionState.None -> return@withTransaction CompleteSeminarResult.LostUpdate(seminarId)
+                is ActiveSeminarSessionState.RecoveryRequired -> {
+                    if (activeState.reason == SeminarSessionRecoveryReason.MULTIPLE_ACTIVE_SEMINARS) {
+                        return@withTransaction CompleteSeminarResult.LostUpdate(seminarId)
+                    }
+                }
+            }
+
+            val now = clockProvider.now()
+            val changedRows = seminarDao.markActiveSeminarCompleted(
+                seminarId = seminarId,
+                activeStatus = SeminarStatus.ACTIVE,
+                completedStatus = SeminarStatus.COMPLETED,
+                endedAt = now,
+                updatedAt = now,
+            )
+            if (changedRows == 1) {
+                CompleteSeminarResult.Completed(seminarId)
+            } else {
+                CompleteSeminarResult.LostUpdate(seminarId)
+            }
+        }
+    }
+
     override suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): AbstractAttachment {
         val existingPath = seminarDao.getSeminar(seminarId)?.abstractPdfPath
         val stored = mediaStorageManager.importAbstractPdf(seminarId, sourceUri)
@@ -201,6 +242,8 @@ class SeminarRepositoryImpl @Inject constructor(
             abstractText = abstractText,
             abstractAttachment = abstractPdfPath?.let(::attachmentFromPath),
             status = status,
+            sessionStartedAt = sessionStartedAt,
+            sessionEndedAt = sessionEndedAt,
             rating = rating,
             isFavorite = isFavorite,
             photoCount = photoCount,

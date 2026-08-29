@@ -21,11 +21,11 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - Abstract PDF import / replace / remove 的本地文件生命周期基础。
 - One-active-seminar invariant 与 session start 语义。
 - Microphone foreground service、本地 `.m4a` recording backend、ongoing notification 和 `RecordingEntity` durable lifecycle。
+- Active Session route、录音状态恢复 UI、权限拒绝状态、notification 返回现场页、以及 End Seminar 的 stop/finalize 后完成 seminar 流程。
 - `0.1.x` 到 `0.2.x` 的分阶段计划文档。
 
 尚未声明完成：
 
-- Active session 恢复流程。
 - CameraX slide capture。
 - 录音中 timeline event 写入。
 - Clip generation、retry 和 full-recording fallback。
@@ -79,6 +79,17 @@ Windows PowerShell 可使用：
 - 相机：`0.1.3` 起用于 slide capture。
 
 权限拒绝必须有真实状态和恢复路径；不能用静态 Compose 页面冒充可用功能。
+
+## Active Session 与恢复
+
+`0.1.2` 现在把详情页的 `Start seminar` / `Resume seminar` 正常流程导航到 Active Session，而不是只在详情页显示临时消息。Active Session 从 Room 中的 durable seminar/recording facts 和当前进程 runtime recorder state 推导 UI：
+
+- 当前进程持有 live recorder 时显示 `Recording` 与本地 elapsed timer。
+- Room 中遗留 `RECORDING` row 但当前进程没有 live recorder 时显示 recovery，而不是伪装正在录音。
+- process-start recovery 会先捕获启动前 stale recording IDs，再只标记这些 rows 为 `FAILED`，避免误杀同一进程中新创建的录音。
+- `End Seminar` 会先停止并 finalize recorder，再条件化完成 seminar 并写 `sessionEndedAt`；stop/finalize 失败时不会把 seminar 宣称为 completed。
+
+计时器使用 `RecordingSession.startedAt` 或 seminar `sessionStartedAt` 作为事实来源，UI 本地 tick 只负责显示，不会每秒写 Room。
 
 ## 当前明确不做
 

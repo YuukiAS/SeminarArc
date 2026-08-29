@@ -28,6 +28,16 @@ interface RecordingRepository {
         errorMessage: String,
     ): FailRecordingResult
 
+    suspend fun getOpenRecordingIds(): List<Long>
+
+    suspend fun getOpenRecordingIdsForSeminar(seminarId: Long): List<Long>
+
+    suspend fun failRecordings(
+        recordingIds: List<Long>,
+        endedAt: Instant,
+        errorMessage: String,
+    ): Int
+
     suspend fun failOpenRecordings(
         endedAt: Instant,
         errorMessage: String,

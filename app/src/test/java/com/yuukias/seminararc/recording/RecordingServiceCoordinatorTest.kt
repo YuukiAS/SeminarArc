@@ -7,6 +7,7 @@ import com.yuukias.seminararc.domain.model.BeginRecordingResult
 import com.yuukias.seminararc.domain.model.CompleteRecordingResult
 import com.yuukias.seminararc.domain.model.FailRecordingResult
 import com.yuukias.seminararc.domain.model.RecordingSession
+import com.yuukias.seminararc.domain.model.RecordingServiceState
 import com.yuukias.seminararc.domain.model.RecordingState
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.recording.controller.RecorderController
@@ -15,6 +16,7 @@ import com.yuukias.seminararc.recording.controller.RecorderStartResult
 import com.yuukias.seminararc.recording.controller.RecorderStopResult
 import com.yuukias.seminararc.recording.notification.SeminarRecordingNotificationContract
 import com.yuukias.seminararc.recording.notification.SeminarRecordingNotificationSpecFactory
+import com.yuukias.seminararc.recording.service.RecordingRecoveryInitializer
 import com.yuukias.seminararc.recording.service.RecordingServiceCommandResult
 import com.yuukias.seminararc.recording.service.RecordingServiceCoordinator
 import com.yuukias.seminararc.util.ClockProvider
@@ -60,6 +62,23 @@ class RecordingServiceCoordinatorTest {
         assertEquals(1, repository.beginCalls)
         assertEquals(1, storage.createdForSeminarIds.size)
         assertEquals(1, controller.startCalls)
+    }
+
+    @Test
+    fun start_whenDurableRecordingExistsWithoutLiveRuntime_returnsRecoveryRequired() = runTest {
+        val repository = FakeRecordingRepository(
+            beginResult = BeginRecordingResult.StaleRecording(recordingSession(), "Seminar 12"),
+        )
+        val storage = FakeMediaStorageManager()
+        val controller = FakeRecorderController()
+        val coordinator = coordinator(repository, storage, FakeRecorderControllerFactory(controller))
+
+        val result = coordinator.start(12L)
+
+        assertTrue(result is RecordingServiceCommandResult.RecoveryRequired)
+        assertTrue(coordinator.state.value is RecordingServiceState.RecoveryRequired)
+        assertEquals(0, controller.startCalls)
+        assertEquals(storage.createdRelativePaths, storage.deletedRelativePaths)
     }
 
     @Test
@@ -118,6 +137,38 @@ class RecordingServiceCoordinatorTest {
     }
 
     @Test
+    fun abandonActiveRecording_releasesRuntimeAndMarksRecordingFailed() = runTest {
+        val repository = FakeRecordingRepository()
+        val controller = FakeRecorderController()
+        val coordinator = coordinator(repository, FakeMediaStorageManager(), FakeRecorderControllerFactory(controller))
+
+        coordinator.start(12L)
+        val result = coordinator.abandonActiveRecording("service destroyed")
+
+        assertEquals(RecordingServiceCommandResult.Failed("service destroyed"), result)
+        assertEquals(RecordingState.FAILED, repository.recording.state)
+        assertEquals("service destroyed", repository.recording.errorMessage)
+        assertEquals(1, controller.releaseCalls)
+        assertEquals(RecordingServiceCommandResult.Idle, coordinator.stop())
+    }
+
+    @Test
+    fun startupRecovery_snapshotsOpenRecordingIdsAndDoesNotFailNewRowsAddedAfterSnapshot() = runTest {
+        val repository = FakeRecordingRepository().apply {
+            openRecordingIds = listOf(1L)
+            onFailRecordings = { openRecordingIds = listOf(1L, 2L) }
+        }
+        val recoveryInitializer = RecordingRecoveryInitializer(
+            recordingRepository = repository,
+            clockProvider = ClockProvider { Instant.parse("2026-08-13T08:00:00Z") },
+        )
+
+        recoveryInitializer.awaitProcessRecovery()
+
+        assertEquals(listOf(listOf(1L)), repository.failedRecordingIdBatches)
+    }
+
+    @Test
     fun notificationSpec_usesStableChannelAndNotificationId() {
         val spec = SeminarRecordingNotificationSpecFactory().recording(
             seminarId = 12L,
@@ -144,9 +195,14 @@ private fun coordinator(
     )
 }
 
-private class FakeRecordingRepository : RecordingRepository {
+private class FakeRecordingRepository(
+    private val beginResult: BeginRecordingResult? = null,
+) : RecordingRepository {
     var beginCalls = 0
     var recording = recordingSession()
+    var openRecordingIds = emptyList<Long>()
+    var onFailRecordings: (() -> Unit)? = null
+    val failedRecordingIdBatches = mutableListOf<List<Long>>()
 
     override fun observeLatestRecordingForSeminar(seminarId: Long): Flow<RecordingSession?> = flowOf(recording)
 
@@ -156,6 +212,7 @@ private class FakeRecordingRepository : RecordingRepository {
         startedAt: Instant,
     ): BeginRecordingResult {
         beginCalls += 1
+        beginResult?.let { return it }
         recording = recording.copy(
             seminarId = seminarId,
             filePath = filePath,
@@ -194,11 +251,26 @@ private class FakeRecordingRepository : RecordingRepository {
     }
 
     override suspend fun failOpenRecordings(endedAt: Instant, errorMessage: String): Int = 0
+
+    override suspend fun getOpenRecordingIds(): List<Long> = openRecordingIds
+
+    override suspend fun getOpenRecordingIdsForSeminar(seminarId: Long): List<Long> = openRecordingIds
+
+    override suspend fun failRecordings(
+        recordingIds: List<Long>,
+        endedAt: Instant,
+        errorMessage: String,
+    ): Int {
+        onFailRecordings?.invoke()
+        failedRecordingIdBatches += recordingIds
+        return recordingIds.size
+    }
 }
 
 private class FakeMediaStorageManager : MediaStorageManager {
     val createdForSeminarIds = mutableListOf<Long>()
     val createdRelativePaths = mutableListOf<String>()
+    val deletedRelativePaths = mutableListOf<String>()
 
     override suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): StoredFile = error("Not used")
 
@@ -216,7 +288,9 @@ private class FakeMediaStorageManager : MediaStorageManager {
         )
     }
 
-    override suspend fun deleteRelativeFile(relativePath: String) = Unit
+    override suspend fun deleteRelativeFile(relativePath: String) {
+        deletedRelativePaths += relativePath
+    }
 
     override suspend fun deleteSeminarMedia(seminarId: Long) = Unit
 }
@@ -265,4 +339,3 @@ private fun recordingSession(): RecordingSession {
         errorMessage = null,
     )
 }
-

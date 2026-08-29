@@ -54,7 +54,7 @@ class RecordingRepositoryImpl @Inject constructor(
                 state = RecordingState.RECORDING,
             )
             if (existingRecording != null) {
-                return@withTransaction BeginRecordingResult.AlreadyRecording(
+                return@withTransaction BeginRecordingResult.StaleRecording(
                     recording = existingRecording.toDomain(),
                     seminarTitle = activeSeminar.title,
                 )
@@ -138,6 +138,34 @@ class RecordingRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun getOpenRecordingIds(): List<Long> {
+        return recordingDao.getRecordingIdsByState(RecordingState.RECORDING)
+    }
+
+    override suspend fun getOpenRecordingIdsForSeminar(seminarId: Long): List<Long> {
+        return recordingDao.getRecordingIdsBySeminarAndState(
+            seminarId = seminarId,
+            state = RecordingState.RECORDING,
+        )
+    }
+
+    override suspend fun failRecordings(
+        recordingIds: List<Long>,
+        endedAt: Instant,
+        errorMessage: String,
+    ): Int {
+        if (recordingIds.isEmpty()) {
+            return 0
+        }
+        return recordingDao.markRecordingsFailed(
+            recordingIds = recordingIds,
+            recordingState = RecordingState.RECORDING,
+            failedState = RecordingState.FAILED,
+            endedAt = endedAt,
+            errorMessage = errorMessage.take(MAX_ERROR_LENGTH),
+        )
+    }
+
     private fun List<SeminarEntity>.toValidatedActiveState(): ActiveValidationFailure? {
         return when {
             isEmpty() -> ActiveValidationFailure(
@@ -198,4 +226,3 @@ class RecordingRepositoryImpl @Inject constructor(
         const val MAX_ERROR_LENGTH = 500
     }
 }
-

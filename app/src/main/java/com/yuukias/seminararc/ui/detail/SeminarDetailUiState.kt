@@ -9,6 +9,6 @@ sealed interface SeminarDetailUiState {
         val isDeleting: Boolean,
         val showDeleteDialog: Boolean,
         val isStartingRecording: Boolean,
-        val recordingMessage: String?,
+        val recordingErrorMessage: String?,
     ) : SeminarDetailUiState
 }

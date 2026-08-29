@@ -32,6 +32,8 @@ data class SeminarDetailRow(
     val abstractText: String?,
     val abstractPdfPath: String?,
     val status: SeminarStatus,
+    val sessionStartedAt: Instant?,
+    val sessionEndedAt: Instant?,
     val rating: Int?,
     val isFavorite: Boolean,
     val photoCount: Int,
@@ -94,6 +96,8 @@ interface SeminarDao {
             s.abstractText,
             s.abstractPdfPath,
             s.status,
+            s.sessionStartedAt,
+            s.sessionEndedAt,
             s.rating,
             s.isFavorite,
             (SELECT COUNT(*) FROM timeline_events t WHERE t.seminarId = s.id AND t.type = 'PHOTO') AS photoCount,
@@ -161,6 +165,24 @@ interface SeminarDao {
         draftStatus: SeminarStatus,
         activeStatus: SeminarStatus,
         startedAt: Instant,
+        updatedAt: Instant,
+    ): Int
+
+    @Query(
+        """
+        UPDATE seminars
+        SET
+            status = :completedStatus,
+            sessionEndedAt = :endedAt,
+            updatedAt = :updatedAt
+        WHERE id = :seminarId AND status = :activeStatus
+        """
+    )
+    suspend fun markActiveSeminarCompleted(
+        seminarId: Long,
+        activeStatus: SeminarStatus,
+        completedStatus: SeminarStatus,
+        endedAt: Instant,
         updatedAt: Instant,
     ): Int
 

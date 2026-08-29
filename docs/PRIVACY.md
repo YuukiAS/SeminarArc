@@ -15,6 +15,9 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - `RECORD_AUDIO` 是开始真实 microphone recording 的硬前提；未授权时不会启动 recorder，也不会创建“正在录音”的 Room 状态。
 - 录音通过 foreground service 持续运行，并显示 ongoing notification。
 - `POST_NOTIFICATIONS` 被拒绝时，SeminarArc 不会把它当作 recorder failure；Android 仍要求 foreground service 创建 notification，系统如何展示由平台权限状态决定。
+- 点击 recording notification 会返回对应 seminar 的 Active Session 页面，不会创建新的 seminar session。
+- 如果进程重启或 service 异常销毁导致录音中断，SeminarArc 会保留已有 app-private recording 文件和 Room 记录，并把不可继续的 recording row 标记为 `FAILED`，不会自动上传或删除其他 seminar assets。
+- 用户点击 `End Seminar` 后，应用会先停止并 finalize 本地 recorder，再把 seminar 标记为 `COMPLETED` 并写入 `sessionEndedAt`。
 
 ## 删除行为
 

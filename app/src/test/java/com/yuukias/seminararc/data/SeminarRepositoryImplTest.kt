@@ -10,6 +10,7 @@ import com.yuukias.seminararc.data.repository.SeminarRepositoryImpl
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.data.storage.RecordingOutputFile
 import com.yuukias.seminararc.data.storage.StoredFile
+import com.yuukias.seminararc.domain.model.CompleteSeminarResult
 import com.yuukias.seminararc.domain.model.SeminarSessionRecoveryReason
 import com.yuukias.seminararc.domain.model.SeminarDraftInput
 import com.yuukias.seminararc.domain.model.SeminarStatus
@@ -288,13 +289,65 @@ class SeminarRepositoryImplTest {
         assertEquals(SeminarStatus.DRAFT, dao.stored.getValue(12L).status)
         assertEquals(1, dao.markActiveCalls)
     }
+
+    @Test
+    fun completeActiveSeminar_whenActive_marksCompletedAndWritesEndedAt() = runTest {
+        val startedAt = Instant.parse("2026-07-13T09:00:00Z")
+        val dao = FakeSeminarDao().apply {
+            stored[12L] = seminar(id = 12L, abstractPath = null).copy(
+                status = SeminarStatus.ACTIVE,
+                sessionStartedAt = startedAt,
+            )
+        }
+        val repository = repository(dao)
+
+        val result = repository.completeActiveSeminar(12L)
+
+        assertEquals(CompleteSeminarResult.Completed(12L), result)
+        val stored = dao.stored.getValue(12L)
+        assertEquals(SeminarStatus.COMPLETED, stored.status)
+        assertEquals(Instant.parse("2026-07-13T10:00:00Z"), stored.sessionEndedAt)
+    }
+
+    @Test
+    fun completeActiveSeminar_whenSeminarIsNotActive_rejectsWithoutMutation() = runTest {
+        val dao = FakeSeminarDao().apply {
+            stored[12L] = seminar(id = 12L, abstractPath = null)
+        }
+        val repository = repository(dao)
+
+        val result = repository.completeActiveSeminar(12L)
+
+        assertEquals(CompleteSeminarResult.NotActive(12L, SeminarStatus.DRAFT), result)
+        assertEquals(SeminarStatus.DRAFT, dao.stored.getValue(12L).status)
+        assertEquals(0, dao.markCompletedCalls)
+    }
+
+    @Test
+    fun completeActiveSeminar_whenConditionalUpdateFails_returnsLostUpdate() = runTest {
+        val dao = FakeSeminarDao().apply {
+            stored[12L] = seminar(id = 12L, abstractPath = null).copy(
+                status = SeminarStatus.ACTIVE,
+                sessionStartedAt = Instant.parse("2026-07-13T09:00:00Z"),
+            )
+            markActiveSeminarCompletedResult = 0
+        }
+        val repository = repository(dao)
+
+        val result = repository.completeActiveSeminar(12L)
+
+        assertEquals(CompleteSeminarResult.LostUpdate(12L), result)
+        assertEquals(SeminarStatus.ACTIVE, dao.stored.getValue(12L).status)
+    }
 }
 
 private class FakeSeminarDao : SeminarDao {
     val stored = linkedMapOf<Long, SeminarEntity>()
     var updateAbstractPathFailure: RuntimeException? = null
     var markDraftSeminarActiveResult: Int? = null
+    var markActiveSeminarCompletedResult: Int? = null
     var markActiveCalls = 0
+    var markCompletedCalls = 0
     private var nextId = 100L
     private val listRows = MutableStateFlow<List<SeminarListRow>>(emptyList())
 
@@ -359,6 +412,27 @@ private class FakeSeminarDao : SeminarDao {
             status = activeStatus,
             sessionStartedAt = startedAt,
             sessionEndedAt = null,
+            updatedAt = updatedAt,
+        )
+        return 1
+    }
+
+    override suspend fun markActiveSeminarCompleted(
+        seminarId: Long,
+        activeStatus: SeminarStatus,
+        completedStatus: SeminarStatus,
+        endedAt: Instant,
+        updatedAt: Instant,
+    ): Int {
+        markCompletedCalls += 1
+        markActiveSeminarCompletedResult?.let { return it }
+        val existing = stored[seminarId] ?: return 0
+        if (existing.status != activeStatus) {
+            return 0
+        }
+        stored[seminarId] = existing.copy(
+            status = completedStatus,
+            sessionEndedAt = endedAt,
             updatedAt = updatedAt,
         )
         return 1

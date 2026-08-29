@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 
 sealed interface SeminarDetailEvent {
     data object Deleted : SeminarDetailEvent
+    data class OpenActiveSession(val seminarId: Long) : SeminarDetailEvent
 }
 
 @HiltViewModel
@@ -46,7 +47,7 @@ class SeminarDetailViewModel @Inject constructor(
                         isDeleting = current?.isDeleting ?: false,
                         showDeleteDialog = current?.showDeleteDialog ?: false,
                         isStartingRecording = current?.isStartingRecording ?: false,
-                        recordingMessage = current?.recordingMessage,
+                        recordingErrorMessage = current?.recordingErrorMessage,
                     )
                 }
             }
@@ -84,13 +85,25 @@ class SeminarDetailViewModel @Inject constructor(
     fun onStartRecordingClicked() {
         val current = _uiState.value as? SeminarDetailUiState.Ready ?: return
         viewModelScope.launch {
-            _uiState.value = current.copy(isStartingRecording = true, recordingMessage = null)
+            _uiState.value = current.copy(isStartingRecording = true, recordingErrorMessage = null)
             val result = startSeminarRecordingUseCase(current.detail.id)
             val latest = _uiState.value as? SeminarDetailUiState.Ready ?: return@launch
-            _uiState.value = latest.copy(
-                isStartingRecording = false,
-                recordingMessage = result.toMessage(),
-            )
+            when (result) {
+                is StartSeminarRecordingResult.Started -> {
+                    _uiState.value = latest.copy(isStartingRecording = false, recordingErrorMessage = null)
+                    _events.emit(SeminarDetailEvent.OpenActiveSession(result.seminarId))
+                }
+                is StartSeminarRecordingResult.AnotherSeminarActive -> {
+                    _uiState.value = latest.copy(isStartingRecording = false, recordingErrorMessage = null)
+                    _events.emit(SeminarDetailEvent.OpenActiveSession(result.activeSession.seminarId))
+                }
+                else -> {
+                    _uiState.value = latest.copy(
+                        isStartingRecording = false,
+                        recordingErrorMessage = result.toMessage(),
+                    )
+                }
+            }
         }
     }
 

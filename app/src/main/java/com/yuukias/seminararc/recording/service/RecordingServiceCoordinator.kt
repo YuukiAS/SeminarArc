@@ -24,11 +24,15 @@ class RecordingServiceCoordinator @Inject constructor(
     private val mediaStorageManager: MediaStorageManager,
     private val recorderControllerFactory: RecorderControllerFactory,
     private val clockProvider: ClockProvider,
-) {
+) : RecordingRuntimeController {
     private val mutex = Mutex()
     private var activeRuntime: ActiveRuntimeRecording? = null
     private val _state = MutableStateFlow<RecordingServiceState>(RecordingServiceState.Idle)
-    val state: StateFlow<RecordingServiceState> = _state
+    override val state: StateFlow<RecordingServiceState> = _state
+
+    override fun hasLiveRecordingForSeminar(seminarId: Long): Boolean {
+        return activeRuntime?.recording?.seminarId == seminarId
+    }
 
     suspend fun start(seminarId: Long): RecordingServiceCommandResult {
         return mutex.withLock {
@@ -86,14 +90,30 @@ class RecordingServiceCoordinator @Inject constructor(
                 }
                 is BeginRecordingResult.AlreadyRecording -> {
                     mediaStorageManager.deleteRelativeFile(outputFile.relativePath)
-                    _state.value = RecordingServiceState.Failed(
+                    _state.value = RecordingServiceState.RecoveryRequired(
                         seminarId = seminarId,
                         recordingId = beginResult.recording.id,
-                        message = "A durable recording row is already active.",
+                        message = "A durable recording row exists, but this process has no live recorder.",
                     )
-                    RecordingServiceCommandResult.AlreadyRunning(
+                    RecordingServiceCommandResult.RecoveryRequired(
                         seminarId = seminarId,
                         seminarTitle = beginResult.seminarTitle,
+                        recordingId = beginResult.recording.id,
+                        message = "A durable recording row exists, but this process has no live recorder.",
+                    )
+                }
+                is BeginRecordingResult.StaleRecording -> {
+                    mediaStorageManager.deleteRelativeFile(outputFile.relativePath)
+                    _state.value = RecordingServiceState.RecoveryRequired(
+                        seminarId = seminarId,
+                        recordingId = beginResult.recording.id,
+                        message = "A previous recording was interrupted and needs recovery before a new segment can start.",
+                    )
+                    RecordingServiceCommandResult.RecoveryRequired(
+                        seminarId = seminarId,
+                        seminarTitle = beginResult.seminarTitle,
+                        recordingId = beginResult.recording.id,
+                        message = "A previous recording was interrupted and needs recovery before a new segment can start.",
                     )
                 }
                 is BeginRecordingResult.AnotherSeminarActive -> {
@@ -117,6 +137,10 @@ class RecordingServiceCoordinator @Inject constructor(
     }
 
     suspend fun stop(): RecordingServiceCommandResult {
+        return stopActiveRecording()
+    }
+
+    override suspend fun stopActiveRecording(): RecordingServiceCommandResult {
         return mutex.withLock {
             val runtime = activeRuntime ?: return@withLock RecordingServiceCommandResult.Idle
             _state.value = RecordingServiceState.Stopping(runtime.recording.id)
@@ -175,6 +199,25 @@ class RecordingServiceCoordinator @Inject constructor(
         _state.value = RecordingServiceState.Idle
     }
 
+    override suspend fun abandonActiveRecording(errorMessage: String): RecordingServiceCommandResult {
+        return mutex.withLock {
+            val runtime = activeRuntime ?: return@withLock RecordingServiceCommandResult.Idle
+            runtime.controller.release()
+            activeRuntime = null
+            recordingRepository.failRecording(
+                recordingId = runtime.recording.id,
+                endedAt = clockProvider.now(),
+                errorMessage = errorMessage,
+            )
+            _state.value = RecordingServiceState.Failed(
+                seminarId = runtime.recording.seminarId,
+                recordingId = runtime.recording.id,
+                message = errorMessage,
+            )
+            RecordingServiceCommandResult.Failed(errorMessage)
+        }
+    }
+
     private data class ActiveRuntimeRecording(
         val recording: com.yuukias.seminararc.domain.model.RecordingSession,
         val seminarTitle: String,
@@ -185,6 +228,12 @@ class RecordingServiceCoordinator @Inject constructor(
 sealed interface RecordingServiceCommandResult {
     data class Started(val seminarId: Long, val seminarTitle: String) : RecordingServiceCommandResult
     data class AlreadyRunning(val seminarId: Long, val seminarTitle: String) : RecordingServiceCommandResult
+    data class RecoveryRequired(
+        val seminarId: Long,
+        val seminarTitle: String,
+        val recordingId: Long?,
+        val message: String,
+    ) : RecordingServiceCommandResult
     data object Stopped : RecordingServiceCommandResult
     data object Idle : RecordingServiceCommandResult
     data class Rejected(val message: String) : RecordingServiceCommandResult

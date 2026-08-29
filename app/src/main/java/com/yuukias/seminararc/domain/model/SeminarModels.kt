@@ -46,6 +46,8 @@ data class SeminarDetail(
     val abstractText: String?,
     val abstractAttachment: AbstractAttachment?,
     val status: SeminarStatus,
+    val sessionStartedAt: Instant?,
+    val sessionEndedAt: Instant?,
     val rating: Int?,
     val isFavorite: Boolean,
     val photoCount: Int,

@@ -20,6 +20,9 @@ import com.yuukias.seminararc.recording.controller.RecorderControllerFactory
 import com.yuukias.seminararc.recording.service.AndroidRecordingPermissionChecker
 import com.yuukias.seminararc.recording.service.AndroidRecordingServiceStarter
 import com.yuukias.seminararc.recording.service.RecordingPermissionChecker
+import com.yuukias.seminararc.recording.service.RecordingRuntimeController
+import com.yuukias.seminararc.recording.service.RecordingRuntimeStateProvider
+import com.yuukias.seminararc.recording.service.RecordingServiceCoordinator
 import com.yuukias.seminararc.recording.service.RecordingServiceStarter
 import com.yuukias.seminararc.util.ClockProvider
 import dagger.Binds
@@ -86,6 +89,14 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindRecordingServiceStarter(impl: AndroidRecordingServiceStarter): RecordingServiceStarter
+
+    @Binds
+    @Singleton
+    abstract fun bindRecordingRuntimeController(impl: RecordingServiceCoordinator): RecordingRuntimeController
+
+    @Binds
+    @Singleton
+    abstract fun bindRecordingRuntimeStateProvider(impl: RecordingServiceCoordinator): RecordingRuntimeStateProvider
 
     @Binds
     @Singleton

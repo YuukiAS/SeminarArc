@@ -38,6 +38,12 @@ interface RecordingDao {
     @Query("SELECT * FROM recordings WHERE state = :state ORDER BY startedAt DESC")
     suspend fun getRecordingsByState(state: RecordingState): List<RecordingEntity>
 
+    @Query("SELECT id FROM recordings WHERE state = :state ORDER BY startedAt ASC")
+    suspend fun getRecordingIdsByState(state: RecordingState): List<Long>
+
+    @Query("SELECT id FROM recordings WHERE seminarId = :seminarId AND state = :state ORDER BY startedAt ASC")
+    suspend fun getRecordingIdsBySeminarAndState(seminarId: Long, state: RecordingState): List<Long>
+
     @Insert
     suspend fun insertRecording(entity: RecordingEntity): Long
 
@@ -70,6 +76,23 @@ interface RecordingDao {
     )
     suspend fun markRecordingFailed(
         recordingId: Long,
+        failedState: RecordingState,
+        endedAt: Instant,
+        errorMessage: String,
+    ): Int
+
+    @Query(
+        """
+        UPDATE recordings
+        SET state = :failedState,
+            endedAt = :endedAt,
+            errorMessage = :errorMessage
+        WHERE id IN (:recordingIds) AND state = :recordingState
+        """
+    )
+    suspend fun markRecordingsFailed(
+        recordingIds: List<Long>,
+        recordingState: RecordingState,
         failedState: RecordingState,
         endedAt: Instant,
         errorMessage: String,

@@ -4,15 +4,19 @@ import com.yuukias.seminararc.domain.model.StartSeminarRecordingResult
 import com.yuukias.seminararc.domain.model.StartSeminarSessionResult
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.recording.service.RecordingPermissionChecker
+import com.yuukias.seminararc.recording.service.RecordingRecoveryInitializer
 import com.yuukias.seminararc.recording.service.RecordingServiceStarter
 import javax.inject.Inject
 
 class StartSeminarRecordingUseCase @Inject constructor(
     private val seminarRepository: SeminarRepository,
     private val permissionChecker: RecordingPermissionChecker,
+    private val recordingRecoveryInitializer: RecordingRecoveryInitializer,
     private val serviceStarter: RecordingServiceStarter,
 ) {
     suspend operator fun invoke(seminarId: Long): StartSeminarRecordingResult {
+        recordingRecoveryInitializer.awaitProcessRecovery()
+
         if (!permissionChecker.hasRecordAudioPermission()) {
             return StartSeminarRecordingResult.AudioPermissionDenied(seminarId)
         }
@@ -51,4 +55,3 @@ class StartSeminarRecordingUseCase @Inject constructor(
         }
     }
 }
-

@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yuukias.seminararc.domain.model.SeminarDetail
+import com.yuukias.seminararc.domain.model.SeminarStatus
 import com.yuukias.seminararc.domain.model.TimelinePreviewItem
 import com.yuukias.seminararc.ui.theme.SeminarArcThemeTokens
 import com.yuukias.seminararc.util.formatSeminarDateTime
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun SeminarDetailScreen(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
+    onOpenActiveSession: (Long) -> Unit,
     onDeleted: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SeminarDetailViewModel = hiltViewModel(),
@@ -89,6 +91,7 @@ fun SeminarDetailScreen(
         viewModel.events.collectLatest { event ->
             when (event) {
                 SeminarDetailEvent.Deleted -> onDeleted()
+                is SeminarDetailEvent.OpenActiveSession -> onOpenActiveSession(event.seminarId)
             }
         }
     }
@@ -180,7 +183,7 @@ fun SeminarDetailScreenContent(
                     SeminarRecordingSection(
                         detail = uiState.detail,
                         isStartingRecording = uiState.isStartingRecording,
-                        recordingMessage = uiState.recordingMessage,
+                        recordingErrorMessage = uiState.recordingErrorMessage,
                         onStartRecording = onStartRecording,
                     )
                     SeminarTimelinePreview(uiState.detail.timelinePreview)
@@ -273,7 +276,7 @@ private fun SeminarAbstractSection(detail: SeminarDetail, modifier: Modifier = M
 private fun SeminarRecordingSection(
     detail: SeminarDetail,
     isStartingRecording: Boolean,
-    recordingMessage: String?,
+    recordingErrorMessage: String?,
     onStartRecording: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -286,25 +289,41 @@ private fun SeminarRecordingSection(
             Text("Recording summary", style = MaterialTheme.typography.titleMedium)
             Text("${detail.photoCount} photos - ${detail.clipCount} clips", style = MaterialTheme.typography.bodyMedium)
             Text(
-                "Start / Resume creates one active seminar session and starts the foreground microphone recording service.",
+                detail.status.toRecordingSummaryText(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            recordingMessage?.let {
+            recordingErrorMessage?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
-            Button(
-                onClick = onStartRecording,
-                enabled = !isStartingRecording,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(if (isStartingRecording) "Starting recording..." else "Start / Resume recording")
+            if (detail.status != SeminarStatus.COMPLETED) {
+                Button(
+                    onClick = onStartRecording,
+                    enabled = !isStartingRecording,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        when {
+                            isStartingRecording -> "Starting..."
+                            detail.status == SeminarStatus.ACTIVE -> "Resume seminar"
+                            else -> "Start seminar"
+                        },
+                    )
+                }
             }
         }
+    }
+}
+
+private fun SeminarStatus.toRecordingSummaryText(): String {
+    return when (this) {
+        SeminarStatus.DRAFT -> "Start seminar creates one active local session and starts foreground microphone recording."
+        SeminarStatus.ACTIVE -> "Resume returns to the active session or its recovery state without creating a second seminar."
+        SeminarStatus.COMPLETED -> "This seminar is completed. Full recording playback is planned for the next task."
     }
 }
 

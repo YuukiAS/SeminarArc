@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
 class SeminarRecordingService : Service() {
@@ -27,6 +28,7 @@ class SeminarRecordingService : Service() {
     @Inject lateinit var notificationFactory: SeminarRecordingNotificationFactory
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var normalStopCompleted = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -40,6 +42,13 @@ class SeminarRecordingService : Service() {
     }
 
     override fun onDestroy() {
+        if (!normalStopCompleted) {
+            runBlocking(Dispatchers.IO) {
+                coordinator.abandonActiveRecording(
+                    "Recording service was destroyed before the recorder finalized.",
+                )
+            }
+        }
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -92,6 +101,7 @@ class SeminarRecordingService : Service() {
                         },
                     )
                 }
+                is RecordingServiceCommandResult.RecoveryRequired,
                 is RecordingServiceCommandResult.Rejected,
                 is RecordingServiceCommandResult.Failed,
                 RecordingServiceCommandResult.Idle,
@@ -103,6 +113,7 @@ class SeminarRecordingService : Service() {
     private fun handleStop() {
         serviceScope.launch {
             coordinator.stop()
+            normalStopCompleted = true
             stopForegroundAndSelf()
         }
     }
@@ -139,4 +150,3 @@ class SeminarRecordingService : Service() {
         }
     }
 }
-

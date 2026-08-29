@@ -24,6 +24,11 @@ sealed interface BeginRecordingResult {
         val seminarTitle: String,
     ) : BeginRecordingResult
 
+    data class StaleRecording(
+        val recording: RecordingSession,
+        val seminarTitle: String,
+    ) : BeginRecordingResult
+
     data class AnotherSeminarActive(
         val requestedSeminarId: Long,
         val activeSession: ActiveSeminarSession,
@@ -79,8 +84,16 @@ sealed interface RecordingServiceState {
     data object Idle : RecordingServiceState
     data class Starting(val seminarId: Long) : RecordingServiceState
     data class Recording(val recording: RecordingSession, val seminarTitle: String) : RecordingServiceState
+    data class RecoveryRequired(val seminarId: Long, val recordingId: Long?, val message: String) : RecordingServiceState
     data class Stopping(val recordingId: Long) : RecordingServiceState
     data class Completed(val recording: RecordingSession) : RecordingServiceState
     data class Failed(val seminarId: Long?, val recordingId: Long?, val message: String) : RecordingServiceState
 }
 
+sealed interface EndSeminarResult {
+    data class Completed(val seminarId: Long) : EndSeminarResult
+    data class StopFailed(val seminarId: Long, val message: String) : EndSeminarResult
+    data class CannotComplete(val seminarId: Long, val reason: String) : EndSeminarResult
+    data class AlreadyCompleted(val seminarId: Long) : EndSeminarResult
+    data class NotFound(val seminarId: Long) : EndSeminarResult
+}

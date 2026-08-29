@@ -2,6 +2,7 @@ package com.yuukias.seminararc.domain.repository
 
 import com.yuukias.seminararc.domain.model.AbstractAttachment
 import com.yuukias.seminararc.domain.model.ActiveSeminarSessionState
+import com.yuukias.seminararc.domain.model.CompleteSeminarResult
 import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarDraftInput
 import com.yuukias.seminararc.domain.model.SeminarEditorData
@@ -25,6 +26,8 @@ interface SeminarRepository {
     suspend fun getActiveSeminarSessionState(): ActiveSeminarSessionState
 
     suspend fun startSeminarSession(seminarId: Long): StartSeminarSessionResult
+
+    suspend fun completeActiveSeminar(seminarId: Long): CompleteSeminarResult
 
     suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): AbstractAttachment
 
