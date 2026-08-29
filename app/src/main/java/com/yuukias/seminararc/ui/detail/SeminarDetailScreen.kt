@@ -19,7 +19,10 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PictureAsPdf
+import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -59,6 +62,7 @@ fun SeminarDetailScreen(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onOpenActiveSession: (Long) -> Unit,
+    onOpenTimeline: (Long) -> Unit,
     onDeleted: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SeminarDetailViewModel = hiltViewModel(),
@@ -100,6 +104,7 @@ fun SeminarDetailScreen(
             when (event) {
                 SeminarDetailEvent.Deleted -> onDeleted()
                 is SeminarDetailEvent.OpenActiveSession -> onOpenActiveSession(event.seminarId)
+                is SeminarDetailEvent.OpenTimeline -> onOpenTimeline(event.seminarId)
             }
         }
     }
@@ -117,6 +122,8 @@ fun SeminarDetailScreen(
         onDeleteDialogChanged = viewModel::onDeleteDialogChanged,
         onDeleteConfirmed = viewModel::onDeleteConfirmed,
         onStartRecording = startRecording,
+        onStartPhotosOnly = viewModel::onStartPhotosOnlyClicked,
+        onOpenTimeline = viewModel::onOpenTimelineClicked,
         onPlaybackPlayPause = viewModel::onPlaybackPlayPauseClicked,
         onPlaybackSeek = viewModel::onPlaybackSeek,
         modifier = modifier,
@@ -134,6 +141,8 @@ fun SeminarDetailScreenContent(
     onDeleteDialogChanged: (Boolean) -> Unit,
     onDeleteConfirmed: () -> Unit,
     onStartRecording: () -> Unit,
+    onStartPhotosOnly: () -> Unit,
+    onOpenTimeline: () -> Unit,
     onPlaybackPlayPause: () -> Unit,
     onPlaybackSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -202,10 +211,14 @@ fun SeminarDetailScreenContent(
                         recordingErrorMessage = uiState.recordingErrorMessage,
                         playback = uiState.recordingPlayback,
                         onStartRecording = onStartRecording,
+                        onStartPhotosOnly = onStartPhotosOnly,
                         onPlaybackPlayPause = onPlaybackPlayPause,
                         onPlaybackSeek = onPlaybackSeek,
                     )
-                    SeminarTimelinePreview(uiState.detail.timelinePreview)
+                    SeminarTimelinePreview(
+                        items = uiState.detail.timelinePreview,
+                        onOpenTimeline = onOpenTimeline,
+                    )
                     TextButton(
                         onClick = { onDeleteDialogChanged(true) },
                         enabled = !uiState.isDeleting,
@@ -298,6 +311,7 @@ private fun SeminarRecordingSection(
     recordingErrorMessage: String?,
     playback: RecordingPlaybackUiState,
     onStartRecording: () -> Unit,
+    onStartPhotosOnly: () -> Unit,
     onPlaybackPlayPause: () -> Unit,
     onPlaybackSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -328,18 +342,29 @@ private fun SeminarRecordingSection(
                 )
             }
             if (detail.status != SeminarStatus.COMPLETED) {
-                Button(
-                    onClick = onStartRecording,
-                    enabled = !isStartingRecording,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        when {
-                            isStartingRecording -> "Starting..."
-                            detail.status == SeminarStatus.ACTIVE -> "Resume seminar"
-                            else -> "Start seminar"
-                        },
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
+                    Button(
+                        onClick = onStartRecording,
+                        enabled = !isStartingRecording,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Outlined.Mic, contentDescription = null)
+                        Text(
+                            when {
+                                isStartingRecording -> "Starting..."
+                                detail.status == SeminarStatus.ACTIVE -> "Resume seminar"
+                                else -> "Start seminar"
+                            },
+                        )
+                    }
+                    Button(
+                        onClick = onStartPhotosOnly,
+                        enabled = !isStartingRecording,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
+                        Text(if (detail.status == SeminarStatus.ACTIVE) "Resume photos only" else "Start photos only")
+                    }
                 }
             }
         }
@@ -528,6 +553,7 @@ private fun android.content.Context.hasPermission(permission: String): Boolean {
 @Composable
 private fun SeminarTimelinePreview(
     items: List<TimelinePreviewItem>,
+    onOpenTimeline: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
@@ -537,6 +563,10 @@ private fun SeminarTimelinePreview(
             verticalArrangement = Arrangement.spacedBy(spacing.space3),
         ) {
             Text("Timeline preview", style = MaterialTheme.typography.titleMedium)
+            Button(onClick = onOpenTimeline, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Outlined.Timeline, contentDescription = null)
+                Text("Open timeline")
+            }
             if (items.isEmpty()) {
                 Text(
                     "Timeline items will appear here after the recording, mark, note, question, and photo flows are added in later batches.",

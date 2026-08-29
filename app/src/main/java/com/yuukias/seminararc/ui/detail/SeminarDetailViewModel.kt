@@ -7,6 +7,7 @@ import androidx.navigation.toRoute
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.model.RecordingSession
 import com.yuukias.seminararc.domain.model.RecordingState
+import com.yuukias.seminararc.domain.model.StartSeminarSessionResult
 import com.yuukias.seminararc.domain.model.StartSeminarRecordingResult
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 sealed interface SeminarDetailEvent {
     data object Deleted : SeminarDetailEvent
     data class OpenActiveSession(val seminarId: Long) : SeminarDetailEvent
+    data class OpenTimeline(val seminarId: Long) : SeminarDetailEvent
 }
 
 @HiltViewModel
@@ -130,6 +132,51 @@ class SeminarDetailViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun onStartPhotosOnlyClicked() {
+        val current = _uiState.value as? SeminarDetailUiState.Ready ?: return
+        viewModelScope.launch {
+            _uiState.value = current.copy(isStartingRecording = true, recordingErrorMessage = null)
+            val result = seminarRepository.startSeminarSession(current.detail.id)
+            val latest = _uiState.value as? SeminarDetailUiState.Ready ?: return@launch
+            when (result) {
+                is StartSeminarSessionResult.Started -> {
+                    _uiState.value = latest.copy(isStartingRecording = false, recordingErrorMessage = null)
+                    _events.emit(SeminarDetailEvent.OpenActiveSession(result.session.seminarId))
+                }
+                is StartSeminarSessionResult.AlreadyActive -> {
+                    _uiState.value = latest.copy(isStartingRecording = false, recordingErrorMessage = null)
+                    _events.emit(SeminarDetailEvent.OpenActiveSession(result.session.seminarId))
+                }
+                is StartSeminarSessionResult.AnotherSeminarActive -> {
+                    _uiState.value = latest.copy(isStartingRecording = false, recordingErrorMessage = null)
+                    _events.emit(SeminarDetailEvent.OpenActiveSession(result.activeSession.seminarId))
+                }
+                is StartSeminarSessionResult.RecoveryRequired -> {
+                    _uiState.value = latest.copy(
+                        isStartingRecording = false,
+                        recordingErrorMessage = "Session recovery is required before starting: ${result.reason}.",
+                    )
+                }
+                is StartSeminarSessionResult.NotFound -> {
+                    _uiState.value = latest.copy(
+                        isStartingRecording = false,
+                        recordingErrorMessage = "Seminar was not found.",
+                    )
+                }
+                is StartSeminarSessionResult.CannotStart -> {
+                    _uiState.value = latest.copy(
+                        isStartingRecording = false,
+                        recordingErrorMessage = "Only draft seminars can start. Current status is ${result.status}.",
+                    )
+                }
+            }
+        }
+    }
+
+    fun onOpenTimelineClicked() {
+        _events.tryEmit(SeminarDetailEvent.OpenTimeline(seminarId))
     }
 
     fun onPlaybackPlayPauseClicked() {

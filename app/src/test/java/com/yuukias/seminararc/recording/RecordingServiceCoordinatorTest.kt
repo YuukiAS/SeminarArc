@@ -288,6 +288,18 @@ private class FakeMediaStorageManager : MediaStorageManager {
         )
     }
 
+    override suspend fun createPhotoOutputFile(
+        seminarId: Long,
+        capturedAt: Instant,
+    ): com.yuukias.seminararc.data.storage.PhotoOutputFile {
+        val path = "seminars/$seminarId/photos/photo.jpg"
+        return com.yuukias.seminararc.data.storage.PhotoOutputFile(
+            displayName = "photo.jpg",
+            relativePath = path,
+            file = File("/tmp/seminararc-test/$path"),
+        )
+    }
+
     override suspend fun resolveReadableRelativeFile(relativePath: String): File? = null
 
     override suspend fun deleteRelativeFile(relativePath: String) {

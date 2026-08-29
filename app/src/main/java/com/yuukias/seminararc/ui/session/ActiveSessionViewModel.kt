@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.model.ActiveSeminarSessionState
 import com.yuukias.seminararc.domain.model.EndSeminarResult
 import com.yuukias.seminararc.domain.model.RecordingServiceState
@@ -12,13 +13,19 @@ import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarSessionRecoveryReason
 import com.yuukias.seminararc.domain.model.SeminarStatus
 import com.yuukias.seminararc.domain.model.StartSeminarRecordingResult
+import com.yuukias.seminararc.domain.model.TimelineEvent
+import com.yuukias.seminararc.domain.model.TimelineEventType
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.domain.repository.TimelineRepository
+import com.yuukias.seminararc.domain.usecase.CaptureOffsetAnchor
+import com.yuukias.seminararc.domain.usecase.CaptureOffsetCalculator
 import com.yuukias.seminararc.domain.usecase.EndSeminarUseCase
 import com.yuukias.seminararc.domain.usecase.StartSeminarRecordingUseCase
 import com.yuukias.seminararc.recording.service.RecordingPermissionChecker
 import com.yuukias.seminararc.recording.service.RecordingRuntimeStateProvider
 import com.yuukias.seminararc.ui.navigation.ActiveSessionRoute
+import com.yuukias.seminararc.util.ClockProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,30 +46,50 @@ class ActiveSessionViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val seminarRepository: SeminarRepository,
     private val recordingRepository: RecordingRepository,
+    private val timelineRepository: TimelineRepository,
+    private val mediaStorageManager: MediaStorageManager,
     private val runtimeStateProvider: RecordingRuntimeStateProvider,
     private val startSeminarRecordingUseCase: StartSeminarRecordingUseCase,
     private val endSeminarUseCase: EndSeminarUseCase,
     private val permissionChecker: RecordingPermissionChecker,
+    private val clockProvider: ClockProvider,
+    private val offsetCalculator: CaptureOffsetCalculator,
 ) : ViewModel() {
 
     private val seminarId: Long = savedStateHandle["seminarId"]
         ?: savedStateHandle.toRoute<ActiveSessionRoute>().seminarId
     private val permissionDenied = MutableStateFlow(false)
     private val ending = MutableStateFlow(false)
+    private val isCapturingPhoto = MutableStateFlow(false)
+    private val actionMessage = MutableStateFlow<String?>(null)
 
-    val uiState: StateFlow<ActiveSessionUiState> = combine(
+    private val coreSnapshot = combine(
         seminarRepository.observeSeminarDetail(seminarId),
         recordingRepository.observeLatestRecordingForSeminar(seminarId),
+        timelineRepository.observeTimelineEvents(seminarId),
         runtimeStateProvider.state,
-        permissionDenied,
-        ending,
-    ) { detail, recording, runtimeState, isPermissionDenied, isEnding ->
-        ActiveSessionSnapshot(
+    ) { detail, recording, timelineEvents, runtimeState ->
+        ActiveSessionCoreSnapshot(
             detail = detail,
             recording = recording,
+            timelineEvents = timelineEvents,
             runtimeState = runtimeState,
+        )
+    }
+
+    val uiState: StateFlow<ActiveSessionUiState> = combine(
+        coreSnapshot,
+        permissionDenied,
+        ending,
+        isCapturingPhoto,
+        actionMessage,
+    ) { core, isPermissionDenied, isEnding, isPhotoCaptureInFlight, message ->
+        ActiveSessionSnapshot(
+            core = core,
             isPermissionDenied = isPermissionDenied,
             isEnding = isEnding,
+            isPhotoCaptureInFlight = isPhotoCaptureInFlight,
+            actionMessage = message,
         )
     }
         .mapLatest { snapshot -> snapshot.toUiState(seminarRepository.getActiveSeminarSessionState()) }
@@ -74,6 +101,14 @@ class ActiveSessionViewModel @Inject constructor(
     fun onAction(action: ActiveSessionAction) {
         when (action) {
             ActiveSessionAction.ResumeRecording -> resumeRecording()
+            ActiveSessionAction.MarkMoment -> addMark()
+            ActiveSessionAction.CaptureSlide -> requestPhotoCapture()
+            ActiveSessionAction.UndoLastPhoto -> undoLastPhoto()
+            ActiveSessionAction.RetakeLastPhoto -> retakeLastPhoto()
+            is ActiveSessionAction.AddQuestion -> addTextEvent(TimelineEventType.QUESTION, action.text)
+            is ActiveSessionAction.AddNote -> addTextEvent(TimelineEventType.NOTE, action.text)
+            is ActiveSessionAction.PhotoCaptureCompleted -> completePhotoCapture(action.relativePath)
+            is ActiveSessionAction.PhotoCaptureFailed -> failPhotoCapture(action.relativePath, action.message)
             ActiveSessionAction.EndSeminarConfirmed -> endSeminar()
             ActiveSessionAction.DismissPermissionDenied -> permissionDenied.value = false
         }
@@ -135,9 +170,118 @@ class ActiveSessionViewModel @Inject constructor(
         }
     }
 
-    private fun ActiveSessionSnapshot.toUiState(
+    private fun addMark() {
+        viewModelScope.launch {
+            val anchor = currentCaptureAnchor() ?: return@launch
+            timelineRepository.addMark(
+                seminarId = seminarId,
+                recordingId = anchor.recordingId,
+                offsetMs = offsetCalculator.offsetFrom(anchor, clockProvider.now()),
+            )
+            actionMessage.value = "Mark saved."
+        }
+    }
+
+    private fun addTextEvent(type: TimelineEventType, text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isBlank()) {
+            actionMessage.value = "Text cannot be empty."
+            return
+        }
+        viewModelScope.launch {
+            val anchor = currentCaptureAnchor() ?: return@launch
+            when (type) {
+                TimelineEventType.QUESTION -> timelineRepository.addQuestion(
+                    seminarId = seminarId,
+                    recordingId = anchor.recordingId,
+                    offsetMs = offsetCalculator.offsetFrom(anchor, clockProvider.now()),
+                    text = trimmed,
+                )
+                TimelineEventType.NOTE -> timelineRepository.addNote(
+                    seminarId = seminarId,
+                    recordingId = anchor.recordingId,
+                    offsetMs = offsetCalculator.offsetFrom(anchor, clockProvider.now()),
+                    text = trimmed,
+                )
+                TimelineEventType.MARK,
+                TimelineEventType.PHOTO,
+                -> return@launch
+            }
+            actionMessage.value = if (type == TimelineEventType.QUESTION) "Question saved." else "Note saved."
+        }
+    }
+
+    private fun requestPhotoCapture() {
+        viewModelScope.launch {
+            val current = uiState.value as? ActiveSessionUiState.Recording ?: return@launch
+            isCapturingPhoto.value = true
+            val output = mediaStorageManager.createPhotoOutputFile(current.detail.id, clockProvider.now())
+            _events.emit(ActiveSessionEvent.CapturePhoto(output.file.absolutePath, output.relativePath))
+        }
+    }
+
+    private fun completePhotoCapture(relativePath: String) {
+        viewModelScope.launch {
+            val anchor = currentCaptureAnchor()
+            if (anchor == null) {
+                mediaStorageManager.deleteRelativeFile(relativePath)
+                isCapturingPhoto.value = false
+                actionMessage.value = "Photo was discarded because the active session is unavailable."
+                return@launch
+            }
+            timelineRepository.addPhoto(
+                seminarId = seminarId,
+                recordingId = anchor.recordingId,
+                offsetMs = offsetCalculator.offsetFrom(anchor, clockProvider.now()),
+                photoPath = relativePath,
+            )
+            isCapturingPhoto.value = false
+            actionMessage.value = "Slide photo saved."
+        }
+    }
+
+    private fun failPhotoCapture(relativePath: String, message: String) {
+        viewModelScope.launch {
+            mediaStorageManager.deleteRelativeFile(relativePath)
+            isCapturingPhoto.value = false
+            actionMessage.value = "Photo capture failed: $message"
+        }
+    }
+
+    private fun undoLastPhoto() {
+        viewModelScope.launch {
+            val lastPhoto = (uiState.value as? ActiveSessionUiState.Recording)?.lastPhoto?.event ?: return@launch
+            timelineRepository.deleteEvent(lastPhoto.id)
+            actionMessage.value = "Last photo removed."
+        }
+    }
+
+    private fun retakeLastPhoto() {
+        viewModelScope.launch {
+            val lastPhoto = (uiState.value as? ActiveSessionUiState.Recording)?.lastPhoto?.event
+            if (lastPhoto != null) {
+                timelineRepository.deleteEvent(lastPhoto.id)
+            }
+            requestPhotoCapture()
+        }
+    }
+
+    private fun currentCaptureAnchor(): CaptureOffsetAnchor? {
+        val current = uiState.value as? ActiveSessionUiState.Recording ?: return null
+        return CaptureOffsetAnchor(
+            recordingId = current.recording?.id,
+            startedAt = current.elapsedStartedAt,
+        )
+    }
+
+    private suspend fun ActiveSessionSnapshot.toUiState(
         activeState: ActiveSeminarSessionState,
     ): ActiveSessionUiState {
+        val detail = core.detail
+        val recording = core.recording
+        val timelineEvents = core.timelineEvents
+        val runtimeState = core.runtimeState
+
         if (isEnding) {
             return ActiveSessionUiState.Ending(detail)
         }
@@ -203,9 +347,14 @@ class ActiveSessionViewModel @Inject constructor(
             return ActiveSessionUiState.Recording(
                 detail = currentDetail,
                 recording = runtimeState.recording,
+                mode = CaptureSessionMode.RECORD_AND_PHOTOS,
                 elapsedStartedAt = runtimeState.recording.startedAt,
                 statusText = "Recording",
                 notificationPermissionGranted = null,
+                eventCount = timelineEvents.size,
+                lastPhoto = latestPhotoFeedback(timelineEvents),
+                isCapturingPhoto = isPhotoCaptureInFlight,
+                actionMessage = actionMessage,
             )
         }
 
@@ -213,9 +362,14 @@ class ActiveSessionViewModel @Inject constructor(
             return ActiveSessionUiState.Recording(
                 detail = currentDetail,
                 recording = recording,
+                mode = CaptureSessionMode.RECORD_AND_PHOTOS,
                 elapsedStartedAt = recording?.startedAt ?: currentDetail.sessionStartedAt,
                 statusText = "Starting recorder",
                 notificationPermissionGranted = null,
+                eventCount = timelineEvents.size,
+                lastPhoto = latestPhotoFeedback(timelineEvents),
+                isCapturingPhoto = isPhotoCaptureInFlight,
+                actionMessage = actionMessage,
             )
         }
 
@@ -229,13 +383,28 @@ class ActiveSessionViewModel @Inject constructor(
             )
         }
 
-        if (currentDetail.status == SeminarStatus.ACTIVE) {
+        if (recording != null) {
             return ActiveSessionUiState.RecoveryRequired(
                 detail = currentDetail,
                 title = "Recording interrupted",
                 message = "The previous recording stopped unexpectedly. Existing files and records are preserved, and there is no live recording right now.",
                 canResume = true,
                 canEnd = true,
+            )
+        }
+
+        if (currentDetail.status == SeminarStatus.ACTIVE) {
+            return ActiveSessionUiState.Recording(
+                detail = currentDetail,
+                recording = null,
+                mode = CaptureSessionMode.PHOTOS_ONLY,
+                elapsedStartedAt = currentDetail.sessionStartedAt,
+                statusText = "Photos only",
+                notificationPermissionGranted = null,
+                eventCount = timelineEvents.size,
+                lastPhoto = latestPhotoFeedback(timelineEvents),
+                isCapturingPhoto = isPhotoCaptureInFlight,
+                actionMessage = actionMessage,
             )
         }
 
@@ -246,13 +415,29 @@ class ActiveSessionViewModel @Inject constructor(
         )
     }
 
-    private data class ActiveSessionSnapshot(
+    private data class ActiveSessionCoreSnapshot(
         val detail: SeminarDetail?,
         val recording: com.yuukias.seminararc.domain.model.RecordingSession?,
+        val timelineEvents: List<TimelineEvent>,
         val runtimeState: RecordingServiceState,
+    )
+
+    private data class ActiveSessionSnapshot(
+        val core: ActiveSessionCoreSnapshot,
         val isPermissionDenied: Boolean,
         val isEnding: Boolean,
+        val isPhotoCaptureInFlight: Boolean,
+        val actionMessage: String?,
     )
+
+    private suspend fun latestPhotoFeedback(events: List<TimelineEvent>): LastPhotoFeedback? {
+        val latestPhoto = events.lastOrNull { event -> event.type == TimelineEventType.PHOTO && event.photoPath != null }
+            ?: return null
+        val absolutePath = latestPhoto.photoPath
+            ?.let { path -> mediaStorageManager.resolveReadableRelativeFile(path) }
+            ?.absolutePath
+        return LastPhotoFeedback(latestPhoto, absolutePath)
+    }
 }
 
 private fun SeminarSessionRecoveryReason.toRecoveryTitle(): String {

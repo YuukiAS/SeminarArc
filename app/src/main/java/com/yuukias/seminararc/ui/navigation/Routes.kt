@@ -13,3 +13,6 @@ data class SeminarDetailRoute(val seminarId: Long)
 
 @Serializable
 data class ActiveSessionRoute(val seminarId: Long)
+
+@Serializable
+data class SeminarTimelineRoute(val seminarId: Long)

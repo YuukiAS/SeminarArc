@@ -11,10 +11,12 @@ import com.yuukias.seminararc.data.local.dao.SeminarDao
 import com.yuukias.seminararc.data.local.dao.TimelineDao
 import com.yuukias.seminararc.data.repository.RecordingRepositoryImpl
 import com.yuukias.seminararc.data.repository.SeminarRepositoryImpl
+import com.yuukias.seminararc.data.repository.TimelineRepositoryImpl
 import com.yuukias.seminararc.data.storage.AppMediaStorageManager
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.domain.repository.TimelineRepository
 import com.yuukias.seminararc.media.playback.Media3RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
 import com.yuukias.seminararc.recording.controller.AndroidMediaRecorderControllerFactory
@@ -104,6 +106,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindSeminarRepository(impl: SeminarRepositoryImpl): SeminarRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindTimelineRepository(impl: TimelineRepositoryImpl): TimelineRepository
 }
 
 @Module

@@ -58,6 +58,20 @@ class AppMediaStorageManager @Inject constructor(
         )
     }
 
+    override suspend fun createPhotoOutputFile(
+        seminarId: Long,
+        capturedAt: Instant,
+    ): PhotoOutputFile = withContext(Dispatchers.IO) {
+        val targetDir = seminarMediaDir(seminarId, "photos").apply { mkdirs() }
+        val timestamp = RECORDING_FILE_TIMESTAMP_FORMATTER.format(capturedAt)
+        val targetFile = uniqueFile(targetDir, "photo-$timestamp", "jpg")
+        PhotoOutputFile(
+            displayName = targetFile.name,
+            relativePath = targetFile.relativeTo(context.filesDir).invariantSeparatorsPath,
+            file = targetFile,
+        )
+    }
+
     override suspend fun resolveReadableRelativeFile(relativePath: String): File? = withContext(Dispatchers.IO) {
         val trimmedPath = relativePath.trim()
         if (trimmedPath.isBlank()) {

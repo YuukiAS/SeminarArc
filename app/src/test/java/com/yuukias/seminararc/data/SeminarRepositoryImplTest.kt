@@ -473,6 +473,17 @@ private class FakeMediaStorageManager : MediaStorageManager {
         )
     }
 
+    override suspend fun createPhotoOutputFile(
+        seminarId: Long,
+        capturedAt: Instant,
+    ): com.yuukias.seminararc.data.storage.PhotoOutputFile {
+        return com.yuukias.seminararc.data.storage.PhotoOutputFile(
+            displayName = "photo.jpg",
+            relativePath = "seminars/$seminarId/photos/photo.jpg",
+            file = java.io.File("/tmp/seminararc-test/seminars/$seminarId/photos/photo.jpg"),
+        )
+    }
+
     override suspend fun resolveReadableRelativeFile(relativePath: String): java.io.File? = null
 
     override suspend fun deleteRelativeFile(relativePath: String) {

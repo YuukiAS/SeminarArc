@@ -14,6 +14,8 @@ import com.yuukias.seminararc.ui.library.SeminarLibraryScreen
 import com.yuukias.seminararc.ui.library.SeminarLibraryViewModel
 import com.yuukias.seminararc.ui.session.ActiveSessionScreen
 import com.yuukias.seminararc.ui.session.ActiveSessionViewModel
+import com.yuukias.seminararc.ui.timeline.SeminarTimelineScreen
+import com.yuukias.seminararc.ui.timeline.SeminarTimelineViewModel
 
 @Composable
 fun SeminarNavHost(
@@ -65,6 +67,7 @@ fun SeminarNavHost(
                         launchSingleTop = true
                     }
                 },
+                onOpenTimeline = { seminarId -> navController.navigate(SeminarTimelineRoute(seminarId)) },
                 onDeleted = {
                     navController.navigate(SeminarLibraryRoute) {
                         popUpTo(SeminarLibraryRoute) { inclusive = false }
@@ -89,6 +92,13 @@ fun SeminarNavHost(
                         launchSingleTop = true
                     }
                 },
+            )
+        }
+        composable<SeminarTimelineRoute> {
+            val viewModel: SeminarTimelineViewModel = hiltViewModel()
+            SeminarTimelineScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
             )
         }
     }

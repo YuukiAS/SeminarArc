@@ -36,6 +36,17 @@ data class TimelinePreviewItem(
     val clipState: ClipState?,
 )
 
+data class TimelineEvent(
+    val id: Long,
+    val seminarId: Long,
+    val recordingId: Long?,
+    val type: TimelineEventType,
+    val offsetMs: Long,
+    val createdAt: Instant,
+    val text: String?,
+    val photoPath: String?,
+)
+
 data class SeminarDetail(
     val id: Long,
     val title: String,

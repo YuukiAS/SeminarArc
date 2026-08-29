@@ -2,6 +2,10 @@ package com.yuukias.seminararc.recording
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import com.yuukias.seminararc.data.storage.MediaStorageManager
+import com.yuukias.seminararc.data.storage.PhotoOutputFile
+import com.yuukias.seminararc.data.storage.RecordingOutputFile
+import com.yuukias.seminararc.data.storage.StoredFile
 import com.yuukias.seminararc.domain.model.AbstractAttachment
 import com.yuukias.seminararc.domain.model.ActiveSeminarSession
 import com.yuukias.seminararc.domain.model.ActiveSeminarSessionState
@@ -21,8 +25,13 @@ import com.yuukias.seminararc.domain.model.SeminarStatus
 import com.yuukias.seminararc.domain.model.SeminarSummary
 import com.yuukias.seminararc.domain.model.StartSeminarRecordingResult
 import com.yuukias.seminararc.domain.model.StartSeminarSessionResult
+import com.yuukias.seminararc.domain.model.TimelineEvent
+import com.yuukias.seminararc.domain.model.TimelineEventType
+import com.yuukias.seminararc.domain.repository.DeleteTimelineEventResult
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.domain.repository.TimelineRepository
+import com.yuukias.seminararc.domain.usecase.CaptureOffsetCalculator
 import com.yuukias.seminararc.domain.usecase.EndSeminarUseCase
 import com.yuukias.seminararc.domain.usecase.StartSeminarRecordingUseCase
 import com.yuukias.seminararc.recording.service.RecordingPermissionChecker
@@ -35,6 +44,7 @@ import com.yuukias.seminararc.ui.session.ActiveSessionAction
 import com.yuukias.seminararc.ui.session.ActiveSessionUiState
 import com.yuukias.seminararc.ui.session.ActiveSessionViewModel
 import com.yuukias.seminararc.util.ClockProvider
+import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -191,6 +201,8 @@ private fun viewModel(
         savedStateHandle = SavedStateHandle(mapOf("seminarId" to 12L)),
         seminarRepository = seminarRepository,
         recordingRepository = recordingRepository,
+        timelineRepository = ActiveFakeTimelineRepository(),
+        mediaStorageManager = ActiveFakeMediaStorageManager(),
         runtimeStateProvider = runtime,
         startSeminarRecordingUseCase = StartSeminarRecordingUseCase(
             seminarRepository = seminarRepository,
@@ -209,6 +221,8 @@ private fun viewModel(
             clockProvider = ClockProvider { Instant.parse("2026-08-13T08:00:00Z") },
         ),
         permissionChecker = permissionChecker,
+        clockProvider = ClockProvider { Instant.parse("2026-08-13T08:01:00Z") },
+        offsetCalculator = CaptureOffsetCalculator(),
     )
 }
 
@@ -250,6 +264,87 @@ private class ActiveFakeRecordingRepository(
     override suspend fun getOpenRecordingIdsForSeminar(seminarId: Long): List<Long> = emptyList()
     override suspend fun failRecordings(recordingIds: List<Long>, endedAt: Instant, errorMessage: String): Int = recordingIds.size
     override suspend fun failOpenRecordings(endedAt: Instant, errorMessage: String): Int = 0
+}
+
+private class ActiveFakeTimelineRepository : TimelineRepository {
+    private val events = MutableStateFlow<List<TimelineEvent>>(emptyList())
+
+    override fun observeTimelineEvents(seminarId: Long): Flow<List<TimelineEvent>> = events
+
+    override suspend fun addMark(seminarId: Long, recordingId: Long?, offsetMs: Long): TimelineEvent {
+        return addEvent(seminarId, recordingId, TimelineEventType.MARK, offsetMs, null, null)
+    }
+
+    override suspend fun addNote(
+        seminarId: Long,
+        recordingId: Long?,
+        offsetMs: Long,
+        text: String,
+    ): TimelineEvent = addEvent(seminarId, recordingId, TimelineEventType.NOTE, offsetMs, text, null)
+
+    override suspend fun addQuestion(
+        seminarId: Long,
+        recordingId: Long?,
+        offsetMs: Long,
+        text: String,
+    ): TimelineEvent = addEvent(seminarId, recordingId, TimelineEventType.QUESTION, offsetMs, text, null)
+
+    override suspend fun addPhoto(
+        seminarId: Long,
+        recordingId: Long?,
+        offsetMs: Long,
+        photoPath: String,
+    ): TimelineEvent = addEvent(seminarId, recordingId, TimelineEventType.PHOTO, offsetMs, null, photoPath)
+
+    override suspend fun deleteEvent(eventId: Long): DeleteTimelineEventResult {
+        events.value = events.value.filterNot { event -> event.id == eventId }
+        return DeleteTimelineEventResult.Deleted(eventId, null)
+    }
+
+    private fun addEvent(
+        seminarId: Long,
+        recordingId: Long?,
+        type: TimelineEventType,
+        offsetMs: Long,
+        text: String?,
+        photoPath: String?,
+    ): TimelineEvent {
+        val event = TimelineEvent(
+            id = events.value.size + 1L,
+            seminarId = seminarId,
+            recordingId = recordingId,
+            type = type,
+            offsetMs = offsetMs,
+            createdAt = Instant.parse("2026-08-13T08:01:00Z"),
+            text = text,
+            photoPath = photoPath,
+        )
+        events.value = events.value + event
+        return event
+    }
+}
+
+private class ActiveFakeMediaStorageManager : MediaStorageManager {
+    override suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): StoredFile = error("Not used")
+
+    override suspend fun createRecordingOutputFile(seminarId: Long, startedAt: Instant): RecordingOutputFile = error("Not used")
+
+    override suspend fun createPhotoOutputFile(seminarId: Long, capturedAt: Instant): PhotoOutputFile {
+        val path = "seminars/$seminarId/photos/photo.jpg"
+        return PhotoOutputFile(
+            displayName = "photo.jpg",
+            relativePath = path,
+            file = File("/tmp/seminararc-test/$path"),
+        )
+    }
+
+    override suspend fun resolveReadableRelativeFile(relativePath: String): File? {
+        return File("/tmp/seminararc-test/$relativePath")
+    }
+
+    override suspend fun deleteRelativeFile(relativePath: String) = Unit
+
+    override suspend fun deleteSeminarMedia(seminarId: Long) = Unit
 }
 
 private class ActiveFakeSeminarRepository(
