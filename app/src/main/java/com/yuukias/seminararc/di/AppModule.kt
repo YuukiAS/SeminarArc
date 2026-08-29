@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.yuukias.seminararc.data.local.AppDatabase
 import com.yuukias.seminararc.data.local.DatabaseTransactionRunner
+import com.yuukias.seminararc.data.local.MIGRATION_1_2
 import com.yuukias.seminararc.data.local.RoomDatabaseTransactionRunner
 import com.yuukias.seminararc.data.export.SeminarExportRepositoryImpl
 import com.yuukias.seminararc.data.local.dao.ClipDao
@@ -56,7 +57,8 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "seminararc.db",
-        ).build()
+        ).addMigrations(MIGRATION_1_2)
+            .build()
     }
 
     @Provides

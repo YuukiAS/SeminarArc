@@ -17,7 +17,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.1-dev"
+        versionName = "0.1.5-dev"
 
         testInstrumentationRunner = "com.yuukias.seminararc.SeminarArcTestRunner"
         vectorDrawables {

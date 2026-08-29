@@ -20,7 +20,7 @@ import com.yuukias.seminararc.data.local.entity.TimelineEventEntity
         TimelineEventEntity::class,
         AudioClipEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(InstantConverters::class)

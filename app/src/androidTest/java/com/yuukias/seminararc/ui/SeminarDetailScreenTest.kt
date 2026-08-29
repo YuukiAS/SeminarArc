@@ -7,6 +7,7 @@ import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarStatus
 import com.yuukias.seminararc.ui.detail.SeminarDetailScreenContent
 import com.yuukias.seminararc.ui.detail.SeminarDetailUiState
+import com.yuukias.seminararc.ui.detail.RecordingPlaybackUiState
 import com.yuukias.seminararc.ui.theme.SeminarArcTheme
 import java.time.Instant
 import org.junit.Rule
@@ -33,6 +34,8 @@ class SeminarDetailScreenTest {
                             abstractText = null,
                             abstractAttachment = null,
                             status = SeminarStatus.DRAFT,
+                            sessionStartedAt = null,
+                            sessionEndedAt = null,
                             rating = null,
                             isFavorite = false,
                             photoCount = 0,
@@ -43,7 +46,10 @@ class SeminarDetailScreenTest {
                         isDeleting = false,
                         showDeleteDialog = false,
                         isStartingRecording = false,
-                        recordingMessage = null,
+                        isExporting = false,
+                        exportMessage = null,
+                        recordingErrorMessage = null,
+                        recordingPlayback = RecordingPlaybackUiState.NoRecording,
                     ),
                     onBack = {},
                     onEdit = { _ -> },
@@ -52,6 +58,14 @@ class SeminarDetailScreenTest {
                     onDeleteDialogChanged = { _ -> },
                     onDeleteConfirmed = {},
                     onStartRecording = {},
+                    onStartPhotosOnly = {},
+                    onOpenTimeline = {},
+                    onSaveMarkdown = {},
+                    onSaveZip = {},
+                    onShareMarkdown = {},
+                    onShareZip = {},
+                    onPlaybackPlayPause = {},
+                    onPlaybackSeek = { _ -> },
                 )
             }
         }

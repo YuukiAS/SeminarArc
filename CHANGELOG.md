@@ -38,6 +38,7 @@
 - 修复 `gradlew` 在 Linux/WSL 远程开发环境中的可执行位，避免 `./gradlew: Permission denied`。
 - 修复 process-start recovery 竞态：启动恢复先捕获 stale recording IDs，再只标记这些 rows 为 `FAILED`，避免误杀当前进程中新建的 recording。
 - 修复 durable `RECORDING` row 被误当成 live recorder 的语义；当前进程没有 runtime recorder 时改为 recovery state。
+- 修复 0.1.4 schema 变更仍停留在 Room version 1 的问题：新增 `MIGRATION_1_2`，为旧 `audio_clips` 表补 `retryCount` 默认值，并恢复 schema history，避免保留旧数据库的真机启动崩溃。
 
 ## 0.1.1-dev
 
