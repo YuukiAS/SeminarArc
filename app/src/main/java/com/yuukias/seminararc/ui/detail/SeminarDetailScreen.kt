@@ -1,7 +1,9 @@
 package com.yuukias.seminararc.ui.detail
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +24,8 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PictureAsPdf
+import androidx.compose.material.icons.outlined.SaveAlt
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
@@ -98,6 +102,12 @@ fun SeminarDetailScreen(
             }
         }
     }
+    val markdownExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/markdown"),
+    ) { uri -> uri?.let { viewModel.onMarkdownDestinationSelected(it.toString()) } }
+    val zipExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip"),
+    ) { uri -> uri?.let { viewModel.onZipDestinationSelected(it.toString()) } }
 
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
@@ -105,6 +115,30 @@ fun SeminarDetailScreen(
                 SeminarDetailEvent.Deleted -> onDeleted()
                 is SeminarDetailEvent.OpenActiveSession -> onOpenActiveSession(event.seminarId)
                 is SeminarDetailEvent.OpenTimeline -> onOpenTimeline(event.seminarId)
+                is SeminarDetailEvent.ShareText -> {
+                    context.startActivity(
+                        Intent.createChooser(
+                            Intent(Intent.ACTION_SEND).apply {
+                                type = event.mimeType
+                                putExtra(Intent.EXTRA_TITLE, event.title)
+                                putExtra(Intent.EXTRA_TEXT, event.text)
+                            },
+                            event.title,
+                        ),
+                    )
+                }
+                is SeminarDetailEvent.ShareFile -> {
+                    context.startActivity(
+                        Intent.createChooser(
+                            Intent(Intent.ACTION_SEND).apply {
+                                type = event.mimeType
+                                putExtra(Intent.EXTRA_STREAM, Uri.parse(event.uriString))
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            },
+                            event.title,
+                        ),
+                    )
+                }
             }
         }
     }
@@ -124,6 +158,10 @@ fun SeminarDetailScreen(
         onStartRecording = startRecording,
         onStartPhotosOnly = viewModel::onStartPhotosOnlyClicked,
         onOpenTimeline = viewModel::onOpenTimelineClicked,
+        onSaveMarkdown = { markdownExportLauncher.launch("seminar.md") },
+        onSaveZip = { zipExportLauncher.launch("seminar.zip") },
+        onShareMarkdown = viewModel::onShareMarkdownClicked,
+        onShareZip = viewModel::onShareZipClicked,
         onPlaybackPlayPause = viewModel::onPlaybackPlayPauseClicked,
         onPlaybackSeek = viewModel::onPlaybackSeek,
         modifier = modifier,
@@ -143,6 +181,10 @@ fun SeminarDetailScreenContent(
     onStartRecording: () -> Unit,
     onStartPhotosOnly: () -> Unit,
     onOpenTimeline: () -> Unit,
+    onSaveMarkdown: () -> Unit,
+    onSaveZip: () -> Unit,
+    onShareMarkdown: () -> Unit,
+    onShareZip: () -> Unit,
     onPlaybackPlayPause: () -> Unit,
     onPlaybackSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -219,6 +261,14 @@ fun SeminarDetailScreenContent(
                         items = uiState.detail.timelinePreview,
                         onOpenTimeline = onOpenTimeline,
                     )
+                    SeminarExportSection(
+                        isExporting = uiState.isExporting,
+                        exportMessage = uiState.exportMessage,
+                        onSaveMarkdown = onSaveMarkdown,
+                        onSaveZip = onSaveZip,
+                        onShareMarkdown = onShareMarkdown,
+                        onShareZip = onShareZip,
+                    )
                     TextButton(
                         onClick = { onDeleteDialogChanged(true) },
                         enabled = !uiState.isDeleting,
@@ -227,6 +277,75 @@ fun SeminarDetailScreenContent(
                         Text(if (uiState.isDeleting) "Deleting..." else "Delete seminar")
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeminarExportSection(
+    isExporting: Boolean,
+    exportMessage: String?,
+    onSaveMarkdown: () -> Unit,
+    onSaveZip: () -> Unit,
+    onShareMarkdown: () -> Unit,
+    onShareZip: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    Card(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(spacing.space4),
+            verticalArrangement = Arrangement.spacedBy(spacing.space3),
+        ) {
+            Text("Export", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Exports are local files. External copies are not removed when the seminar is deleted.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.space3)) {
+                Button(
+                    onClick = onSaveMarkdown,
+                    enabled = !isExporting,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Outlined.SaveAlt, contentDescription = null)
+                    Text("Markdown")
+                }
+                Button(
+                    onClick = onSaveZip,
+                    enabled = !isExporting,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Outlined.SaveAlt, contentDescription = null)
+                    Text("ZIP")
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
+                TextButton(
+                    onClick = onShareMarkdown,
+                    enabled = !isExporting,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Share, contentDescription = null)
+                    Text("Share Markdown")
+                }
+                TextButton(
+                    onClick = onShareZip,
+                    enabled = !isExporting,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Share, contentDescription = null)
+                    Text("Share ZIP")
+                }
+            }
+            exportMessage?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

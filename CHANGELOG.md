@@ -15,6 +15,7 @@
 - 新增 `0.1.2` 完整录音回放：Seminar Detail 使用 Media3 页面内播放器播放已完成 `.m4a`，支持 Play/Pause/Seek、duration/position、缺失文件和失败录音状态。
 - 新增 `0.1.3` Capture + Timeline：CameraX 幻灯片拍照、photos-only seminar session、MARK/PHOTO/QUESTION/NOTE 事件写入、统一 timeline review route、photo missing state、last-photo undo/retake 和 `Play from here` 回放入口。
 - 新增 `0.1.4` clip 韧性基础：MARK 自动创建 `PENDING` clip、WorkManager 生成任务、Android `MediaExtractor`/`MediaMuxer` 本地 `.m4a` 裁剪、`READY` clip 播放入口、failed retry、完整录音 fallback 和 clip-owned 文件清理。
+- 新增 `0.1.5` 本地导出闭环：UI-independent export document、Markdown renderer、ZIP writer、missing-media skip、`ACTION_CREATE_DOCUMENT` 保存和 Android share sheet。
 - 新增 `0.1.x` 分阶段开发计划索引：`docs/plans/0.1.x-development-plan-index.md`。
 - 新增 `0.1.1` 收口计划，覆盖当前基础批次的构建、CI、Room、UI、PDF 生命周期和文档校验。
 - 新增 `0.1.2` 录音服务计划，覆盖 foreground service、active seminar invariant、恢复流程和完整录音回放。
@@ -25,7 +26,7 @@
 
 ### 文档
 
-- 更新 README、架构和隐私说明，准确记录 `0.1.2-dev` 已具备本地录音基础设施，但尚未完成 Active Session UI、CameraX、timeline、clip 或 playback UI。
+- 更新 README、架构和隐私说明，准确记录 `0.1.5-dev` 已具备本地 capture/timeline/clip/export headless 实现，并明确真机完整 E2E 验收仍需后续授权设备会话。
 - 新增 `docs/notes/2026-08-08-remote-wsl-codex-handoff.md`，记录远端 WSL Codex 开发环境、Android Studio 安装判断、已完成线程上下文和后续开发入口。
 - 明确 changelog 后续使用中文维护。
 - 完善 README，说明当前仓库状态、文档入口、开发顺序和本地构建命令。

@@ -23,6 +23,9 @@ import com.yuukias.seminararc.domain.model.StartSeminarRecordingResult
 import com.yuukias.seminararc.domain.model.StartSeminarSessionResult
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.domain.repository.ExportShareResult
+import com.yuukias.seminararc.domain.repository.ExportWriteResult
+import com.yuukias.seminararc.domain.repository.SeminarExportRepository
 import com.yuukias.seminararc.domain.usecase.StartSeminarRecordingUseCase
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackControllerState
@@ -247,6 +250,7 @@ private fun viewModel(
         savedStateHandle = SavedStateHandle(mapOf("seminarId" to 12L)),
         seminarRepository = seminarRepository,
         recordingRepository = recordingRepository,
+        exportRepository = DetailFakeExportRepository(),
         mediaStorageManager = storage,
         playbackController = playbackController,
         startSeminarRecordingUseCase = StartSeminarRecordingUseCase(
@@ -259,6 +263,14 @@ private fun viewModel(
             serviceStarter = DetailFakeServiceStarter(),
         ),
     )
+}
+
+private class DetailFakeExportRepository : SeminarExportRepository {
+    override suspend fun buildExportPackage(seminarId: Long): com.yuukias.seminararc.domain.model.SeminarExportPackage? = null
+    override suspend fun writeMarkdown(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
+    override suspend fun writeZip(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
+    override suspend fun prepareMarkdownShare(seminarId: Long): ExportShareResult = ExportShareResult.TextReady("markdown", "text/markdown", "seminar.md")
+    override suspend fun prepareZipShare(seminarId: Long): ExportShareResult = ExportShareResult.Failed("Not used")
 }
 
 private fun SeminarDetailViewModel.readyState(): SeminarDetailUiState.Ready {

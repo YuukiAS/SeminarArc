@@ -5,7 +5,7 @@ SeminarArc follows a single-module layered Android architecture:
 - `ui`: Compose screens, navigation, ViewModels, UI state
 - `domain`: plain Kotlin models and repository contracts
 - `data`: Room, storage, and repository implementations
-- `recording`, `media`, `worker`: contracts and future implementation surfaces for later batches
+- `recording`, `media`, `worker`: microphone recording, clip generation, playback, CameraX capture, and background work boundaries
 - `di`: Hilt modules
 
 ## Batch 01 focus
@@ -59,6 +59,26 @@ If recorder stop/finalize fails, the recording is marked `FAILED` by the coordin
 
 Playback is intentionally page-scoped in this phase. There is no `MediaSessionService`, lock-screen control, notification media control, background playback service, waveform, stitching, clip generation, OCR, transcription, or AI path in `0.1.2`.
 
+## Capture, timeline, and clips
+
+`0.1.3` and `0.1.4` add the local capture loop:
+
+- `ActiveSessionViewModel` is the capture coordinator for marks, questions, notes, slide photos, and last-photo undo/retake.
+- CameraX stays behind the UI/session layer; domain and repository layers only persist app-private relative photo paths.
+- Timeline events are durable Room rows keyed by `seminarId`, ordered by recoverable `offsetMs`, and may reference a photo path or a generated clip.
+- MARK events create `PENDING` clips through `ClipRepository`; WorkManager re-reads Room state and calls the Android `.m4a` clip generator instead of trusting Activity memory.
+- A clip is playable only when its Room state is `READY` and its app-private file resolves through `MediaStorageManager`; otherwise UI keeps a full-recording fallback from the event offset.
+
+## Local export
+
+`0.1.5` adds local-only export without introducing cloud/provider dependencies:
+
+- `SeminarExportAssembler` maps `SeminarDetail`, timeline events, recordings, and clips into a UI-independent `SeminarExportDocument`.
+- `SeminarMarkdownRenderer` renders deterministic Markdown with relative media links and visible fallback text for non-ready clips.
+- `SeminarZipWriter` writes `<seminar-slug>/seminar.md` plus readable `media/abstract`, `media/photos`, and `media/clips` assets; missing media is skipped and recorded instead of failing the full export.
+- `SeminarExportRepositoryImpl` owns Android I/O: Room flow reads, `MediaStorageManager` file resolution, `ACTION_CREATE_DOCUMENT` writes, and cache-backed FileProvider share URIs.
+- `SeminarDetailViewModel` exposes progress/success/failure state and one-shot share events; Compose screens do not read Room or app-private files directly.
+
 ## Planned ownership model
 
 All future assets must remain owned by a seminar:
@@ -74,3 +94,5 @@ files/
 ```
 
 Deletion must go through repository orchestration so database rows and owned files are removed together.
+
+External Markdown/ZIP copies created through document export or share sheets are outside app-owned storage. Seminar deletion must not imply those external copies are removed.

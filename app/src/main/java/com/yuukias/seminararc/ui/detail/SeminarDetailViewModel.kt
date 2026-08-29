@@ -11,6 +11,9 @@ import com.yuukias.seminararc.domain.model.StartSeminarSessionResult
 import com.yuukias.seminararc.domain.model.StartSeminarRecordingResult
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.domain.repository.ExportShareResult
+import com.yuukias.seminararc.domain.repository.ExportWriteResult
+import com.yuukias.seminararc.domain.repository.SeminarExportRepository
 import com.yuukias.seminararc.domain.usecase.StartSeminarRecordingUseCase
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackControllerState
@@ -31,6 +34,8 @@ sealed interface SeminarDetailEvent {
     data object Deleted : SeminarDetailEvent
     data class OpenActiveSession(val seminarId: Long) : SeminarDetailEvent
     data class OpenTimeline(val seminarId: Long) : SeminarDetailEvent
+    data class ShareText(val text: String, val mimeType: String, val title: String) : SeminarDetailEvent
+    data class ShareFile(val uriString: String, val mimeType: String, val title: String) : SeminarDetailEvent
 }
 
 @HiltViewModel
@@ -38,6 +43,7 @@ class SeminarDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val seminarRepository: SeminarRepository,
     private val recordingRepository: RecordingRepository,
+    private val exportRepository: SeminarExportRepository,
     private val mediaStorageManager: MediaStorageManager,
     private val playbackController: RecordingPlaybackController,
     private val startSeminarRecordingUseCase: StartSeminarRecordingUseCase,
@@ -70,6 +76,8 @@ class SeminarDetailViewModel @Inject constructor(
                         isDeleting = current?.isDeleting ?: false,
                         showDeleteDialog = current?.showDeleteDialog ?: false,
                         isStartingRecording = current?.isStartingRecording ?: false,
+                        isExporting = current?.isExporting ?: false,
+                        exportMessage = current?.exportMessage,
                         recordingErrorMessage = current?.recordingErrorMessage,
                         recordingPlayback = resolvePlaybackUiState(
                             recordings = inputs.recordings,
@@ -179,6 +187,22 @@ class SeminarDetailViewModel @Inject constructor(
         _events.tryEmit(SeminarDetailEvent.OpenTimeline(seminarId))
     }
 
+    fun onMarkdownDestinationSelected(uriString: String) {
+        exportToUri { exportRepository.writeMarkdown(seminarId, uriString) }
+    }
+
+    fun onZipDestinationSelected(uriString: String) {
+        exportToUri { exportRepository.writeZip(seminarId, uriString) }
+    }
+
+    fun onShareMarkdownClicked() {
+        share { exportRepository.prepareMarkdownShare(seminarId) }
+    }
+
+    fun onShareZipClicked() {
+        share { exportRepository.prepareZipShare(seminarId) }
+    }
+
     fun onPlaybackPlayPauseClicked() {
         when ((_uiState.value as? SeminarDetailUiState.Ready)?.recordingPlayback) {
             is RecordingPlaybackUiState.Playing -> playbackController.pause()
@@ -192,6 +216,44 @@ class SeminarDetailViewModel @Inject constructor(
                 playbackController.play()
             }
             else -> Unit
+        }
+    }
+
+    private fun exportToUri(block: suspend () -> ExportWriteResult) {
+        val current = _uiState.value as? SeminarDetailUiState.Ready ?: return
+        viewModelScope.launch {
+            _uiState.value = current.copy(isExporting = true, exportMessage = "Exporting...")
+            val latest = _uiState.value as? SeminarDetailUiState.Ready ?: return@launch
+            _uiState.value = when (val result = block()) {
+                ExportWriteResult.Written -> latest.copy(isExporting = false, exportMessage = "Export complete.")
+                is ExportWriteResult.Failed -> latest.copy(isExporting = false, exportMessage = result.message)
+            }
+        }
+    }
+
+    private fun share(block: suspend () -> ExportShareResult) {
+        val current = _uiState.value as? SeminarDetailUiState.Ready ?: return
+        viewModelScope.launch {
+            _uiState.value = current.copy(isExporting = true, exportMessage = "Preparing share...")
+            when (val result = block()) {
+                is ExportShareResult.TextReady -> {
+                    _uiState.value = (_uiState.value as? SeminarDetailUiState.Ready)
+                        ?.copy(isExporting = false, exportMessage = "Share sheet ready.")
+                        ?: return@launch
+                    _events.emit(SeminarDetailEvent.ShareText(result.text, result.mimeType, result.title))
+                }
+                is ExportShareResult.Ready -> {
+                    _uiState.value = (_uiState.value as? SeminarDetailUiState.Ready)
+                        ?.copy(isExporting = false, exportMessage = "Share sheet ready.")
+                        ?: return@launch
+                    _events.emit(SeminarDetailEvent.ShareFile(result.uriString, result.mimeType, result.title))
+                }
+                is ExportShareResult.Failed -> {
+                    _uiState.value = (_uiState.value as? SeminarDetailUiState.Ready)
+                        ?.copy(isExporting = false, exportMessage = result.message)
+                        ?: return@launch
+                }
+            }
         }
     }
 

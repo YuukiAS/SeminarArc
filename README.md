@@ -1,6 +1,6 @@
 # SeminarArc
 
-SeminarArc 是一个本地优先的原生 Android 应用，用于记录、回顾和整理线下学术 seminar。每一场 seminar 都是唯一的所有权容器，后续录音、幻灯片照片、问题、笔记、clip、OCR、参考文献候选和导出记录都必须归属于明确的 `seminarId`。
+SeminarArc 是一个本地优先的原生 Android 应用，用于记录、回顾和整理线下学术 seminar。每一场 seminar 都是唯一的所有权容器；当前 `0.1.x` 的录音、幻灯片照片、问题、笔记、clip 和导出记录都必须归属于明确的 `seminarId`。
 
 产品主循环：
 
@@ -10,7 +10,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 ## 当前状态
 
-仓库当前处于 `0.1.2-dev` 录音基础设施批次。
+仓库当前处于 `0.1.5-dev` 本地 MVP 导出与验收收口批次。
 
 已经具备：
 
@@ -23,14 +23,15 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - Microphone foreground service、本地 `.m4a` recording backend、ongoing notification 和 `RecordingEntity` durable lifecycle。
 - Active Session route、录音状态恢复 UI、权限拒绝状态、notification 返回现场页、以及 End Seminar 的 stop/finalize 后完成 seminar 流程。
 - Seminar Detail 的完整录音回放：Media3 页面内播放器、Play/Pause/Seek、duration/position、文件缺失和失败录音状态。
+- CameraX slide capture、photo-only seminar session、MARK/PHOTO/QUESTION/NOTE timeline 写入、统一 timeline review route、last-photo undo/retake 和 `Play from here` 回放入口。
+- Clip generation 韧性基础：MARK 自动创建 `PENDING` clip、WorkManager 本地 `.m4a` 裁剪、`READY` clip 播放入口、failed retry 和完整录音 fallback。
+- 单 seminar Markdown/ZIP 本地导出：包含 metadata、abstract、recording summary、timeline、relative media links、missing media skip 记录，并通过 `ACTION_CREATE_DOCUMENT` 与 Android share sheet 暴露。
 - `0.1.x` 到 `0.2.x` 的分阶段计划文档。
 
 尚未声明完成：
 
-- CameraX slide capture。
-- 录音中 timeline event 写入。
-- Clip generation、retry 和 full-recording fallback。
-- Markdown/ZIP 导出和最终本地 MVP 验收。
+- 非破坏性真机完整 E2E 验收：创建 seminar、录音、拍照、timeline、clip、重启后持久化、离线导出和删除清理仍需在用户授权的设备会话中执行。
+- `0.2.x` 的 OCR、转写、AI 总结、Notion/provider 或云同步。
 
 ## 文档入口
 
@@ -63,6 +64,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 ```bash
 ./gradlew assembleDebug
 ./gradlew testDebugUnitTest
+./gradlew lintDebug
 ```
 
 Windows PowerShell 可使用：

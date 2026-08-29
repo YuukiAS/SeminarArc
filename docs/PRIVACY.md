@@ -7,6 +7,7 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - Seminar metadata 存储在本地 Room database。
 - Imported PDFs 会复制到 app-private storage。
 - 录音文件会写入 app-private seminar-owned storage，例如 `files/seminars/<seminar-id>/recordings/`。
+- 幻灯片照片和本地生成的 clips 会写入同一 seminar-owned app-private storage。
 - 数据库只保存 app-private storage 的相对路径，便于后续内部迁移。
 
 ## 麦克风与 foreground recording
@@ -22,8 +23,15 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 ## 删除行为
 
 - 删除 seminar 会删除该 seminar 的 Room 记录和 app-owned local media directory。
-- 这包括该 seminar 下的 abstract PDF、recordings，以及后续阶段加入的 photos/clips。
+- 这包括该 seminar 下的 abstract PDF、recordings、photos 和 clips。
 - 一个录音失败不会删除同一 seminar 的其他 assets。
+
+## 本地导出
+
+- Markdown/ZIP 导出由用户显式触发，可保存到用户通过 Android system picker 选择的位置，也可交给 Android share sheet。
+- ZIP 内只包含当前可读的 app-owned abstract/photos/ready clips；缺失媒体会记录为 skipped media，不会自动上传或补传。
+- 导出文件是外部副本。删除 SeminarArc 内的 seminar 只清理 app-owned Room 记录和 app-private media，不会删除用户另存或分享出去的 Markdown/ZIP 副本。
+- SeminarArc 不会默认把导出内容发送到云端或第三方服务；真正发送到哪里取决于用户在系统 share sheet 中选择的目标应用。
 
 ## 用户责任
 
@@ -36,3 +44,4 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - Remote upload。
 - AI transcription 或 summaries。
 - Notion 或第三方 provider 上传。
+- OCR。

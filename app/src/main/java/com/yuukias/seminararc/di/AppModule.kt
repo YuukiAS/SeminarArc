@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.yuukias.seminararc.data.local.AppDatabase
 import com.yuukias.seminararc.data.local.DatabaseTransactionRunner
 import com.yuukias.seminararc.data.local.RoomDatabaseTransactionRunner
+import com.yuukias.seminararc.data.export.SeminarExportRepositoryImpl
 import com.yuukias.seminararc.data.local.dao.ClipDao
 import com.yuukias.seminararc.data.local.dao.RecordingDao
 import com.yuukias.seminararc.data.local.dao.SeminarDao
@@ -17,6 +18,7 @@ import com.yuukias.seminararc.data.storage.AppMediaStorageManager
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.domain.repository.SeminarExportRepository
 import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
 import com.yuukias.seminararc.media.clip.AndroidM4aClipGenerator
@@ -112,6 +114,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindSeminarRepository(impl: SeminarRepositoryImpl): SeminarRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSeminarExportRepository(impl: SeminarExportRepositoryImpl): SeminarExportRepository
 
     @Binds
     @Singleton
