@@ -47,7 +47,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.yuukias.seminararc.domain.model.ProcessingJob
 import com.yuukias.seminararc.domain.model.ProcessingJobState
+import com.yuukias.seminararc.domain.model.ProcessingJobType
 import com.yuukias.seminararc.ui.theme.SeminarArcThemeTokens
 
 @Composable
@@ -78,6 +80,8 @@ fun ReconstructionWorkspaceScreen(
         onEditOcrResult = viewModel::onEditOcrResult,
         onEnhancePhoto = { assetId -> viewModel.onEnhancePhoto(assetId) },
         onRunOcr = { assetId -> viewModel.onRunOcr(assetId) },
+        onRetryJob = viewModel::onRetryJob,
+        onCancelJob = viewModel::onCancelJob,
         modifier = modifier,
     )
 }
@@ -95,6 +99,8 @@ fun ReconstructionWorkspaceScreenContent(
     onEditOcrResult: (Long, String) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
     onRunOcr: (Long) -> Unit,
+    onRetryJob: (Long) -> Unit,
+    onCancelJob: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -138,6 +144,8 @@ fun ReconstructionWorkspaceScreenContent(
                 onEditOcrResult = onEditOcrResult,
                 onEnhancePhoto = onEnhancePhoto,
                 onRunOcr = onRunOcr,
+                onRetryJob = onRetryJob,
+                onCancelJob = onCancelJob,
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -154,6 +162,8 @@ private fun ReconstructionReadyContent(
     onEditOcrResult: (Long, String) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
     onRunOcr: (Long) -> Unit,
+    onRetryJob: (Long) -> Unit,
+    onCancelJob: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
@@ -219,6 +229,8 @@ private fun ReconstructionReadyContent(
                     onEditOcrResult = onEditOcrResult,
                     onEnhancePhoto = onEnhancePhoto,
                     onRunOcr = onRunOcr,
+                    onRetryJob = onRetryJob,
+                    onCancelJob = onCancelJob,
                 )
             }
         }
@@ -232,8 +244,12 @@ private fun ReconstructionAssetCard(
     onEditOcrResult: (Long, String) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
     onRunOcr: (Long) -> Unit,
+    onRetryJob: (Long) -> Unit,
+    onCancelJob: (Long) -> Unit,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
+    val ocrJob = item.latestJob(ProcessingJobType.TEXT_OCR)
+    val enhancementJob = item.latestJob(ProcessingJobType.IMAGE_ENHANCEMENT)
     var editedText by remember(item.asset.id, item.ocrResult?.updatedAt) {
         mutableStateOf(item.ocrResult?.editedText ?: item.ocrResult?.recognizedText.orEmpty())
     }
@@ -262,6 +278,7 @@ private fun ReconstructionAssetCard(
             Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
                 Button(
                     onClick = { onEnhancePhoto(item.asset.id) },
+                    enabled = enhancementJob?.state !in listOf(ProcessingJobState.QUEUED, ProcessingJobState.RUNNING),
                     modifier = Modifier.heightIn(min = 48.dp),
                 ) {
                     Icon(Icons.Outlined.AutoFixHigh, contentDescription = null)
@@ -269,12 +286,18 @@ private fun ReconstructionAssetCard(
                 }
                 Button(
                     onClick = { onRunOcr(item.asset.id) },
+                    enabled = ocrJob?.state !in listOf(ProcessingJobState.QUEUED, ProcessingJobState.RUNNING),
                     modifier = Modifier.heightIn(min = 48.dp),
                 ) {
                     Icon(Icons.Outlined.NoteAlt, contentDescription = null)
                     Text("OCR")
                 }
             }
+            ProcessingJobControls(
+                jobs = item.jobs,
+                onRetryJob = onRetryJob,
+                onCancelJob = onCancelJob,
+            )
             OutlinedTextField(
                 value = editedText,
                 onValueChange = { editedText = it },
@@ -288,6 +311,45 @@ private fun ReconstructionAssetCard(
                 modifier = Modifier.heightIn(min = 48.dp),
             ) {
                 Text("Save OCR edit")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProcessingJobControls(
+    jobs: List<ProcessingJob>,
+    onRetryJob: (Long) -> Unit,
+    onCancelJob: (Long) -> Unit,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    val orderedJobs = jobs.sortedByDescending { job -> job.createdAt }
+    if (orderedJobs.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
+        orderedJobs.forEach { job ->
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
+                Text(
+                    text = job.statusText(),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (job.state in listOf(ProcessingJobState.QUEUED, ProcessingJobState.RUNNING)) {
+                    TextButton(
+                        onClick = { onCancelJob(job.id) },
+                        modifier = Modifier.heightIn(min = 48.dp),
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+                if (job.state in listOf(ProcessingJobState.FAILED, ProcessingJobState.CANCELLED) && job.isRetryable) {
+                    TextButton(
+                        onClick = { onRetryJob(job.id) },
+                        modifier = Modifier.heightIn(min = 48.dp),
+                    ) {
+                        Text("Retry")
+                    }
+                }
             }
         }
     }
@@ -328,8 +390,31 @@ private fun PhotoPreview(item: ReconstructionAssetUiItem) {
 private fun ReconstructionAssetUiItem.statusLabel(): String {
     val latestJob = jobs.maxByOrNull { job -> job.createdAt }
     val ocrLabel = if (ocrResult == null) "No OCR" else "OCR ready"
-    val jobLabel = latestJob?.let { job -> "${job.type.name}: ${job.state.name}" }
+    val jobLabel = latestJob?.statusText()
     return listOfNotNull(asset.type.name, ocrLabel, jobLabel).joinToString(" | ")
+}
+
+private fun ReconstructionAssetUiItem.latestJob(type: ProcessingJobType): ProcessingJob? {
+    return jobs.filter { job -> job.type == type }.maxByOrNull { job -> job.createdAt }
+}
+
+private fun ProcessingJob.statusText(): String {
+    val typeLabel = when (type) {
+        ProcessingJobType.IMAGE_ENHANCEMENT -> "Enhancement"
+        ProcessingJobType.TEXT_OCR -> "OCR"
+    }
+    val stateLabel = when (state) {
+        ProcessingJobState.QUEUED -> "queued"
+        ProcessingJobState.RUNNING -> "running"
+        ProcessingJobState.SUCCEEDED -> "succeeded"
+        ProcessingJobState.FAILED -> "failed"
+        ProcessingJobState.CANCELLED -> "cancelled"
+    }
+    return if (state == ProcessingJobState.FAILED && !errorMessage.isNullOrBlank()) {
+        "$typeLabel $stateLabel: $errorMessage"
+    } else {
+        "$typeLabel $stateLabel"
+    }
 }
 
 private fun OcrStatusFilter.label(): String {

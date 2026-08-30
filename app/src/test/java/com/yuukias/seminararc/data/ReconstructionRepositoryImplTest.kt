@@ -121,6 +121,48 @@ class ReconstructionRepositoryImplTest {
         )
     }
 
+    @Test
+    fun requeueJob_resetsRetryableFailedJobToQueued() = runTest {
+        val assetId = dao.insertAsset(photoAsset())
+        val job = repository.enqueueJob(
+            EnqueueProcessingJobInput(
+                seminarId = SEMINAR_ID,
+                type = ProcessingJobType.TEXT_OCR,
+                inputAssetId = assetId,
+                providerId = "mlkit-text",
+                providerVersion = "16.0.1",
+            ),
+        )
+        repository.markJobFailed(job.id, "OCR failed", isRetryable = true)
+
+        val requeued = repository.requeueJob(job.id)
+
+        assertEquals(ProcessingJobState.QUEUED, requeued?.state)
+        assertEquals(null, requeued?.errorMessage)
+        assertEquals(null, requeued?.completedAt)
+    }
+
+    @Test
+    fun recoverInterruptedJobsMovesRunningJobsBackToQueued() = runTest {
+        val assetId = dao.insertAsset(photoAsset())
+        val job = repository.enqueueJob(
+            EnqueueProcessingJobInput(
+                seminarId = SEMINAR_ID,
+                type = ProcessingJobType.IMAGE_ENHANCEMENT,
+                inputAssetId = assetId,
+                providerId = "android-bitmap-local",
+                providerVersion = "1",
+            ),
+        )
+        repository.markJobRunning(job.id)
+
+        val recovered = repository.recoverInterruptedJobs()
+
+        assertEquals(ProcessingJobState.QUEUED, recovered.single().state)
+        assertEquals(ProcessingJobState.QUEUED, repository.getJob(job.id)?.state)
+        assertEquals(null, repository.getJob(job.id)?.startedAt)
+    }
+
     private fun photoAsset(): SeminarAssetEntity {
         return SeminarAssetEntity(
             seminarId = SEMINAR_ID,
@@ -202,6 +244,10 @@ private class FakeReconstructionDao : ReconstructionDao {
 
     override suspend fun getJob(jobId: Long): ProcessingJobEntity? {
         return jobs.firstOrNull { it.id == jobId }
+    }
+
+    override suspend fun getJobsInStates(states: List<ProcessingJobState>): List<ProcessingJobEntity> {
+        return jobs.filter { it.state in states }.sortedWith(compareBy({ it.createdAt }, { it.id }))
     }
 
     override suspend fun insertJob(entity: ProcessingJobEntity): Long {

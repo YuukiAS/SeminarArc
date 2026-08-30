@@ -165,6 +165,22 @@ private class FakeOcrReconstructionRepository : ReconstructionRepository {
 
     override suspend fun getAssetByRelativePath(relativePath: String): SeminarAsset? = null
 
+    override suspend fun getJob(jobId: Long): ProcessingJob? = jobs.firstOrNull { it.id == jobId }
+
+    override suspend fun recoverInterruptedJobs(): List<ProcessingJob> {
+        val interrupted = jobs.filter {
+            it.state in listOf(ProcessingJobState.QUEUED, ProcessingJobState.RUNNING)
+        }
+        interrupted.forEach { job ->
+            if (job.state == ProcessingJobState.RUNNING) {
+                replaceJob(job.id) { it.copy(state = ProcessingJobState.QUEUED, startedAt = null) }
+            }
+        }
+        return interrupted.map { job ->
+            if (job.state == ProcessingJobState.RUNNING) job.copy(state = ProcessingJobState.QUEUED, startedAt = null) else job
+        }
+    }
+
     override suspend fun createDerivedAsset(input: CreateDerivedAssetInput): SeminarAsset {
         error("Derived assets are not used in this test.")
     }
@@ -188,6 +204,18 @@ private class FakeOcrReconstructionRepository : ReconstructionRepository {
         )
         jobs += job
         return job
+    }
+
+    override suspend fun requeueJob(jobId: Long): ProcessingJob? {
+        val job = getJob(jobId) ?: return null
+        val requeued = job.copy(
+            state = ProcessingJobState.QUEUED,
+            startedAt = null,
+            completedAt = null,
+            errorMessage = null,
+        )
+        replaceJob(jobId) { requeued }
+        return requeued
     }
 
     override suspend fun markJobRunning(jobId: Long) {

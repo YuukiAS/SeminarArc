@@ -325,16 +325,16 @@ Notion 集成可使用官方 API 创建页面、追加 block，并在需要时�
 
 目标：让照片从“可回看”变成“可搜索、可整理”。
 
-当前 readiness gate 已通过；Room v3 数据基础、本地图像增强基础、本地 OCR provider/use case、Reconstruction workspace ViewModel 基础和 Compose workspace UI foundation 已落地，见 `docs/plans/0.2.x-reconstruction-readiness-plan.md` 和 `prompts/tasks/0.2.x_*_result.md`。
+当前 `0.2.x` 已完成：Room v3 数据基础、本地图像增强、本地 OCR provider/use case、WorkManager-backed processing queue、Reconstruction workspace ViewModel/Compose UI、Windows Emulator connected closeout 均已落地，见 `docs/plans/0.2.x-reconstruction-readiness-plan.md` 和 `prompts/tasks/0.2.x_*_result.md`。
 
 范围：
 
-- 图像旋转、裁边、透视矫正和增强，始终保留原图。基础 provider 已落地，后续仍需 UI/worker 接入和 Emulator smoke。
-- ML Kit 普通 OCR。Provider/use case 已落地，后续仍需 UI/worker 接入和 Emulator smoke。
-- OCR 文本搜索。ViewModel 过滤基础已落地，后续仍需 Compose UI 接入。
-- 照片标签和关键幻灯片筛选。KEY_SLIDE toggle/filter 基础已落地，后续仍需 Compose UI 接入。
-- ProcessingJob 状态与重试。
-- Room migration，为 transcript、OCR 和 references 建立稳定数据层。
+- 图像旋转、裁边、透视矫正和增强，始终保留原图。
+- bundled ML Kit 普通 OCR，覆盖 Latin、Chinese、mixed 和 empty/low-text smoke。
+- OCR 文本搜索。
+- 照片标签和关键幻灯片筛选。
+- ProcessingJob durable queue、重试、取消、幂等和 process-start recovery。
+- Room migration，为后续 transcript、OCR 和 references 建立稳定数据层边界。
 
 ### `0.3.x` 论文候选与 Seminar Brief
 

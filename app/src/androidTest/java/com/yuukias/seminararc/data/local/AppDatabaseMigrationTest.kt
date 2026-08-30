@@ -72,7 +72,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB,
-        ).addMigrations(MIGRATION_1_2)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
         database.openHelper.readableDatabase.query("SELECT retryCount FROM audio_clips WHERE id = 1").use { cursor ->
             cursor.moveToFirst()

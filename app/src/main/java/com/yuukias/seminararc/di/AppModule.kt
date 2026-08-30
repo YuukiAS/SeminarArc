@@ -36,6 +36,8 @@ import com.yuukias.seminararc.media.image.AndroidBitmapImageEnhancementProvider
 import com.yuukias.seminararc.media.ocr.MlKitTextOcrProvider
 import com.yuukias.seminararc.media.playback.Media3RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
+import com.yuukias.seminararc.media.processing.ProcessingWorkScheduler
+import com.yuukias.seminararc.media.processing.WorkManagerProcessingWorkScheduler
 import com.yuukias.seminararc.recording.controller.AndroidMediaRecorderControllerFactory
 import com.yuukias.seminararc.recording.controller.RecorderControllerFactory
 import com.yuukias.seminararc.recording.service.AndroidRecordingPermissionChecker
@@ -159,6 +161,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindClipWorkScheduler(impl: WorkManagerClipWorkScheduler): ClipWorkScheduler
+
+    @Binds
+    @Singleton
+    abstract fun bindProcessingWorkScheduler(impl: WorkManagerProcessingWorkScheduler): ProcessingWorkScheduler
 }
 
 @Module

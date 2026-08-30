@@ -14,6 +14,8 @@
 - 新增 `0.2.x` 本地 OCR 基础：bundled ML Kit Latin/Chinese Text Recognition 依赖、`TextOcrProvider`、app-owned OCR block JSON、`RunTextOcrForAssetUseCase` 和 OCR job/result JVM 测试。
 - 新增 `0.2.x` Reconstruction workspace ViewModel 基础：组合 photo assets、OCR results、processing jobs、KEY_SLIDE 标签、搜索 query 和 OCR 状态过滤，并暴露 enhance/OCR/edit/tag actions。
 - 新增 `0.2.x` Reconstruction workspace Compose UI：Seminar Detail 整理入口、照片预览、OCR 搜索/过滤、key-slide toggle、enhance/OCR 动作和 OCR 编辑保存路径。
+- 完成 `0.2.x` processing queue 收口：新增 WorkManager-backed OCR/enhancement worker、durable retry/cancel/idempotency、process-start recovery，以及 Reconstruction workspace 真实 queued/running/succeeded/failed/cancelled 控件。
+- 新增 Windows Emulator closeout 覆盖：`MIGRATION_2_3` connected、bundled ML Kit Latin/Chinese/mixed/empty OCR smoke、Android Bitmap enhancement smoke、WorkManager queue smoke、Reconstruction workspace UI regression 和既有 0.1.x connected regression。
 - 完成 `0.1.2` 第一阶段 one-active-seminar invariant：新增 session start 结果语义、事务边界和 repository unit tests。
 - 新增 `0.1.2` foreground recording service 基础：microphone foreground service、`MediaRecorder` 本地 `.m4a` backend、recording notification channel、ongoing notification、seminar-owned recording file 和 `RecordingEntity` durable lifecycle。
 - 新增最小 recording start use case，让详情页可以在麦克风权限允许后通过 repository/session 语义启动 foreground service。
@@ -41,6 +43,7 @@
 
 ### 修复
 
+- 修复 `0.2.x` closeout 期间暴露的 instrumentation 问题：旧 migration test 未在当前 v3 database builder 上注册 `MIGRATION_2_3`、mixed OCR fixture 断言过窄、workspace queue UI 只显示同类最新 job 导致 cancelled state 不可见。
 - 修复 `gradlew` 在 Linux/WSL 远程开发环境中的可执行位，避免 `./gradlew: Permission denied`。
 - 修复 process-start recovery 竞态：启动恢复先捕获 stale recording IDs，再只标记这些 rows 为 `FAILED`，避免误杀当前进程中新建的 recording。
 - 修复 durable `RECORDING` row 被误当成 live recorder 的语义；当前进程没有 runtime recorder 时改为 recovery state。

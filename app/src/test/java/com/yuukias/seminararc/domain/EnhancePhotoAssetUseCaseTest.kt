@@ -197,6 +197,24 @@ private class FakeReconstructionRepository : ReconstructionRepository {
         return assets.firstOrNull { it.relativePath == relativePath }
     }
 
+    override suspend fun getJob(jobId: Long): ProcessingJob? {
+        return jobs.firstOrNull { it.id == jobId }
+    }
+
+    override suspend fun recoverInterruptedJobs(): List<ProcessingJob> {
+        val interrupted = jobs.filter {
+            it.state in listOf(ProcessingJobState.QUEUED, ProcessingJobState.RUNNING)
+        }
+        interrupted.forEach { job ->
+            if (job.state == ProcessingJobState.RUNNING) {
+                replaceJob(job.id) { it.copy(state = ProcessingJobState.QUEUED, startedAt = null) }
+            }
+        }
+        return interrupted.map { job ->
+            if (job.state == ProcessingJobState.RUNNING) job.copy(state = ProcessingJobState.QUEUED, startedAt = null) else job
+        }
+    }
+
     override suspend fun createDerivedAsset(input: CreateDerivedAssetInput): SeminarAsset {
         val asset = asset(
             id = nextAssetId++,
@@ -233,6 +251,18 @@ private class FakeReconstructionRepository : ReconstructionRepository {
         )
         jobs += job
         return job
+    }
+
+    override suspend fun requeueJob(jobId: Long): ProcessingJob? {
+        val job = getJob(jobId) ?: return null
+        val requeued = job.copy(
+            state = ProcessingJobState.QUEUED,
+            startedAt = null,
+            completedAt = null,
+            errorMessage = null,
+        )
+        replaceJob(jobId) { requeued }
+        return requeued
     }
 
     override suspend fun markJobRunning(jobId: Long) {

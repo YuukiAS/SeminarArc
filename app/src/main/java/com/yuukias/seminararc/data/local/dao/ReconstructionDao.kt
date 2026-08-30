@@ -64,6 +64,15 @@ interface ReconstructionDao {
     @Query("SELECT * FROM processing_jobs WHERE id = :jobId")
     suspend fun getJob(jobId: Long): ProcessingJobEntity?
 
+    @Query(
+        """
+        SELECT * FROM processing_jobs
+        WHERE state IN (:states)
+        ORDER BY createdAt ASC, id ASC
+        """
+    )
+    suspend fun getJobsInStates(states: List<ProcessingJobState>): List<ProcessingJobEntity>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertJob(entity: ProcessingJobEntity): Long
 

@@ -63,6 +63,38 @@ class ReconstructionRepositoryImpl @Inject constructor(
         return dao.getAssetByRelativePath(relativePath)?.toDomain()
     }
 
+    override suspend fun getJob(jobId: Long): ProcessingJob? {
+        return dao.getJob(jobId)?.toDomain()
+    }
+
+    override suspend fun recoverInterruptedJobs(): List<ProcessingJob> {
+        val interrupted = dao.getJobsInStates(listOf(ProcessingJobState.QUEUED, ProcessingJobState.RUNNING))
+        interrupted
+            .filter { job -> job.state == ProcessingJobState.RUNNING }
+            .forEach { job ->
+                dao.updateJob(
+                    job.copy(
+                        state = ProcessingJobState.QUEUED,
+                        startedAt = null,
+                        completedAt = null,
+                        errorMessage = null,
+                    ),
+                )
+            }
+        return interrupted.map { job ->
+            if (job.state == ProcessingJobState.RUNNING) {
+                job.copy(
+                    state = ProcessingJobState.QUEUED,
+                    startedAt = null,
+                    completedAt = null,
+                    errorMessage = null,
+                )
+            } else {
+                job
+            }.toDomain()
+        }
+    }
+
     override suspend fun createDerivedAsset(input: CreateDerivedAssetInput): SeminarAsset {
         require(input.type == SeminarAssetType.PHOTO_ENHANCED) {
             "Only PHOTO_ENHANCED derived assets are supported in 0.2.x."
@@ -110,6 +142,21 @@ class ReconstructionRepositoryImpl @Inject constructor(
             ),
         )
         return dao.getJob(id)?.toDomain() ?: error("Job $id was not readable after insert.")
+    }
+
+    override suspend fun requeueJob(jobId: Long): ProcessingJob? {
+        val existing = dao.getJob(jobId) ?: return null
+        if (!existing.isRetryable || existing.state !in listOf(ProcessingJobState.FAILED, ProcessingJobState.CANCELLED)) {
+            return null
+        }
+        val updated = existing.copy(
+            state = ProcessingJobState.QUEUED,
+            startedAt = null,
+            completedAt = null,
+            errorMessage = null,
+        )
+        dao.updateJob(updated)
+        return updated.toDomain()
     }
 
     override suspend fun markJobRunning(jobId: Long) {

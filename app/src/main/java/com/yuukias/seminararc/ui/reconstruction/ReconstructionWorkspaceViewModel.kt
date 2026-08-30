@@ -12,10 +12,7 @@ import com.yuukias.seminararc.domain.model.SeminarSystemTag
 import com.yuukias.seminararc.domain.ocr.TextOcrLanguageMode
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
-import com.yuukias.seminararc.domain.usecase.EnhancePhotoAssetResult
-import com.yuukias.seminararc.domain.usecase.EnhancePhotoAssetUseCase
-import com.yuukias.seminararc.domain.usecase.RunTextOcrForAssetUseCase
-import com.yuukias.seminararc.domain.usecase.RunTextOcrResult
+import com.yuukias.seminararc.media.processing.ProcessingWorkScheduler
 import com.yuukias.seminararc.ui.navigation.ReconstructionWorkspaceRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -38,8 +35,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
     private val seminarRepository: SeminarRepository,
     private val reconstructionRepository: ReconstructionRepository,
     private val mediaStorageManager: MediaStorageManager,
-    private val enhancePhotoAssetUseCase: EnhancePhotoAssetUseCase,
-    private val runTextOcrForAssetUseCase: RunTextOcrForAssetUseCase,
+    private val processingWorkScheduler: ProcessingWorkScheduler,
 ) : ViewModel() {
     private val seminarId: Long = savedStateHandle["seminarId"]
         ?: savedStateHandle.toRoute<ReconstructionWorkspaceRoute>().seminarId
@@ -116,30 +112,38 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
 
     fun onEnhancePhoto(assetId: Long, options: ImageEnhancementOptions = ImageEnhancementOptions()) {
         viewModelScope.launch {
-            when (val result = enhancePhotoAssetUseCase(assetId, options)) {
-                is EnhancePhotoAssetResult.Enhanced -> {
-                    _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Enhanced photo saved."))
-                }
-                is EnhancePhotoAssetResult.AlreadyEnhanced -> {
-                    _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Enhanced photo already exists."))
-                }
-                is EnhancePhotoAssetResult.Failed -> {
-                    _events.emit(ReconstructionWorkspaceEvent.ShowMessage(result.message))
-                }
+            if (processingWorkScheduler.enqueueImageEnhancement(assetId, options) == null) {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Source asset was not found."))
+            } else {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Image enhancement queued."))
             }
         }
     }
 
     fun onRunOcr(assetId: Long, languageMode: TextOcrLanguageMode = TextOcrLanguageMode.LATIN_AND_CHINESE) {
         viewModelScope.launch {
-            when (val result = runTextOcrForAssetUseCase(assetId, languageMode)) {
-                is RunTextOcrResult.Recognized -> {
-                    _events.emit(ReconstructionWorkspaceEvent.ShowMessage("OCR complete."))
-                }
-                is RunTextOcrResult.Failed -> {
-                    _events.emit(ReconstructionWorkspaceEvent.ShowMessage(result.message))
-                }
+            if (processingWorkScheduler.enqueueTextOcr(assetId, languageMode) == null) {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Source asset was not found."))
+            } else {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("OCR queued."))
             }
+        }
+    }
+
+    fun onRetryJob(jobId: Long) {
+        viewModelScope.launch {
+            if (processingWorkScheduler.retry(jobId) == null) {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Job was not found."))
+            } else {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Processing retry queued."))
+            }
+        }
+    }
+
+    fun onCancelJob(jobId: Long) {
+        viewModelScope.launch {
+            processingWorkScheduler.cancel(jobId)
+            _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Processing job cancelled."))
         }
     }
 
@@ -177,7 +181,10 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
         return when (filter) {
             OcrStatusFilter.ALL -> true
             OcrStatusFilter.HAS_OCR -> ocrResult != null
-            OcrStatusFilter.NEEDS_OCR -> ocrResult == null && jobs.none { job -> job.type == ProcessingJobType.TEXT_OCR && job.state == ProcessingJobState.RUNNING }
+            OcrStatusFilter.NEEDS_OCR -> ocrResult == null && jobs.none { job ->
+                job.type == ProcessingJobType.TEXT_OCR &&
+                    job.state in listOf(ProcessingJobState.QUEUED, ProcessingJobState.RUNNING)
+            }
             OcrStatusFilter.FAILED -> jobs.any { job -> job.type == ProcessingJobType.TEXT_OCR && job.state == ProcessingJobState.FAILED }
         }
     }

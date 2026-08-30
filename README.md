@@ -10,7 +10,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 ## 当前状态
 
-仓库当前处于 `0.2.x-dev` Local Visual Reconstruction 本地图像增强实现批次。
+仓库当前已完成 `0.2.x` Local Visual Reconstruction 收口，可进入 `0.3.x` planning。
 
 已经具备：
 
@@ -32,12 +32,13 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.2.x` 本地图像增强基础：Android Bitmap/Matrix/Canvas/ColorMatrix provider、rotate/crop/perspective/readability options、原图保留的 enhanced derived asset 输出，以及 job success/failure/idempotency 单元测试。
 - `0.2.x` 本地 OCR 基础：bundled ML Kit Text Recognition Latin/Chinese 依赖、`TextOcrProvider`、app-owned OCR block JSON、`RunTextOcrForAssetUseCase` 和 OCR job/result JVM 测试。
 - `0.2.x` Reconstruction workspace 基础：照片 asset、OCR result、processing job、key-slide tag、搜索 query 和 OCR 状态过滤组合成可渲染 UI state，并从 Seminar Detail 进入 Compose 工作区进行照片预览、增强、OCR、OCR 编辑和 key-slide 标记。
+- `0.2.x` WorkManager-backed processing queue：OCR 和 image enhancement 支持 durable `QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED`，并具备 duplicate idempotency、retry、cancel 和 process-start recovery。
+- Windows Emulator closeout：`MIGRATION_2_3`、bundled ML Kit Latin/Chinese/mixed/empty OCR、Android Bitmap enhancement、Reconstruction workspace UI 和 0.1.x regression 已在 `Pixel_8` API 36 Emulator 上通过 connected 验证。
 
 尚未声明完成：
 
 - 非破坏性真机完整 E2E 验收：创建 seminar、录音、拍照、timeline、clip、重启后持久化、离线导出和删除清理仍需在用户授权的设备会话中执行。
-- `0.2.x` 的 worker 队列接入、Windows Emulator connected regression 和真实设备硬件 smoke。
-- 转写、AI 总结、Notion、cloud sync、Reference lookup、广告或支付。
+- 转写、AI 总结、Notion、cloud sync、Reference lookup、公式 OCR、广告或支付。
 
 ## 文档入口
 
@@ -59,7 +60,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 3. `0.1.3` capture/timeline：CameraX、photo-only、offset、现场交互和统一 timeline。
 4. `0.1.4` clip：WorkManager、clip 状态、retry 和 full-recording fallback。
 5. `0.1.5` local MVP：Markdown/ZIP 导出、数据清理、验收、README/隐私/CI 收口。
-6. `0.2.x` implementation：asset/job/OCR/tag data foundation、local image enhancement、local OCR、搜索、标签和 Research Reconstruction workspace UI。
+6. `0.2.x` implementation：asset/job/OCR/tag data foundation、WorkManager processing queue、local image enhancement、local OCR、搜索、标签和 Research Reconstruction workspace UI。
 
 实际执行时必须先写入 `prompts/tasks/<id>_task.md`，再由 Codex 按任务单执行并回写 `prompts/tasks/<id>_result.md`。
 
@@ -101,12 +102,12 @@ Windows PowerShell 可使用：
 
 ## 当前明确不做
 
-在本地采集闭环完成前，不做：
+当前明确不做：
 
 - 强制登录或云同步。
 - 自动上传全部录音或全部照片。
-- OCR、转写、AI 总结、Notion 或 provider API 接入。
+- formula OCR、转写、AI 总结、Reference lookup、Notion 或 cloud provider API 接入。
 - 广告、订阅、支付。
 - iOS 或 web 客户端。
 
-这些能力可以保留在 roadmap 中，但不能在 `0.1.x` UI 中伪装成已完成。
+普通本地 OCR、图像增强和 Reconstruction workspace 已在 `0.2.x` 实现；上述能力可以保留在 roadmap 中，但不能在 UI 中伪装成已完成。
