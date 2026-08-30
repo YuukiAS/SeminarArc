@@ -13,6 +13,7 @@
 - JDK 位置：`/home/yuukias/opt/jdk-17`；当前 `JAVA_HOME=/home/yuukias/opt/jdk-17`。
 - WSL Android SDK 位置：`/home/yuukias/Android/Sdk`；当前 `ANDROID_HOME` 和 `ANDROID_SDK_ROOT` 都指向该目录。
 - Windows Android SDK 当前由用户安装在 `D:\Android\Sdk`；该 SDK 主要服务 Windows Android Studio / Emulator。使用前仍必须实际检查，不要把路径视为永远不变。
+- 2026-08-30 本 WSL session 中 `/mnt/c` 与 `/mnt/d` 以 `ro` 挂载，且直接执行 `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe` 或 `/mnt/c/Windows/System32/cmd.exe` 返回 `Invalid argument`。这表示当前 Codex/WSL 进程暂不能通过 Windows interop 操作 Windows SDK/Emulator，也不能从 WSL 写入 `D:\Code\SeminarArc-emulator`；恢复该能力需要用户在 Windows/WSL 环境层处理，不得用 `wsl --shutdown`、usbipd 或真机 transport 操作绕过。
 - `local.properties` 应保持 WSL 构建路径 `sdk.dir=/home/yuukias/Android/Sdk`；不要把 canonical WSL 工作区改指向 Windows SDK。
 - `~/.bashrc` 已写入 JDK、Android SDK 和 scrcpy PATH：`$JAVA_HOME/bin`、`$ANDROID_HOME/cmdline-tools/latest/bin`、`$ANDROID_HOME/platform-tools`、`$SCRCPY_HOME`。
 - Gradle 使用仓库内 wrapper：`./gradlew`；当前 wrapper 为 Gradle `8.10.2`，不要假设系统级 `gradle` 已安装。
@@ -27,6 +28,7 @@
 - **后续 Android 自动化默认 Emulator-first。** JVM unit tests、Room/repository/ViewModel 测试继续在 WSL canonical repo 运行；Compose/instrumentation/Room migration/connected Android tests 优先在 Windows Emulator 运行。远程物理真机不再承担日常 CI/connected test 角色。
 - Windows Android Studio / Emulator 使用独立 Windows SDK `D:\Android\Sdk`。WSL 与 Windows SDK 可以重复下载 platform/build-tools/Gradle 缓存；为了隔离平台二进制和降低真机风险，不要强行共享 SDK 或 ADB server。
 - 后续可维护一个 Windows/NTFS 上的**测试镜像 checkout**（建议 `D:\Code\SeminarArc-emulator`），只用于从 `origin/main` 同步代码并在 Windows Gradle/SDK/Emulator 上跑 connected/instrumentation tests。canonical 开发工作区仍是 `/home/yuukias/code/SeminarArc`。测试镜像不得反向成为源码事实来源。
+- 如果 Windows interop 不可执行或 `D:\` 在 WSL 中只读，不能从 WSL 自动建立/同步 Windows test mirror；记录 `EMULATOR_INFRA_NEEDS_FIX`，继续 WSL headless 工作，等待用户恢复 Windows interop 或在 Windows 侧手动准备 mirror。
 - Windows Emulator 的实际 AVD 名称、serial（通常 `emulator-*`）、API 和 system image 必须由 setup task 现场检查后记录；不要提前假设 `emulator-5554` 永远固定。
 - 运行任何 Windows connected/instrumentation test 前，必须先用 `D:\Android\Sdk\platform-tools\adb.exe devices -l` 确认 Windows ADB **只看到预期 `emulator-*` 设备，绝不能看到物理真机 serial `8cc54656`**。如果 Windows ADB 看见物理真机，立即停止 connected test，视为 transport isolation 异常。
 - connected/instrumentation 自动安装链只允许对 Emulator 使用。只要目标设备不是明确的 `emulator-*`，默认禁止运行 connected test。

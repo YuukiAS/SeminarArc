@@ -24,6 +24,7 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 - Android Studio / Android Emulator 运行在 Windows。
 - 负责：Compose instrumentation、Room migration instrumentation、connected Android tests、自动安装测试 APK、可重复 UI regression。
 - Windows Emulator 的 AVD 名、API、serial 由 onboarding task 现场确认后再写入仓库事实记录。
+- 2026-08-30 onboarding 尝试时，当前 Codex WSL session 无法执行 Windows interop：`powershell.exe` 不在 PATH，直接调用 `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe` 和 `/mnt/c/Windows/System32/cmd.exe` 均返回 `Invalid argument`；同时 `/mnt/d` 为只读挂载。因此本轮无法验证 `D:\Android\Sdk`、AVD、Windows ADB 或建立 `D:\Code\SeminarArc-emulator`。
 
 ### Protected physical device
 
@@ -61,6 +62,7 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 - 不在 Windows mirror 中开发独立功能或产生未同步 commit。
 - 每次 connected test 前先确认 mirror 对应目标 commit。
 - Windows Gradle/JDK/SDK 缓存允许与 WSL 重复，隔离优先于节省磁盘。
+- 如果 `/mnt/d` 在 WSL 中是只读挂载，或 Windows interop 无法执行 `powershell.exe` / `cmd.exe`，Codex 不能自动创建该 mirror。此时应记录环境状态，先保留 WSL canonical headless gate，通过用户恢复 Windows interop 或在 Windows 侧手动准备 mirror 后再重跑 onboarding。
 
 ## 5. Emulator connected-test safety
 
