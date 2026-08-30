@@ -325,7 +325,7 @@ Notion 集成可使用官方 API 创建页面、追加 block，并在需要时�
 
 目标：让照片从“可回看”变成“可搜索、可整理”。
 
-当前 readiness gate 已通过；Room v3 数据基础、本地图像增强基础、本地 OCR provider/use case 和 Reconstruction workspace ViewModel 基础已落地，见 `docs/plans/0.2.x-reconstruction-readiness-plan.md` 和 `prompts/tasks/0.2.x_*_result.md`。
+当前 readiness gate 已通过；Room v3 数据基础、本地图像增强基础、本地 OCR provider/use case、Reconstruction workspace ViewModel 基础和 Compose workspace UI foundation 已落地，见 `docs/plans/0.2.x-reconstruction-readiness-plan.md` 和 `prompts/tasks/0.2.x_*_result.md`。
 
 范围：
 

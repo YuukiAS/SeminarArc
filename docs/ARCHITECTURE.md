@@ -103,7 +103,9 @@ Local OCR now uses `MlKitTextOcrProvider` behind `TextOcrProvider`. The first im
 
 `ReconstructionWorkspaceViewModel` is the first UI-facing reconstruction boundary. It combines seminar detail, photo assets, OCR results, processing jobs, key-slide tag membership, search text, and OCR status filters into immutable UI state. It also exposes actions for key-slide toggles, OCR editing, image enhancement, and local OCR through repository/use-case APIs.
 
-Compose screens continue to call ViewModels only. ViewModels call repository/use-case boundaries. Workers/use cases call providers and persist results. No composable reads Room, app-private files, ML Kit, or bitmap processing APIs directly.
+`ReconstructionWorkspaceScreen` is now reachable from Seminar Detail for completed-seminar cleanup work. It renders searchable/filterable photo assets, ViewModel-resolved local image previews, key-slide toggles, local enhance/OCR commands, and editable OCR text. The screen is intentionally a thin Compose layer over the ViewModel; it does not call Room, ML Kit, CameraX, or storage repositories directly.
+
+Compose screens continue to call ViewModels for app actions. ViewModels call repository/use-case boundaries. Workers/use cases call providers and persist results. No composable reads Room, ML Kit, or bitmap processing providers directly.
 
 ## Planned ownership model
 

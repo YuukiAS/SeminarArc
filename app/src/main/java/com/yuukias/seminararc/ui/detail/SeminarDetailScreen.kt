@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.NoteAlt
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.SaveAlt
@@ -69,6 +70,7 @@ fun SeminarDetailScreen(
     onEdit: (Long) -> Unit,
     onOpenActiveSession: (Long) -> Unit,
     onOpenTimeline: (Long) -> Unit,
+    onOpenReconstruction: (Long) -> Unit,
     onDeleted: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SeminarDetailViewModel = hiltViewModel(),
@@ -160,6 +162,7 @@ fun SeminarDetailScreen(
         onStartRecording = startRecording,
         onStartPhotosOnly = viewModel::onStartPhotosOnlyClicked,
         onOpenTimeline = viewModel::onOpenTimelineClicked,
+        onOpenReconstruction = { ready -> onOpenReconstruction(ready.detail.id) },
         onSaveMarkdown = { markdownExportLauncher.launch("seminar.md") },
         onSaveZip = { zipExportLauncher.launch("seminar.zip") },
         onShareMarkdown = viewModel::onShareMarkdownClicked,
@@ -183,6 +186,7 @@ fun SeminarDetailScreenContent(
     onStartRecording: () -> Unit,
     onStartPhotosOnly: () -> Unit,
     onOpenTimeline: () -> Unit,
+    onOpenReconstruction: (SeminarDetailUiState.Ready) -> Unit,
     onSaveMarkdown: () -> Unit,
     onSaveZip: () -> Unit,
     onShareMarkdown: () -> Unit,
@@ -264,6 +268,10 @@ fun SeminarDetailScreenContent(
                         items = uiState.detail.timelinePreview,
                         onOpenTimeline = onOpenTimeline,
                     )
+                    SeminarReconstructionSection(
+                        uiState = uiState,
+                        onOpenReconstruction = onOpenReconstruction,
+                    )
                     SeminarExportSection(
                         isExporting = uiState.isExporting,
                         exportMessage = uiState.exportMessage,
@@ -280,6 +288,32 @@ fun SeminarDetailScreenContent(
                         Text(if (uiState.isDeleting) "Deleting..." else "Delete seminar")
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeminarReconstructionSection(
+    uiState: SeminarDetailUiState.Ready,
+    onOpenReconstruction: (SeminarDetailUiState.Ready) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    Card(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(spacing.space4),
+            verticalArrangement = Arrangement.spacedBy(spacing.space3),
+        ) {
+            Text("Reconstruction", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Review slide photos, enhance readability, run local OCR, edit text, and mark key slides.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(onClick = { onOpenReconstruction(uiState) }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Outlined.NoteAlt, contentDescription = null)
+                Text("Open reconstruction")
             }
         }
     }

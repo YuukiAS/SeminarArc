@@ -61,6 +61,7 @@ class SeminarDetailScreenTest {
                     onStartRecording = {},
                     onStartPhotosOnly = {},
                     onOpenTimeline = {},
+                    onOpenReconstruction = { _ -> },
                     onSaveMarkdown = {},
                     onSaveZip = {},
                     onShareMarkdown = {},

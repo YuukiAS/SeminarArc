@@ -12,6 +12,8 @@ import com.yuukias.seminararc.ui.editor.SeminarEditorScreen
 import com.yuukias.seminararc.ui.editor.SeminarEditorViewModel
 import com.yuukias.seminararc.ui.library.SeminarLibraryScreen
 import com.yuukias.seminararc.ui.library.SeminarLibraryViewModel
+import com.yuukias.seminararc.ui.reconstruction.ReconstructionWorkspaceScreen
+import com.yuukias.seminararc.ui.reconstruction.ReconstructionWorkspaceViewModel
 import com.yuukias.seminararc.ui.session.ActiveSessionScreen
 import com.yuukias.seminararc.ui.session.ActiveSessionViewModel
 import com.yuukias.seminararc.ui.timeline.SeminarTimelineScreen
@@ -68,6 +70,7 @@ fun SeminarNavHost(
                     }
                 },
                 onOpenTimeline = { seminarId -> navController.navigate(SeminarTimelineRoute(seminarId)) },
+                onOpenReconstruction = { seminarId -> navController.navigate(ReconstructionWorkspaceRoute(seminarId)) },
                 onDeleted = {
                     navController.navigate(SeminarLibraryRoute) {
                         popUpTo(SeminarLibraryRoute) { inclusive = false }
@@ -97,6 +100,13 @@ fun SeminarNavHost(
         composable<SeminarTimelineRoute> {
             val viewModel: SeminarTimelineViewModel = hiltViewModel()
             SeminarTimelineScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<ReconstructionWorkspaceRoute> {
+            val viewModel: ReconstructionWorkspaceViewModel = hiltViewModel()
+            ReconstructionWorkspaceScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
             )
