@@ -3,6 +3,7 @@ package com.yuukias.seminararc.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarStatus
 import com.yuukias.seminararc.ui.detail.SeminarDetailScreenContent
@@ -71,5 +72,6 @@ class SeminarDetailScreenTest {
         }
 
         composeRule.onNodeWithText("No abstract PDF attached. This seminar remains valid and can be completed without it.").assertIsDisplayed()
+        composeRule.onNodeWithText("Share ZIP").performScrollTo().assertIsDisplayed()
     }
 }

@@ -23,8 +23,11 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 - Windows Android SDK：`D:\Android\Sdk`
 - Android Studio / Android Emulator 运行在 Windows。
 - 负责：Compose instrumentation、Room migration instrumentation、connected Android tests、自动安装测试 APK、可重复 UI regression。
-- Windows Emulator 的 AVD 名、API、serial 由 onboarding task 现场确认后再写入仓库事实记录。
-- 2026-08-30 onboarding 尝试时，当前 Codex WSL session 无法执行 Windows interop：`powershell.exe` 不在 PATH，直接调用 `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe` 和 `/mnt/c/Windows/System32/cmd.exe` 均返回 `Invalid argument`；同时 `/mnt/d` 为只读挂载。因此本轮无法验证 `D:\Android\Sdk`、AVD、Windows ADB 或建立 `D:\Code\SeminarArc-emulator`。
+- 2026-08-30 Windows 原生 Codex 已确认：AVD `Pixel_8`，serial `emulator-5554`，model `sdk_gphone64_x86_64`，API `36`，ABI `x86_64`。
+- Emulator version：`37.1.11.0 (build_id 15917651)`；acceleration：`WHPX(10.0.26100) is installed and usable`。
+- Windows ADB gate 已确认仅看到 `emulator-5554`，未看到 `8cc54656`、GM1910 或其他 physical USB device。
+- 2026-08-30 Windows 原生 onboarding/regression 结果：`EMULATOR_REGRESSION_PASS`。
+- 历史 WSL onboarding 尝试曾因 WSL session 无法执行 Windows interop 且 `/mnt/d` 只读而记录 `EMULATOR_INFRA_NEEDS_FIX`；该 blocker 仅适用于当时的 WSL interop 场景，不适用于 Windows 原生 Codex 执行。
 
 ### Protected physical device
 
@@ -62,6 +65,8 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 - 不在 Windows mirror 中开发独立功能或产生未同步 commit。
 - 每次 connected test 前先确认 mirror 对应目标 commit。
 - Windows Gradle/JDK/SDK 缓存允许与 WSL 重复，隔离优先于节省磁盘。
+- 2026-08-30 已建立并验证 `D:\Code\SeminarArc-emulator`。
+- Android Studio JBR 当前位于 `C:\Android\Android Studio\jbr`，但该环境中为 OpenJDK `25.0.2`，与当前 Gradle/Kotlin DSL 不兼容；本轮 Windows Gradle 使用本地 JDK 17：`D:\Code\_jdks\jdk-17.0.20.1+1`，未修改系统级 JAVA_HOME。
 - 如果 `/mnt/d` 在 WSL 中是只读挂载，或 Windows interop 无法执行 `powershell.exe` / `cmd.exe`，Codex 不能自动创建该 mirror。此时应记录环境状态，先保留 WSL canonical headless gate，通过用户恢复 Windows interop 或在 Windows 侧手动准备 mirror 后再重跑 onboarding。
 
 ## 5. Emulator connected-test safety
@@ -99,7 +104,7 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 
 从 2026-08-30 起：
 
-1. 先验证 Windows Emulator 环境。
-2. 将 existing instrumentation / migration / connected regression 迁移到 Emulator。
-3. 只做一次只读检查确认 GM1910 仍在线，随后默认不再操作真机。
+1. Windows Emulator 环境已验证，当前结果为 `EMULATOR_REGRESSION_PASS`。
+2. existing instrumentation / migration / connected regression 已可在 Windows Emulator 执行。
+3. 每次涉及 GM1910 的 task 只做 task 明确授权的只读/单步检查，默认不操作真机。
 4. 原先等待真机完整 E2E 的 stalled task 不再作为日常开发 blocker；物理验收延期到未来明确的 hardware acceptance checkpoint。

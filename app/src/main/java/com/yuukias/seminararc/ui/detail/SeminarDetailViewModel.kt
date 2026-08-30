@@ -184,7 +184,9 @@ class SeminarDetailViewModel @Inject constructor(
     }
 
     fun onOpenTimelineClicked() {
-        _events.tryEmit(SeminarDetailEvent.OpenTimeline(seminarId))
+        viewModelScope.launch {
+            _events.emit(SeminarDetailEvent.OpenTimeline(seminarId))
+        }
     }
 
     fun onMarkdownDestinationSelected(uriString: String) {

@@ -1,6 +1,7 @@
 package com.yuukias.seminararc.ui.detail
 
 import androidx.lifecycle.SavedStateHandle
+import app.cash.turbine.test
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.data.storage.RecordingOutputFile
 import com.yuukias.seminararc.data.storage.StoredFile
@@ -126,6 +127,16 @@ class SeminarDetailViewModelPlaybackTest {
     }
 
     @Test
+    fun openTimeline_emitsNavigationEvent() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.events.test {
+            viewModel.onOpenTimelineClicked()
+            assertEquals(SeminarDetailEvent.OpenTimeline(12L), awaitItem())
+        }
+    }
+
+    @Test
     fun latestFailedDoesNotHideOlderCompletedRecording() = runTest {
         val failed = detailRecording(
             id = 8L,
@@ -151,7 +162,7 @@ class SeminarDetailViewModelPlaybackTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.readyState().recordingPlayback is RecordingPlaybackUiState.Playing)
-        assertEquals("/fake/files/${completed.filePath}", playback.preparedFiles.single().absolutePath)
+        assertEquals(fakeStoredFile(completed.filePath).absolutePath, playback.preparedFiles.single().absolutePath)
     }
 
     @Test
@@ -375,10 +386,14 @@ private class DetailFakeMediaStorageManager(
     override suspend fun createPhotoOutputFile(seminarId: Long, capturedAt: Instant): com.yuukias.seminararc.data.storage.PhotoOutputFile = error("Not used")
     override suspend fun createClipOutputFile(seminarId: Long, clipId: Long): com.yuukias.seminararc.data.storage.ClipOutputFile = error("Not used")
     override suspend fun resolveReadableRelativeFile(relativePath: String): File? {
-        return if (relativePath in readablePaths) File("/fake/files/$relativePath") else null
+        return if (relativePath in readablePaths) fakeStoredFile(relativePath) else null
     }
     override suspend fun deleteRelativeFile(relativePath: String) = Unit
     override suspend fun deleteSeminarMedia(seminarId: Long) = Unit
+}
+
+private fun fakeStoredFile(relativePath: String): File {
+    return File(File("fake", "files"), relativePath)
 }
 
 private class DetailFakeSeminarRepository(
