@@ -24,13 +24,20 @@
 ## 真机解锁与设备操作安全
 
 - 当前常用本地测试机：serial `8cc54656`，型号 `GM1910` / OnePlus 7 Pro，Android 10 / API 29；每次真机验收前仍必须用 `adb devices -l` 和 `adb shell getprop` 复核，不要把这些信息当成永久不变。
+- **该真机长期位于远程工位且经常处于无人值守状态。保持 USB / usbipd / WSL / ADB 链路连续可用是最高优先级安全约束，高于完成测试、收集 coverage、运行 instrumentation 或追求一次性验收完整度。只要某个命令是否可能影响连接存在合理不确定性，默认停止并请求用户确认，不得“先试一下”。**
+- **严禁以任何直接或间接方式导致真机从 Windows、usbipd、WSL 或 ADB 中断开、重枚举、切换连接形态或失去当前可访问状态。禁止范围不仅包括显式 disconnect，也包括可能重置 USB/ADB transport、重启设备/服务、切换 USB mode、重新绑定 passthrough、重启 WSL 或触发高风险 instrumentation 安装链的操作。**
 - 不得把真机 PIN、密码或任何解锁 secret 写入本仓库、task、result、日志、截图说明、commit message 或 `AGENTS.md`。PIN 只能保存在用户本机私有 secret store、受权限保护的本地配置或专门 harness 的加密 secret 文件中。
 - 如需自动短暂解锁，优先复用 EchoSelect 的 WSL 本地 harness 流程：`/home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py`。默认 PIN secret 文件为 `~/.config/echoselect/device-secrets/8cc54656.pin.wsl`，该文件不是仓库内容，不得复制进 SeminarArc。
 - 可用的只读锁屏检查命令：`python /home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py check-lock-state --serial 8cc54656`。
 - 可用的短暂解锁命令：`python /home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py unlock --serial 8cc54656 --evidence-root /tmp/seminararc-device-evidence`。该流程只允许 wake/swipe/text/keyevent 这类解锁输入，并通过 `deviceLocked=0` 验证成功；输出证据不得包含 PIN。
-- 真机验收期间禁止执行会断开、重置或改变连接形态的命令，包括但不限于 `adb disconnect`、`adb kill-server`、`adb reboot`、`adb tcpip`、USB detach/unbind 或等价操作。
+- 真机验收期间禁止执行会断开、重置或改变连接形态的命令，包括但不限于 `adb disconnect`、`adb kill-server`、`adb reboot`、`adb tcpip`、`adb usb`、`svc usb`、修改 `sys.usb.config` / USB 模式、USB detach/unbind、`usbipd attach/detach/bind/unbind`、重启 usbipd 服务、`wsl --shutdown` 或任何等价操作。即使目的是“恢复连接”，也必须先取得用户明确授权。
+- **远程无人值守真机默认禁止作为通用 connected/instrumentation CI 目标。未经用户对该次执行明确授权，不得运行 `connectedDebugAndroidTest`、`connectedAndroidTest`、会自动安装 instrumentation APK 的 Gradle connected test、批量 device test、测试 runner 安装链或其他可能触发 package/transport 重置的自动化设备测试。优先使用 JVM tests、静态检查或 emulator。**
+- `adb install -r` 只允许在 task 明确需要更新 app 且当前设备链路已确认稳定时使用；执行前后都必须重新运行 `adb devices -l` 核对同一 serial 仍为 `device`。禁止把 `adb install -r` 扩展成 uninstall/reinstall/clear-data 流程。若安装过程中或安装后设备从 ADB 消失，立即停止所有设备命令，不得自动重连、重启 server、切换 USB、重绑 usbipd 或重复安装。
+- 任何会写入、安装、启动 instrumentation、改变 package 状态或长时间占用设备的命令，在执行前必须先做设备 preflight：至少确认 `adb devices -l` 中目标 serial 唯一且状态为 `device`；执行后立即做 postflight。多个会访问真机的 Gradle/ADB/scrcpy 流程不得并行运行。
+- 如果 `adb devices -l` 为空、设备状态不是 `device`、serial 改变，或 Windows/WSL 对设备可见性出现任何异常：**立即把真机视为连接安全事件并停止。不得为了继续任务自行尝试恢复连接。** 只记录最后一个已知安全命令、设备消失发生在哪一步以及只读证据，等待用户处理或明确授权恢复动作。
 - 真机验收期间禁止卸载 app、清空 app data、删除或移动设备上的用户文件/媒体/数据库，除非用户对该具体动作给出明确授权。本项目调试产生的 app-owned 测试数据可以保留到用户手动清理。
 - `scrcpy -S` 或黑屏只算显示隐私措施，不等于安全锁屏；如果某项验收要求锁屏状态，必须用 `dumpsys trust` / `dumpsys window policy` 或 harness 的 `check-lock-state` 明确验证。
+- 每次 task 只要涉及 physical device、ADB、scrcpy、usbipd、instrumentation 或安装 APK，Codex 必须在执行任何设备命令前重新阅读本节；不得仅凭之前线程中“设备一直可用”的状态继续操作。
 
 ## SeminarArc Project Skills
 
@@ -48,7 +55,7 @@ Load supporting references from:
 
 ### Compose Expert Skill
 
-For Jetpack Compose UI implementation, state management, modifier ordering, performance, navigation patterns, animation, Material 3, and source-backed Compose guidance, follow:
+For Jetpack Compose UI implementation, state management, modifier ordering, performance, navigation patterns, animation, Material 3 theming, and source-backed Compose guidance, follow:
 
 `.agents/skills/compose-expert/SKILL.md`
 
@@ -105,7 +112,7 @@ Load supporting references from:
 - `prompts/tasks/*_result.md`：Codex 的结果回写位置。
 - `prompts/tasks/*_review.md`：ChatGPT 的复盘位置。
 - `docs/notes/`：参考笔记目录，不是默认任务入口。
-- `docs/wiki/`：长期研究知识库，不是默认任务入口。
+- `docs/wiki/`：长期研究知识库，用于沉淀论文、报告、概念、对比、gap 和综合讨论；不是默认任务入口。
 
 ## Codex 行为规则
 
@@ -120,6 +127,6 @@ Load supporting references from:
 - ChatGPT 通过 GitHub MCP 处理本仓库时，应先读取 `AGENTS.md` 和 `prompts/CHATGPT_RULES.md`。
 - 需要 Codex 执行的内容必须写成 `prompts/tasks/<id>_task.md`。
 - 只作参考的研究分析、方案比较、会议记录和复盘应写到 `docs/notes/`。
-- 有长期复用价值的论文摘要、报告摘要、概念、对比、gap 和综合讨论应写到 `docs/wiki/`。
+- 有长期复用价值的论文摘要、报告摘要、概念、对比、gap 和综合讨论应写入 `docs/wiki/`，并让 task 显式引用相关 wiki 页面。
 - ChatGPT 不应把 issue、PR description 或聊天正文当作 Codex 的唯一任务来源。
 <!-- ai-bridge-kit:end -->
