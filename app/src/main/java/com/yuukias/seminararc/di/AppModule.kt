@@ -5,12 +5,15 @@ import androidx.room.Room
 import com.yuukias.seminararc.data.local.AppDatabase
 import com.yuukias.seminararc.data.local.DatabaseTransactionRunner
 import com.yuukias.seminararc.data.local.MIGRATION_1_2
+import com.yuukias.seminararc.data.local.MIGRATION_2_3
 import com.yuukias.seminararc.data.local.RoomDatabaseTransactionRunner
 import com.yuukias.seminararc.data.export.SeminarExportRepositoryImpl
 import com.yuukias.seminararc.data.local.dao.ClipDao
+import com.yuukias.seminararc.data.local.dao.ReconstructionDao
 import com.yuukias.seminararc.data.local.dao.RecordingDao
 import com.yuukias.seminararc.data.local.dao.SeminarDao
 import com.yuukias.seminararc.data.local.dao.TimelineDao
+import com.yuukias.seminararc.data.repository.ReconstructionRepositoryImpl
 import com.yuukias.seminararc.data.repository.RecordingRepositoryImpl
 import com.yuukias.seminararc.data.repository.SeminarRepositoryImpl
 import com.yuukias.seminararc.data.repository.ClipRepositoryImpl
@@ -18,6 +21,7 @@ import com.yuukias.seminararc.data.repository.TimelineRepositoryImpl
 import com.yuukias.seminararc.data.storage.AppMediaStorageManager
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.repository.RecordingRepository
+import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.SeminarExportRepository
 import com.yuukias.seminararc.domain.repository.ClipRepository
@@ -57,7 +61,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "seminararc.db",
-        ).addMigrations(MIGRATION_1_2)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 
@@ -72,6 +76,9 @@ object DatabaseModule {
 
     @Provides
     fun provideClipDao(database: AppDatabase): ClipDao = database.clipDao()
+
+    @Provides
+    fun provideReconstructionDao(database: AppDatabase): ReconstructionDao = database.reconstructionDao()
 
     @Provides
     @Singleton
@@ -128,6 +135,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindClipRepository(impl: ClipRepositoryImpl): ClipRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindReconstructionRepository(impl: ReconstructionRepositoryImpl): ReconstructionRepository
 
     @Binds
     @Singleton
