@@ -10,7 +10,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 ## 当前状态
 
-仓库当前处于 `0.2.x-dev` Local Visual Reconstruction 数据基础实现批次。
+仓库当前处于 `0.2.x-dev` Local Visual Reconstruction 本地图像增强实现批次。
 
 已经具备：
 
@@ -29,11 +29,12 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.1.x` 到 `0.2.x` 的分阶段计划文档。
 - `0.2.x` readiness gate：Room v2->v3 migration 设计、bundled ML Kit Text Recognition v2 OCR 决策、Android 原生图像增强决策、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - `0.2.x` Room version 3 数据基础：`SeminarAsset`、`ProcessingJob`、`OcrResult`、tags/key-slide mapping、schema `3.json` 和 v2->v3 backfill migration。
+- `0.2.x` 本地图像增强基础：Android Bitmap/Matrix/Canvas/ColorMatrix provider、rotate/crop/perspective/readability options、原图保留的 enhanced derived asset 输出，以及 job success/failure/idempotency 单元测试。
 
 尚未声明完成：
 
 - 非破坏性真机完整 E2E 验收：创建 seminar、录音、拍照、timeline、clip、重启后持久化、离线导出和删除清理仍需在用户授权的设备会话中执行。
-- `0.2.x` 的 production ML Kit OCR、图像增强 provider、搜索 UI、标签 UI 和 Research Reconstruction workspace。
+- `0.2.x` 的 production ML Kit OCR、搜索 UI、标签 UI、Research Reconstruction workspace 和 Windows Emulator connected regression。
 - 转写、AI 总结、Notion、cloud sync、Reference lookup、广告或支付。
 
 ## 文档入口

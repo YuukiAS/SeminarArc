@@ -37,6 +37,9 @@ interface ReconstructionDao {
     @Query("SELECT * FROM seminar_assets WHERE id = :assetId")
     suspend fun getAsset(assetId: Long): SeminarAssetEntity?
 
+    @Query("SELECT * FROM seminar_assets WHERE relativePath = :relativePath LIMIT 1")
+    suspend fun getAssetByRelativePath(relativePath: String): SeminarAssetEntity?
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertAsset(entity: SeminarAssetEntity): Long
 

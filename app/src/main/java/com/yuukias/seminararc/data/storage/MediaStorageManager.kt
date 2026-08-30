@@ -20,6 +20,12 @@ data class PhotoOutputFile(
     val file: File,
 )
 
+data class EnhancedPhotoOutputFile(
+    val displayName: String,
+    val relativePath: String,
+    val file: File,
+)
+
 data class ClipOutputFile(
     val displayName: String,
     val relativePath: String,
@@ -30,6 +36,13 @@ interface MediaStorageManager {
     suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): StoredFile
     suspend fun createRecordingOutputFile(seminarId: Long, startedAt: Instant): RecordingOutputFile
     suspend fun createPhotoOutputFile(seminarId: Long, capturedAt: Instant): PhotoOutputFile
+    suspend fun createEnhancedPhotoOutputFile(
+        seminarId: Long,
+        originAssetId: Long,
+        variantKey: String,
+    ): EnhancedPhotoOutputFile {
+        throw UnsupportedOperationException("Enhanced photo output is not available for this storage manager.")
+    }
     suspend fun createClipOutputFile(seminarId: Long, clipId: Long): ClipOutputFile
     suspend fun resolveReadableRelativeFile(relativePath: String): File?
     suspend fun deleteRelativeFile(relativePath: String)

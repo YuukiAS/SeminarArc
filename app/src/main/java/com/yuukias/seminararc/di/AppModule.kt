@@ -20,6 +20,7 @@ import com.yuukias.seminararc.data.repository.ClipRepositoryImpl
 import com.yuukias.seminararc.data.repository.TimelineRepositoryImpl
 import com.yuukias.seminararc.data.storage.AppMediaStorageManager
 import com.yuukias.seminararc.data.storage.MediaStorageManager
+import com.yuukias.seminararc.domain.image.ImageEnhancementProvider
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
@@ -30,6 +31,7 @@ import com.yuukias.seminararc.media.clip.AndroidM4aClipGenerator
 import com.yuukias.seminararc.media.clip.ClipGenerator
 import com.yuukias.seminararc.media.clip.ClipWorkScheduler
 import com.yuukias.seminararc.media.clip.WorkManagerClipWorkScheduler
+import com.yuukias.seminararc.media.image.AndroidBitmapImageEnhancementProvider
 import com.yuukias.seminararc.media.playback.Media3RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
 import com.yuukias.seminararc.recording.controller.AndroidMediaRecorderControllerFactory
@@ -139,6 +141,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindReconstructionRepository(impl: ReconstructionRepositoryImpl): ReconstructionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindImageEnhancementProvider(impl: AndroidBitmapImageEnhancementProvider): ImageEnhancementProvider
 
     @Binds
     @Singleton

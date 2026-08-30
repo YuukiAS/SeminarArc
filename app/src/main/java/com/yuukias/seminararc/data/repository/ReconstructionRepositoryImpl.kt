@@ -55,6 +55,10 @@ class ReconstructionRepositoryImpl @Inject constructor(
         return dao.getAsset(assetId)?.toDomain()
     }
 
+    override suspend fun getAssetByRelativePath(relativePath: String): SeminarAsset? {
+        return dao.getAssetByRelativePath(relativePath)?.toDomain()
+    }
+
     override suspend fun createDerivedAsset(input: CreateDerivedAssetInput): SeminarAsset {
         require(input.type == SeminarAssetType.PHOTO_ENHANCED) {
             "Only PHOTO_ENHANCED derived assets are supported in 0.2.x."

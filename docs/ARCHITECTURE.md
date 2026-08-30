@@ -90,11 +90,12 @@ Playback is intentionally page-scoped in this phase. There is no `MediaSessionSe
 - `ocr_results` stores app-owned recognized text, optional lightweight block JSON, provider metadata, and human-edited state.
 - `tags` and `asset_tags` support key slides and seminar-scoped photo organization.
 - `MIGRATION_2_3` backfills assets from existing `abstractPdfPath`, `recordings.filePath`, `timeline_events.photoPath`, and `audio_clips.filePath` without moving or deleting files.
+- Local image enhancement now uses `AndroidBitmapImageEnhancementProvider` behind `ImageEnhancementProvider`. `EnhancePhotoAssetUseCase` resolves the original app-owned file, writes a deterministic `enhanced/` JPEG, creates a `PHOTO_ENHANCED` derived `SeminarAsset`, and marks the durable `IMAGE_ENHANCEMENT` job succeeded or retryable failed.
 
 Provider boundaries:
 
 - `TextOcrProvider` owns local OCR calls and returns app-owned domain models.
-- `ImageEnhancementProvider` owns rotate/crop/perspective/readability outputs and always writes derived assets.
+- `ImageEnhancementProvider` owns rotate/crop/perspective/readability outputs and always writes derived assets instead of replacing original photos.
 - `CloudUploadPolicy` defaults to no upload in `0.2.x`.
 - `FormulaOcrProvider`, `TranscriptionProvider`, `SummaryProvider`, and `ReferenceLookupProvider` remain deferred boundaries; no real `0.3.x+` provider behavior ships in `0.2.x`.
 

@@ -10,6 +10,7 @@
 
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
+- 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。
 - 完成 `0.1.2` 第一阶段 one-active-seminar invariant：新增 session start 结果语义、事务边界和 repository unit tests。
 - 新增 `0.1.2` foreground recording service 基础：microphone foreground service、`MediaRecorder` 本地 `.m4a` backend、recording notification channel、ongoing notification、seminar-owned recording file 和 `RecordingEntity` durable lifecycle。
 - 新增最小 recording start use case，让详情页可以在麦克风权限允许后通过 repository/session 语义启动 foreground service。

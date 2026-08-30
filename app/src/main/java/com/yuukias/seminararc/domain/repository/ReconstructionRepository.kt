@@ -23,6 +23,8 @@ interface ReconstructionRepository {
 
     suspend fun getAsset(assetId: Long): SeminarAsset?
 
+    suspend fun getAssetByRelativePath(relativePath: String): SeminarAsset?
+
     suspend fun createDerivedAsset(input: CreateDerivedAssetInput): SeminarAsset
 
     suspend fun enqueueJob(input: EnqueueProcessingJobInput): ProcessingJob

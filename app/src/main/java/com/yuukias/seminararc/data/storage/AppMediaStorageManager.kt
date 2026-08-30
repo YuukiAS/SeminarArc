@@ -72,6 +72,21 @@ class AppMediaStorageManager @Inject constructor(
         )
     }
 
+    override suspend fun createEnhancedPhotoOutputFile(
+        seminarId: Long,
+        originAssetId: Long,
+        variantKey: String,
+    ): EnhancedPhotoOutputFile = withContext(Dispatchers.IO) {
+        val targetDir = seminarMediaDir(seminarId, "enhanced").apply { mkdirs() }
+        val safeVariant = variantKey.toSafeFileToken()
+        val targetFile = File(targetDir, "enhanced-photo-$originAssetId-$safeVariant.jpg")
+        EnhancedPhotoOutputFile(
+            displayName = targetFile.name,
+            relativePath = targetFile.relativeTo(context.filesDir).invariantSeparatorsPath,
+            file = targetFile,
+        )
+    }
+
     override suspend fun createClipOutputFile(
         seminarId: Long,
         clipId: Long,
@@ -153,7 +168,17 @@ class AppMediaStorageManager @Inject constructor(
         return File(input).isAbsolute
     }
 
+    private fun String.toSafeFileToken(): String {
+        return trim()
+            .lowercase()
+            .replace(Regex("[^a-z0-9._-]+"), "-")
+            .trim('-')
+            .take(MAX_VARIANT_KEY_LENGTH)
+            .ifBlank { "default" }
+    }
+
     private companion object {
+        const val MAX_VARIANT_KEY_LENGTH = 48
         val RECORDING_FILE_TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter
             .ofPattern("yyyyMMdd-HHmmss-SSS")
             .withZone(ZoneOffset.UTC)

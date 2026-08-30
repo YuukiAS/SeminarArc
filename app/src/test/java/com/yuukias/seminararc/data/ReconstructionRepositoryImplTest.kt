@@ -174,6 +174,10 @@ private class FakeReconstructionDao : ReconstructionDao {
         return assets.firstOrNull { it.id == assetId }
     }
 
+    override suspend fun getAssetByRelativePath(relativePath: String): SeminarAssetEntity? {
+        return assets.firstOrNull { it.relativePath == relativePath }
+    }
+
     override suspend fun insertAsset(entity: SeminarAssetEntity): Long {
         val id = nextAssetId++
         assets += entity.copy(id = id)
