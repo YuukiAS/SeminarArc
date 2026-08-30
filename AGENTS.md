@@ -26,15 +26,21 @@
 - 当前常用本地测试机：serial `8cc54656`，型号 `GM1910` / OnePlus 7 Pro，Android 10 / API 29；每次真机验收前仍必须用 `adb devices -l` 和 `adb shell getprop` 复核，不要把这些信息当成永久不变。
 - **该真机长期位于远程工位且经常处于无人值守状态。保持 USB / usbipd / WSL / ADB 链路连续可用是最高优先级安全约束，高于完成测试、收集 coverage、运行 instrumentation 或追求一次性验收完整度。只要某个命令是否可能影响连接存在合理不确定性，默认停止并请求用户确认，不得“先试一下”。**
 - **严禁以任何直接或间接方式导致真机从 Windows、usbipd、WSL 或 ADB 中断开、重枚举、切换连接形态或失去当前可访问状态。禁止范围不仅包括显式 disconnect，也包括可能重置 USB/ADB transport、重启设备/服务、切换 USB mode、重新绑定 passthrough、重启 WSL 或触发高风险 instrumentation 安装链的操作。**
+- **2026-08-30 已发生一次真实连接安全事件：在尝试 `connectedDebugAndroidTest` 的 instrumentation APK 安装阶段后，serial `8cc54656` 从 WSL ADB 消失；Windows `usbipd list` 仍能识别 `GM1910`，但状态退回 `Shared (forced)`，需要用户亲自在 Windows PowerShell 执行 `usbipd attach --wsl --busid 1-4` 才恢复 `Attached`。此事件证明 connected/instrumentation 自动安装链可能间接破坏远程 usbipd passthrough。以后绝不能把“掉线后还能重新 attach”视为可接受兜底，也不得由 agent 自行执行恢复。**
+- 用户不在工位旁时，自动进入“远程无人值守设备保护模式”。该模式下，默认只允许必要的只读检查和 task 明确授权的单步设备动作；任何测试覆盖率收益都不足以抵消失去远程真机连接的风险。
+- 除 `adb devices -l` 这种枚举命令外，所有针对真机的 ADB 命令必须显式指定 `-s 8cc54656`，不得依赖“只有一台设备”而使用隐式默认 target。执行前仍需先确认当前实际 serial，没有核对时不得盲用历史 serial。
+- 当设备已经通过 usbipd `Attached` 给 WSL 时，不要再启动或使用 Windows 侧 ADB 去争用/探测同一手机；真机 ADB 操作统一使用 WSL 内 `/home/yuukias/Android/Sdk/platform-tools/adb`。不要在 Windows ADB 与 WSL ADB 之间来回切换 transport ownership。
 - 不得把真机 PIN、密码或任何解锁 secret 写入本仓库、task、result、日志、截图说明、commit message 或 `AGENTS.md`。PIN 只能保存在用户本机私有 secret store、受权限保护的本地配置或专门 harness 的加密 secret 文件中。
 - 如需自动短暂解锁，优先复用 EchoSelect 的 WSL 本地 harness 流程：`/home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py`。默认 PIN secret 文件为 `~/.config/echoselect/device-secrets/8cc54656.pin.wsl`，该文件不是仓库内容，不得复制进 SeminarArc。
 - 可用的只读锁屏检查命令：`python /home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py check-lock-state --serial 8cc54656`。
 - 可用的短暂解锁命令：`python /home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py unlock --serial 8cc54656 --evidence-root /tmp/seminararc-device-evidence`。该流程只允许 wake/swipe/text/keyevent 这类解锁输入，并通过 `deviceLocked=0` 验证成功；输出证据不得包含 PIN。
-- 真机验收期间禁止执行会断开、重置或改变连接形态的命令，包括但不限于 `adb disconnect`、`adb kill-server`、`adb reboot`、`adb tcpip`、`adb usb`、`svc usb`、修改 `sys.usb.config` / USB 模式、USB detach/unbind、`usbipd attach/detach/bind/unbind`、重启 usbipd 服务、`wsl --shutdown` 或任何等价操作。即使目的是“恢复连接”，也必须先取得用户明确授权。
-- **远程无人值守真机默认禁止作为通用 connected/instrumentation CI 目标。未经用户对该次执行明确授权，不得运行 `connectedDebugAndroidTest`、`connectedAndroidTest`、会自动安装 instrumentation APK 的 Gradle connected test、批量 device test、测试 runner 安装链或其他可能触发 package/transport 重置的自动化设备测试。优先使用 JVM tests、静态检查或 emulator。**
-- `adb install -r` 只允许在 task 明确需要更新 app 且当前设备链路已确认稳定时使用；执行前后都必须重新运行 `adb devices -l` 核对同一 serial 仍为 `device`。禁止把 `adb install -r` 扩展成 uninstall/reinstall/clear-data 流程。若安装过程中或安装后设备从 ADB 消失，立即停止所有设备命令，不得自动重连、重启 server、切换 USB、重绑 usbipd 或重复安装。
-- 任何会写入、安装、启动 instrumentation、改变 package 状态或长时间占用设备的命令，在执行前必须先做设备 preflight：至少确认 `adb devices -l` 中目标 serial 唯一且状态为 `device`；执行后立即做 postflight。多个会访问真机的 Gradle/ADB/scrcpy 流程不得并行运行。
+- 真机验收期间禁止执行会断开、重置或改变连接形态的命令，包括但不限于 `adb disconnect`、`adb reconnect`、`adb kill-server`、`adb reboot`、`adb tcpip`、`adb usb`、`adb pair`、`adb connect`、`svc usb`、修改 `sys.usb.config` / USB 模式、USB detach/unbind、`usbipd attach/detach/bind/unbind`、重启 usbipd 服务、`wsl --shutdown` 或任何等价操作。即使目的是“恢复连接”，也必须先取得用户明确授权；用户不在工位时默认由用户本人执行恢复动作。
+- **远程无人值守真机默认禁止作为通用 connected/instrumentation CI 目标。未经用户对该次执行明确授权，不得运行 `connectedDebugAndroidTest`、`connectedAndroidTest`、任何 `connected*AndroidTest` / `device*AndroidTest` Gradle task、会自动安装 instrumentation APK 的 connected test、批量 device test、测试 runner 安装链、Gradle Managed Device 对真机的等价流程或其他可能触发 package/transport 重置的自动化设备测试。优先使用 JVM tests、静态检查或 emulator。**
+- `adb install -r` 只允许在 task 明确需要更新 app 且当前设备链路已确认稳定时使用；必须使用显式 serial，例如 `/home/yuukias/Android/Sdk/platform-tools/adb -s 8cc54656 install -r ...`。执行前后都必须重新运行 `adb devices -l` 核对同一 serial 仍为 `device`。禁止把 `adb install -r` 扩展成 uninstall/reinstall/clear-data 流程。若安装过程中或安装后设备从 ADB 消失，立即停止所有设备命令，不得自动重连、重启 server、切换 USB、重绑 usbipd 或重复安装。
+- 任何会写入、安装、启动 instrumentation、改变 package 状态、向 UI 注入输入或长时间占用设备的命令，在执行前必须先做设备 preflight：至少确认 `adb devices -l` 中目标 serial 唯一且状态为 `device`；执行后立即做 postflight。每一个风险动作单独执行，动作之间重新检查设备状态；不得把多个真机写操作串成无检查的长 shell 链。多个会访问真机的 Gradle/ADB/scrcpy 流程不得并行运行。
+- `scrcpy` 只能作为单一、受控的观察/交互通道使用；禁止 `--tcpip` 或任何改变 transport 的选项。启动前后做 ADB 状态检查，且不得与 Gradle connected test、另一个 scrcpy 实例或其他真机自动化并行。
 - 如果 `adb devices -l` 为空、设备状态不是 `device`、serial 改变，或 Windows/WSL 对设备可见性出现任何异常：**立即把真机视为连接安全事件并停止。不得为了继续任务自行尝试恢复连接。** 只记录最后一个已知安全命令、设备消失发生在哪一步以及只读证据，等待用户处理或明确授权恢复动作。
+- 如果设备从 `Attached` 退回 `Shared (forced)` 或其他非 Attached 状态，agent 不得自动运行 `usbipd attach`；即使历史上用户曾成功恢复过，也必须停下并让用户本人确认/执行。一次成功恢复不意味着未来掉线一定可恢复。
 - 真机验收期间禁止卸载 app、清空 app data、删除或移动设备上的用户文件/媒体/数据库，除非用户对该具体动作给出明确授权。本项目调试产生的 app-owned 测试数据可以保留到用户手动清理。
 - `scrcpy -S` 或黑屏只算显示隐私措施，不等于安全锁屏；如果某项验收要求锁屏状态，必须用 `dumpsys trust` / `dumpsys window policy` 或 harness 的 `check-lock-state` 明确验证。
 - 每次 task 只要涉及 physical device、ADB、scrcpy、usbipd、instrumentation 或安装 APK，Codex 必须在执行任何设备命令前重新阅读本节；不得仅凭之前线程中“设备一直可用”的状态继续操作。
