@@ -49,7 +49,24 @@
 4. 若 clip 处理中或失败，清晰提示并回退到完整录音对应时间点
 5. 用户之后可从详情页再次回到时间线
 
-## 7. 异常与边界
+## 7. 会后视觉重建
+
+1. 用户打开 `COMPLETED` seminar detail
+2. 用户点击 `Research Reconstruction`
+3. 系统显示本 seminar 的照片列表、key slide filter、OCR status filter 和搜索入口
+4. 用户选择一张照片
+5. 用户可在原图和增强图之间切换；尚无增强图时可执行 rotate、crop、perspective 或 readability enhancement
+6. 系统将增强图保存为 derived asset，不覆盖原图
+7. 用户对当前照片或 key slides 运行本地 OCR
+8. OCR job 显示 `PENDING / RUNNING / SUCCEEDED / FAILED / CANCELLED`
+9. 用户查看并编辑 OCR 文本；人工编辑后显示 edited state
+10. 用户为照片添加标签，或标记为 key slide
+11. 用户搜索 OCR 文本，结果限定在当前 seminar
+12. 用户可回到 Timeline 对应 offset，或继续导出 0.1.x Markdown/ZIP
+
+0.2.x 不出现真实 reference lookup、transcription、AI summary、Notion 或 cloud upload 流程。
+
+## 8. 异常与边界
 
 ### 首页空状态
 
@@ -76,9 +93,17 @@
 3. 明确列出将被删除的资产种类
 4. 用户完成二次确认后才真正删除
 
-## 8. 设计意图摘要
+### OCR 或增强失败
+
+1. 任务失败后保留原图和已有 OCR 文本
+2. 页面显示 readable error 和 retry
+3. 用户取消任务时不删除原图或已确认标签
+4. 重复点击同一照片的 OCR 不产生无限重复 job
+
+## 9. 设计意图摘要
 
 - 首页负责“找到哪一场 seminar”
 - 详情页负责“确认这场 seminar 有什么”
 - 现场页负责“尽快记录，不犯错”
 - 时间线负责“回放同一场 seminar 的完整上下文”
+- Research Reconstruction 负责“把照片整理成可搜索、可修订、可导出的研究材料”

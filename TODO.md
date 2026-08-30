@@ -325,6 +325,8 @@ Notion 集成可使用官方 API 创建页面、追加 block，并在需要时�
 
 目标：让照片从“可回看”变成“可搜索、可整理”。
 
+当前 readiness gate 已通过，见 `docs/plans/0.2.x-reconstruction-readiness-plan.md` 和 `prompts/tasks/0.2.x_*_result.md`。
+
 范围：
 
 - 图像旋转、裁边、透视矫正和增强，始终保留原图。

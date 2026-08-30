@@ -79,6 +79,27 @@ Playback is intentionally page-scoped in this phase. There is no `MediaSessionSe
 - `SeminarExportRepositoryImpl` owns Android I/O: Room flow reads, `MediaStorageManager` file resolution, `ACTION_CREATE_DOCUMENT` writes, and cache-backed FileProvider share URIs.
 - `SeminarDetailViewModel` exposes progress/success/failure state and one-shot share events; Compose screens do not read Room or app-private files directly.
 
+## Local visual reconstruction readiness
+
+`0.2.x` advances from local capture into local visual reconstruction. The readiness gate has approved these architecture decisions:
+
+- Room migrates explicitly from version `2` to version `3`.
+- Existing `seminars`, `recordings`, `timeline_events`, and `audio_clips` remain intact for `0.1.x` compatibility.
+- `seminar_assets` becomes the app-owned index for original and derived assets: abstract PDFs, recordings, original photos, enhanced photos, clips, and exports.
+- `processing_jobs` records durable local processing state for image enhancement and OCR. Job state is persisted as `QUEUED`, `RUNNING`, `SUCCEEDED`, `FAILED`, or `CANCELLED`.
+- `ocr_results` stores app-owned recognized text, optional lightweight block JSON, provider metadata, and human-edited state.
+- `tags` and `asset_tags` support key slides and seminar-scoped photo organization.
+- `MIGRATION_2_3` must backfill assets from existing `abstractPdfPath`, `recordings.filePath`, `timeline_events.photoPath`, and `audio_clips.filePath` without moving or deleting files.
+
+Provider boundaries:
+
+- `TextOcrProvider` owns local OCR calls and returns app-owned domain models.
+- `ImageEnhancementProvider` owns rotate/crop/perspective/readability outputs and always writes derived assets.
+- `CloudUploadPolicy` defaults to no upload in `0.2.x`.
+- `FormulaOcrProvider`, `TranscriptionProvider`, `SummaryProvider`, and `ReferenceLookupProvider` remain deferred boundaries; no real `0.3.x+` provider behavior ships in `0.2.x`.
+
+Compose screens continue to call ViewModels only. ViewModels call repository/use-case boundaries. Workers/use cases call providers and persist results. No composable reads Room, app-private files, ML Kit, or bitmap processing APIs directly.
+
 ## Planned ownership model
 
 All future assets must remain owned by a seminar:

@@ -159,6 +159,61 @@
 - 自定义 timeline spine + event rows
 - 固定底部 player bar
 
+### 2.6 Research Reconstruction 工作区
+
+页面目的：
+让 completed seminar 的照片从“可回看”变成“可增强、可 OCR、可搜索、可筛选关键幻灯片、可继续整理”的本地会后工作区。
+
+入口：
+- `Seminar Detail` 在 seminar `COMPLETED` 时显示 `Research Reconstruction` 主操作。
+- Timeline 的 photo event 可进入同一 workspace 并预选对应照片。
+
+主操作：
+- 选择照片或关键幻灯片
+- 运行本地 OCR
+- 编辑 OCR 文本
+- 标记 / 取消关键幻灯片
+- 搜索 OCR 文本
+- 重试或取消处理任务
+
+次要操作：
+- 原图 / 增强图切换
+- rotate / crop / perspective / readability enhancement
+- 添加系统标签：`KEY_SLIDE`、`BACKGROUND`、`METHOD`、`RESULT`、`REFERENCE`、`FORMULA`、`FOLLOW_UP`
+- 添加用户自定义标签
+- 返回 Timeline 对应 offset
+
+页面结构：
+- 顶部栏：返回、seminar title、处理状态入口
+- Seminar identity strip：speaker、date、photo count、OCR count
+- Search/filter row：搜索框、key slides filter、OCR status filter
+- Photo rail：缩略图列表，显示 key-slide、tag、OCR status
+- Selected slide workspace：大图预览、原图/增强图切换、增强操作
+- OCR review panel：状态、识别文本、编辑入口、保存状态
+- Processing queue：queued/running/failed/cancelled jobs 和 retry/cancel
+
+组件映射：
+- `TopAppBar`
+- `SearchBar` 或 `OutlinedTextField`
+- `FilterChip`
+- `SegmentedButton`
+- `LazyRow` / `LazyColumn`
+- 轻量 `Surface` 分组
+- `TextField` for OCR editing
+- `AssistChip` for tags/status
+
+状态要求：
+- `PENDING`：可运行 OCR / enhancement
+- `RUNNING`：显示任务类型、不能重复排队同一 input
+- `SUCCEEDED`：显示结果和时间
+- `FAILED`：显示 readable error 与 retry
+- `CANCELLED`：显示可重新运行
+- empty / no photo：解释没有照片仍可使用 0.1.x timeline/export
+
+禁止事项：
+- 不在 `0.2.x` 显示真实 Crossref/OpenAlex、DOI matching、transcription、Whisper、AI summary、Notion、formula OCR 或 cloud upload 功能。
+- Future capability 只能 disabled / coming later，不能伪装成已完成。
+
 ## 3. 导航规则
 
 - 启动进入 `Seminar List`
@@ -167,6 +222,8 @@
 - `Seminar Detail -> Live Capture`
 - `Seminar Detail -> Seminar Timeline`
 - `Live Capture -> End Seminar Confirm -> Seminar Timeline`
+- `Seminar Detail (COMPLETED) -> Research Reconstruction`
+- `Seminar Timeline photo event -> Research Reconstruction(photoId)`
 - 当已有 `ACTIVE` seminar 时，从列表或详情的“开始”动作必须回到该 active seminar，而不是创建第二场 session
 
 ## 4. 顶部栏、底部导航、FAB、按钮、卡片、列表、底部弹层
@@ -248,6 +305,7 @@ elevation：
 - 页面转场保持克制，以淡入、轻滑动、低幅度共享感为主
 - Live Capture 的录音状态可有轻微波形/脉冲，但不能分散操作注意力
 - Timeline 事件展开、播放态切换和状态 pill 更新应有简短过渡
+- Research Reconstruction 中 photo rail selection、原图/增强图切换和 OCR 状态变更使用克制过渡，不引入会影响阅读的动效
 - 删除确认、权限请求、错误恢复优先清晰，不做花哨动画
 
 ## 9. 不允许实现阶段自行改变的关键视觉决策
@@ -256,5 +314,6 @@ elevation：
 - 首页必须保持“列表优先”，不能堆叠统计卡片替代 seminar 行
 - Live Capture 必须保留两个高强调主操作：`Mark Moment` 与 `Capture Slide`
 - Timeline 必须维持单条时间序列逻辑，不能拆散成多个互不相关的 tab 墙
+- Research Reconstruction 必须保持 seminar-scoped，不做跨 seminar 全局资料库
 - 录音、照片、问题、笔记都必须持续显示其属于当前 seminar
 - 深色模式不能改成高饱和霓虹风

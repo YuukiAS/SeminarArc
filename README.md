@@ -10,7 +10,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 ## 当前状态
 
-仓库当前处于 `0.1.5-dev` 本地 MVP 导出与验收收口批次。
+仓库当前处于 `0.2.x-dev` Local Visual Reconstruction readiness 已通过、生产实现准备进入的批次。
 
 已经具备：
 
@@ -27,11 +27,13 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - Clip generation 韧性基础：MARK 自动创建 `PENDING` clip、WorkManager 本地 `.m4a` 裁剪、`READY` clip 播放入口、failed retry 和完整录音 fallback。
 - 单 seminar Markdown/ZIP 本地导出：包含 metadata、abstract、recording summary、timeline、relative media links、missing media skip 记录，并通过 `ACTION_CREATE_DOCUMENT` 与 Android share sheet 暴露。
 - `0.1.x` 到 `0.2.x` 的分阶段计划文档。
+- `0.2.x` readiness gate：Room v2->v3 migration 设计、bundled ML Kit Text Recognition v2 OCR 决策、Android 原生图像增强决策、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 
 尚未声明完成：
 
 - 非破坏性真机完整 E2E 验收：创建 seminar、录音、拍照、timeline、clip、重启后持久化、离线导出和删除清理仍需在用户授权的设备会话中执行。
-- `0.2.x` 的 OCR、转写、AI 总结、Notion/provider 或云同步。
+- `0.2.x` 的 production OCR、图像增强、搜索、标签和 Research Reconstruction 实现。
+- 转写、AI 总结、Notion、cloud sync、Reference lookup、广告或支付。
 
 ## 文档入口
 
@@ -53,7 +55,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 3. `0.1.3` capture/timeline：CameraX、photo-only、offset、现场交互和统一 timeline。
 4. `0.1.4` clip：WorkManager、clip 状态、retry 和 full-recording fallback。
 5. `0.1.5` local MVP：Markdown/ZIP 导出、数据清理、验收、README/隐私/CI 收口。
-6. `0.2.x` readiness：OCR、provider、Room migration 和 Research Reconstruction 设计审查。
+6. `0.2.x` implementation：asset/job/OCR/tag data foundation、local image enhancement、local OCR、搜索、标签和 Research Reconstruction workspace。
 
 实际执行时必须先写入 `prompts/tasks/<id>_task.md`，再由 Codex 按任务单执行并回写 `prompts/tasks/<id>_result.md`。
 

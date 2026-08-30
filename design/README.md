@@ -44,6 +44,8 @@ design/
   目的：现场记录，执行标记、拍照、提问、速记和结束 seminar。
 - `screens/seminar-timeline.png`
   目的：按时间统一回看照片、音频标记、问题和笔记。
+- `Research Reconstruction`（0.2.x 文字规格，尚未生成高保真图）
+  目的：completed seminar 的会后视觉重建工作区，用于选择关键幻灯片、查看原图/增强图、运行和编辑本地 OCR、添加标签、搜索 OCR 文本、重试或取消处理任务。该工作区不替代统一时间线，也不展示已完成的 transcript/reference/AI 能力。
 
 ## 状态页面
 
@@ -65,6 +67,7 @@ design/
 - 先读 [`UI_SPEC.md`](UI_SPEC.md) 确认页面目的、导航关系和不可擅改项。
 - 再读 [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) 映射为 Compose Theme 与扩展令牌。
 - 实现阶段必须把状态图和主图一起看，不能只照主界面实现。
+- `0.2.x` Research Reconstruction 先以 `UI_SPEC.md` 和 `USER_FLOW.md` 的结构化规格为准；没有高保真 PNG 不阻塞生产实现，但不得偏离 `Academic Archive` 的列表优先、安静、专业方向。
 
 ## 交付边界
 

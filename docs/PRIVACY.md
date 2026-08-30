@@ -33,6 +33,19 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - 导出文件是外部副本。删除 SeminarArc 内的 seminar 只清理 app-owned Room 记录和 app-private media，不会删除用户另存或分享出去的 Markdown/ZIP 副本。
 - SeminarArc 不会默认把导出内容发送到云端或第三方服务；真正发送到哪里取决于用户在系统 share sheet 中选择的目标应用。
 
+## 本地 OCR 与图像增强
+
+- `0.2.x` 计划使用 bundled ML Kit Text Recognition v2 进行本地普通 OCR。SeminarArc 不会把 seminar 照片或 OCR 文本上传给 Google servers。
+- ML Kit SDK 仍可能向 Google 发送 diagnostics / usage metrics，例如 device/app information、performance metrics、API configuration、feature input/output size、event type 和 error codes。正式发布前需要在 Google Play Data safety 与隐私政策中披露。
+- 图像 rotate、crop、perspective correction 和 basic readability enhancement 默认使用 Android 本地 Bitmap/Matrix/ColorMatrix 管线，输出为 app-private derived asset。
+- 原始照片始终保留；增强失败、OCR 失败、取消或重试都不得删除原图。
+
+## Provider 与云上传边界
+
+- `0.2.x` 不实现 cloud OCR、transcription、AI summary、reference lookup 或 Notion upload。
+- 未来任何 cloud provider 都必须由用户主动触发，并在上传前显示 provider、资产范围、费用/配额和删除语义。
+- 应用自有 commercial API secret 不得嵌入 APK。
+
 ## 用户责任
 
 用户应在录音前确认所在地法律、机构政策和现场活动规则允许录音。SeminarArc 的权限提示不替代用户获得必要许可。
@@ -44,4 +57,4 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - Remote upload。
 - AI transcription 或 summaries。
 - Notion 或第三方 provider 上传。
-- OCR。
+- Cloud OCR、formula OCR、transcription、AI summary、reference lookup。
