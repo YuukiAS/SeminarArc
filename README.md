@@ -31,11 +31,12 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.2.x` Room version 3 数据基础：`SeminarAsset`、`ProcessingJob`、`OcrResult`、tags/key-slide mapping、schema `3.json` 和 v2->v3 backfill migration。
 - `0.2.x` 本地图像增强基础：Android Bitmap/Matrix/Canvas/ColorMatrix provider、rotate/crop/perspective/readability options、原图保留的 enhanced derived asset 输出，以及 job success/failure/idempotency 单元测试。
 - `0.2.x` 本地 OCR 基础：bundled ML Kit Text Recognition Latin/Chinese 依赖、`TextOcrProvider`、app-owned OCR block JSON、`RunTextOcrForAssetUseCase` 和 OCR job/result JVM 测试。
+- `0.2.x` Reconstruction workspace ViewModel 基础：照片 asset、OCR result、processing job、key-slide tag、搜索 query 和 OCR 状态过滤组合成可渲染 UI state。
 
 尚未声明完成：
 
 - 非破坏性真机完整 E2E 验收：创建 seminar、录音、拍照、timeline、clip、重启后持久化、离线导出和删除清理仍需在用户授权的设备会话中执行。
-- `0.2.x` 的 OCR UI、搜索 UI、标签 UI、Research Reconstruction workspace 和 Windows Emulator connected regression。
+- `0.2.x` 的 Reconstruction workspace Compose UI、worker 队列接入和 Windows Emulator connected regression。
 - 转写、AI 总结、Notion、cloud sync、Reference lookup、广告或支付。
 
 ## 文档入口

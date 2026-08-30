@@ -187,6 +187,8 @@ private class FakeReconstructionRepository : ReconstructionRepository {
 
     override fun observeTagsForAsset(assetId: Long): Flow<List<AssetTag>> = flowOf(emptyList())
 
+    override fun observeAssetIdsForSystemTag(seminarId: Long, tag: SeminarSystemTag): Flow<List<Long>> = flowOf(emptyList())
+
     override suspend fun getAsset(assetId: Long): SeminarAsset? {
         return assets.firstOrNull { it.id == assetId }
     }
@@ -267,6 +269,8 @@ private class FakeReconstructionRepository : ReconstructionRepository {
     override suspend fun saveOcrResult(input: SaveOcrResultInput): OcrResult {
         error("OCR is not used in this test.")
     }
+
+    override suspend fun editOcrResult(assetId: Long, editedText: String): Boolean = false
 
     override suspend fun setSystemTag(assetId: Long, tag: SeminarSystemTag, enabled: Boolean) = Unit
 

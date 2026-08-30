@@ -101,6 +101,8 @@ Provider boundaries:
 
 Local OCR now uses `MlKitTextOcrProvider` behind `TextOcrProvider`. The first implementation uses bundled Latin and Chinese ML Kit recognizers, stores recognized text and lightweight block JSON in `ocr_results`, and writes durable `TEXT_OCR` processing job state through `RunTextOcrForAssetUseCase`. OCR operates on app-owned photo assets only and does not upload seminar media.
 
+`ReconstructionWorkspaceViewModel` is the first UI-facing reconstruction boundary. It combines seminar detail, photo assets, OCR results, processing jobs, key-slide tag membership, search text, and OCR status filters into immutable UI state. It also exposes actions for key-slide toggles, OCR editing, image enhancement, and local OCR through repository/use-case APIs.
+
 Compose screens continue to call ViewModels only. ViewModels call repository/use-case boundaries. Workers/use cases call providers and persist results. No composable reads Room, app-private files, ML Kit, or bitmap processing APIs directly.
 
 ## Planned ownership model

@@ -81,6 +81,21 @@ interface ReconstructionDao {
 
     @Query(
         """
+        UPDATE ocr_results
+        SET editedText = :editedText,
+            isEdited = 1,
+            updatedAt = :updatedAt
+        WHERE assetId = :assetId
+        """
+    )
+    suspend fun updateOcrEditedText(
+        assetId: Long,
+        editedText: String,
+        updatedAt: java.time.Instant,
+    ): Int
+
+    @Query(
+        """
         SELECT tags.* FROM tags
         INNER JOIN asset_tags ON asset_tags.tagId = tags.id
         WHERE asset_tags.assetId = :assetId
@@ -88,6 +103,21 @@ interface ReconstructionDao {
         """
     )
     fun observeTagsForAsset(assetId: Long): Flow<List<TagEntity>>
+
+    @Query(
+        """
+        SELECT asset_tags.assetId FROM asset_tags
+        INNER JOIN tags ON tags.id = asset_tags.tagId
+        INNER JOIN seminar_assets ON seminar_assets.id = asset_tags.assetId
+        WHERE seminar_assets.seminarId = :seminarId
+            AND tags.key = :tagKey
+        ORDER BY asset_tags.assetId ASC
+        """
+    )
+    fun observeAssetIdsForTag(
+        seminarId: Long,
+        tagKey: String,
+    ): Flow<List<Long>>
 
     @Query("SELECT * FROM tags WHERE key = :key LIMIT 1")
     suspend fun getSystemTag(key: String): TagEntity?

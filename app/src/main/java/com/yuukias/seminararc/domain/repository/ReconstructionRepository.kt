@@ -21,6 +21,8 @@ interface ReconstructionRepository {
 
     fun observeTagsForAsset(assetId: Long): Flow<List<AssetTag>>
 
+    fun observeAssetIdsForSystemTag(seminarId: Long, tag: SeminarSystemTag): Flow<List<Long>>
+
     suspend fun getAsset(assetId: Long): SeminarAsset?
 
     suspend fun getAssetByRelativePath(relativePath: String): SeminarAsset?
@@ -38,6 +40,8 @@ interface ReconstructionRepository {
     suspend fun markJobCancelled(jobId: Long)
 
     suspend fun saveOcrResult(input: SaveOcrResultInput): OcrResult
+
+    suspend fun editOcrResult(assetId: Long, editedText: String): Boolean
 
     suspend fun setSystemTag(assetId: Long, tag: SeminarSystemTag, enabled: Boolean)
 }

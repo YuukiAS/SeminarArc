@@ -51,6 +51,10 @@ class ReconstructionRepositoryImpl @Inject constructor(
         return dao.observeTagsForAsset(assetId).map { tags -> tags.map { it.toDomain() } }
     }
 
+    override fun observeAssetIdsForSystemTag(seminarId: Long, tag: SeminarSystemTag): Flow<List<Long>> {
+        return dao.observeAssetIdsForTag(seminarId, tag.name)
+    }
+
     override suspend fun getAsset(assetId: Long): SeminarAsset? {
         return dao.getAsset(assetId)?.toDomain()
     }
@@ -177,6 +181,18 @@ class ReconstructionRepositoryImpl @Inject constructor(
         )
         val id = dao.upsertOcrResult(entity)
         return (dao.getOcrResultForAsset(input.assetId) ?: entity.copy(id = id)).toDomain()
+    }
+
+    override suspend fun editOcrResult(assetId: Long, editedText: String): Boolean {
+        val trimmed = editedText.trim()
+        if (trimmed.isBlank()) {
+            return false
+        }
+        return dao.updateOcrEditedText(
+            assetId = assetId,
+            editedText = trimmed,
+            updatedAt = clockProvider.now(),
+        ) > 0
     }
 
     override suspend fun setSystemTag(assetId: Long, tag: SeminarSystemTag, enabled: Boolean) {

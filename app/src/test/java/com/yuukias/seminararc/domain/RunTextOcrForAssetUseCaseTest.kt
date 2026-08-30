@@ -159,6 +159,8 @@ private class FakeOcrReconstructionRepository : ReconstructionRepository {
 
     override fun observeTagsForAsset(assetId: Long): Flow<List<AssetTag>> = flowOf(emptyList())
 
+    override fun observeAssetIdsForSystemTag(seminarId: Long, tag: SeminarSystemTag): Flow<List<Long>> = flowOf(emptyList())
+
     override suspend fun getAsset(assetId: Long): SeminarAsset? = assets.firstOrNull { it.id == assetId }
 
     override suspend fun getAssetByRelativePath(relativePath: String): SeminarAsset? = null
@@ -239,6 +241,8 @@ private class FakeOcrReconstructionRepository : ReconstructionRepository {
         ocrResults += result
         return result
     }
+
+    override suspend fun editOcrResult(assetId: Long, editedText: String): Boolean = false
 
     override suspend fun setSystemTag(assetId: Long, tag: SeminarSystemTag, enabled: Boolean) = Unit
 

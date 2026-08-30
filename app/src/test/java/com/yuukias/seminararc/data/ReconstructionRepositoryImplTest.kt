@@ -232,10 +232,39 @@ private class FakeReconstructionDao : ReconstructionDao {
         return id
     }
 
+    override suspend fun updateOcrEditedText(
+        assetId: Long,
+        editedText: String,
+        updatedAt: Instant,
+    ): Int {
+        val index = ocrResults.indexOfFirst { it.assetId == assetId }
+        if (index < 0) {
+            return 0
+        }
+        ocrResults[index] = ocrResults[index].copy(
+            editedText = editedText,
+            isEdited = true,
+            updatedAt = updatedAt,
+        )
+        bump()
+        return 1
+    }
+
     override fun observeTagsForAsset(assetId: Long): Flow<List<TagEntity>> {
         return version.map {
             val tagIds = assetTags.filter { it.assetId == assetId }.map { it.tagId }.toSet()
             tags.filter { it.id in tagIds }.sortedWith(compareByDescending<TagEntity> { it.isSystem }.thenBy { it.label })
+        }
+    }
+
+    override fun observeAssetIdsForTag(seminarId: Long, tagKey: String): Flow<List<Long>> {
+        return version.map {
+            val matchingTagIds = tags.filter { tag -> tag.key == tagKey }.map { tag -> tag.id }.toSet()
+            val seminarAssetIds = assets.filter { asset -> asset.seminarId == seminarId }.map { asset -> asset.id }.toSet()
+            assetTags
+                .filter { assetTag -> assetTag.tagId in matchingTagIds && assetTag.assetId in seminarAssetIds }
+                .map { assetTag -> assetTag.assetId }
+                .sorted()
         }
     }
 

@@ -16,3 +16,6 @@ data class ActiveSessionRoute(val seminarId: Long)
 
 @Serializable
 data class SeminarTimelineRoute(val seminarId: Long)
+
+@Serializable
+data class ReconstructionWorkspaceRoute(val seminarId: Long)
