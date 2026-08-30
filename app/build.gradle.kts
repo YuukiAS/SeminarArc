@@ -94,6 +94,8 @@ dependencies {
     implementation(libs.androidx.camerax.camera2)
     implementation(libs.androidx.camerax.lifecycle)
     implementation(libs.androidx.camerax.view)
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.mlkit.text.recognition.chinese)
 
     ksp(libs.androidx.room.compiler)
     ksp(libs.hilt.compiler)

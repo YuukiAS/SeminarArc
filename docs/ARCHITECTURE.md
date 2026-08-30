@@ -99,6 +99,8 @@ Provider boundaries:
 - `CloudUploadPolicy` defaults to no upload in `0.2.x`.
 - `FormulaOcrProvider`, `TranscriptionProvider`, `SummaryProvider`, and `ReferenceLookupProvider` remain deferred boundaries; no real `0.3.x+` provider behavior ships in `0.2.x`.
 
+Local OCR now uses `MlKitTextOcrProvider` behind `TextOcrProvider`. The first implementation uses bundled Latin and Chinese ML Kit recognizers, stores recognized text and lightweight block JSON in `ocr_results`, and writes durable `TEXT_OCR` processing job state through `RunTextOcrForAssetUseCase`. OCR operates on app-owned photo assets only and does not upload seminar media.
+
 Compose screens continue to call ViewModels only. ViewModels call repository/use-case boundaries. Workers/use cases call providers and persist results. No composable reads Room, app-private files, ML Kit, or bitmap processing APIs directly.
 
 ## Planned ownership model

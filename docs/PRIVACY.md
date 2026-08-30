@@ -35,7 +35,7 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 
 ## 本地 OCR 与图像增强
 
-- `0.2.x` 计划使用 bundled ML Kit Text Recognition v2 进行本地普通 OCR。SeminarArc 不会把 seminar 照片或 OCR 文本上传给 Google servers。
+- `0.2.x` 已接入 bundled ML Kit Text Recognition v2 作为本地普通 OCR provider。SeminarArc 不会把 seminar 照片或 OCR 文本上传给 Google servers。
 - ML Kit SDK 仍可能向 Google 发送 diagnostics / usage metrics，例如 device/app information、performance metrics、API configuration、feature input/output size、event type 和 error codes。正式发布前需要在 Google Play Data safety 与隐私政策中披露。
 - 图像 rotate、crop、perspective correction 和 basic readability enhancement 已使用 Android 本地 Bitmap/Matrix/Canvas/ColorMatrix 管线实现基础 provider，输出为 app-private derived asset。
 - 原始照片始终保留；增强失败、OCR 失败、取消或重试都不得删除原图。

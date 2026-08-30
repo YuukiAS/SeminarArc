@@ -325,12 +325,12 @@ Notion 集成可使用官方 API 创建页面、追加 block，并在需要时�
 
 目标：让照片从“可回看”变成“可搜索、可整理”。
 
-当前 readiness gate 已通过；Room v3 数据基础和本地图像增强基础已落地，见 `docs/plans/0.2.x-reconstruction-readiness-plan.md` 和 `prompts/tasks/0.2.x_*_result.md`。
+当前 readiness gate 已通过；Room v3 数据基础、本地图像增强基础和本地 OCR provider/use case 已落地，见 `docs/plans/0.2.x-reconstruction-readiness-plan.md` 和 `prompts/tasks/0.2.x_*_result.md`。
 
 范围：
 
 - 图像旋转、裁边、透视矫正和增强，始终保留原图。基础 provider 已落地，后续仍需 UI/worker 接入和 Emulator smoke。
-- ML Kit 普通 OCR。
+- ML Kit 普通 OCR。Provider/use case 已落地，后续仍需 UI/worker 接入和 Emulator smoke。
 - OCR 文本搜索。
 - 照片标签和关键幻灯片筛选。
 - ProcessingJob 状态与重试。
