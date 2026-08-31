@@ -34,6 +34,7 @@
 
 ### 文档
 
+- 新增 `0.3.x` Reference Candidate + Seminar Brief readiness plan，明确 Crossref/OpenAlex/DataCite/Semantic Scholar 取舍、evidence extraction、candidate ranking/dedup、Room v4 设计、联网隐私边界和 Candidate Review / Brief UX。
 - 更新 README、架构和隐私说明，准确记录 `0.1.5-dev` 已具备本地 capture/timeline/clip/export headless 实现，并明确真机完整 E2E 验收仍需后续授权设备会话。
 - 新增 `docs/notes/2026-08-08-remote-wsl-codex-handoff.md`，记录远端 WSL Codex 开发环境、Android Studio 安装判断、已完成线程上下文和后续开发入口。
 - 明确 changelog 后续使用中文维护。

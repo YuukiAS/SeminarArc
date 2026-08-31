@@ -66,7 +66,24 @@
 
 0.2.x 不出现真实 reference lookup、transcription、AI summary、Notion 或 cloud upload 流程。
 
-## 8. 异常与边界
+## 8. 论文候选与 Seminar Brief
+
+1. 用户在 `Research Reconstruction` 中选择 `REFERENCE` / `KEY_SLIDE` 照片、OCR edited text、question/note 或手工 DOI/title/author/year clue
+2. 用户点击 `Find references`
+3. 系统展示 query preview，明确 provider、将发送字段和不会发送的内容
+4. 用户确认 lookup
+5. 系统优先执行 exact DOI lookup；没有 DOI 时使用 title/author/year bibliographic query
+6. 系统按 normalized DOI 或 normalized title/year/author overlap 合并候选
+7. 用户查看 candidate list，每个 candidate 显示 match reason 和来源 provider
+8. 用户打开 candidate detail，核对 OCR evidence 与 provider metadata
+9. 用户将候选标记为 `CONFIRMED` 或 `REJECTED`
+10. confirmed references 出现在 `Seminar Brief` 的 reference section
+11. 用户编辑 Brief 的 background、core question、methods、main results、takeaways、unresolved questions、follow-up actions 和 user notes
+12. 用户从 Brief 进入现有 Markdown/ZIP export，导出 confirmed references、key slides 和手工编辑内容
+
+0.3.x 第一版不自动确认参考文献，不自动下载 PDF，不生成 AI brief，不接入 transcription、Notion、formula OCR 或 cloud upload。
+
+## 9. 异常与边界
 
 ### 首页空状态
 
@@ -100,10 +117,20 @@
 3. 用户取消任务时不删除原图或已确认标签
 4. 重复点击同一照片的 OCR 不产生无限重复 job
 
-## 9. 设计意图摘要
+### Reference lookup 失败
+
+1. 离线时保留 selected evidence，不发请求，允许稍后重试
+2. provider rate limit 时显示 provider、backoff 状态和本地 Reconstruction 仍可继续
+3. 没有候选时允许用户修改 query 或保存手工 reference note
+4. 低置信候选必须停留在 `PENDING`，不能自动写入 confirmed references
+5. 删除 seminar 时清理 candidates、lookup evidence、lookup attempts 和 Brief
+
+## 10. 设计意图摘要
 
 - 首页负责“找到哪一场 seminar”
 - 详情页负责“确认这场 seminar 有什么”
 - 现场页负责“尽快记录，不犯错”
 - 时间线负责“回放同一场 seminar 的完整上下文”
 - Research Reconstruction 负责“把照片整理成可搜索、可修订、可导出的研究材料”
+- Reference Candidate Review 负责“把用户选择的线索变成可核对的候选文献”
+- Seminar Brief 负责“把人工确认的 references、key slides、问题和笔记整理成可导出的研究摘要”

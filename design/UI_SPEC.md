@@ -214,6 +214,60 @@
 - 不在 `0.2.x` 显示真实 Crossref/OpenAlex、DOI matching、transcription、Whisper、AI summary、Notion、formula OCR 或 cloud upload 功能。
 - Future capability 只能 disabled / coming later，不能伪装成已完成。
 
+### 2.7 Reference Candidate Review / Seminar Brief
+
+页面目的：
+在 completed seminar 的 Reconstruction 工作流之后，把用户选定的 OCR 片段、REFERENCE/KEY_SLIDE 照片、seminar metadata 和手工 DOI/title/author/year clue 转换为可核对的论文候选，并由用户确认/拒绝后进入可编辑 Seminar Brief。
+
+入口：
+- `Research Reconstruction` 顶部或 selected slide actions 中显示 `Find references`。
+- 只有当存在用户选择的 evidence，或用户手工输入 DOI/title/author/year clue 时才启用。
+- Timeline 中带 `REFERENCE` tag 的 photo event 可深链到同一流程并预选该 evidence。
+
+主操作：
+- 选择 evidence
+- 预览将发送给 provider 的 query
+- 运行 lookup
+- 确认 / 拒绝 candidate
+- 打开 candidate detail
+- 编辑 Seminar Brief
+- 将 confirmed references 纳入 Markdown/ZIP export
+
+页面结构：
+- Evidence picker：按 `KEY_SLIDE`、`REFERENCE`、OCR edited text、question/note 和 seminar metadata 分组，默认不全选。
+- Query preview：显示 DOI / title / author / year / venue clue，标注将发送到哪个 provider。
+- Candidate list：列表优先，每行显示 title、authors、year、venue、DOI、provider badges、confidence band 和 match reason。
+- Candidate detail：显示 provider metadata、evidence 对照、duplicate DOI 合并说明、source URL 和 license/open-access metadata。
+- Review state：`PENDING`、`CONFIRMED`、`REJECTED`，确认后仍可撤销。
+- Seminar Brief editor：分段编辑 `Background / Core question / Methods / Main results / Key takeaways / Unresolved questions / Follow-up actions / User notes / Confirmed references / Key slides`。
+
+组件映射：
+- `TopAppBar`
+- `FilterChip` / `AssistChip` for evidence source, provider, confidence band, status
+- `OutlinedTextField` for manual DOI/title/author/year clue and brief sections
+- `LazyColumn` candidate list
+- `ModalBottomSheet` or full destination for candidate detail
+- `Checkbox` or switch-style selector for evidence inclusion
+- `Button` for lookup and save brief
+
+状态要求：
+- `NO_EVIDENCE`：说明需要选择 OCR text、REFERENCE/key slide 或手工输入 clue。
+- `QUERY_PREVIEW`：联网前必须显示将发送的字段，不发送照片、录音或完整 archive。
+- `LOOKUP_RUNNING`：显示 provider 和可取消状态，不重复发相同 fingerprint 的 active lookup。
+- `RATE_LIMITED`：显示 provider、retry-after/backoff 和本地流程不受影响。
+- `OFFLINE`：保留 evidence 和已缓存 candidates，可稍后重试。
+- `NO_RESULTS`：允许修改 query 或保留手工 reference note。
+- `LOW_CONFIDENCE`：不突出单一候选，要求用户 review。
+- `DUPLICATE DOI`：按 normalized DOI 合并 provider 结果，保留各 provider provenance。
+
+禁止事项：
+- 不把 match score 显示为概率百分比。
+- 不默认上传全部 OCR、照片、录音或 timeline。
+- 不自动确认 candidate。
+- 不自动生成 AI Seminar Brief。
+- 不自动下载或抓取论文 PDF。
+- 不在 `0.3.x` 引入 transcript、LLM summary、Notion、formula OCR、cloud upload、广告或支付。
+
 ## 3. 导航规则
 
 - 启动进入 `Seminar List`
@@ -224,6 +278,9 @@
 - `Live Capture -> End Seminar Confirm -> Seminar Timeline`
 - `Seminar Detail (COMPLETED) -> Research Reconstruction`
 - `Seminar Timeline photo event -> Research Reconstruction(photoId)`
+- `Research Reconstruction -> Reference Candidate Review`
+- `Reference Candidate Review -> Seminar Brief`
+- `Seminar Brief -> existing Markdown/ZIP export`
 - 当已有 `ACTIVE` seminar 时，从列表或详情的“开始”动作必须回到该 active seminar，而不是创建第二场 session
 
 ## 4. 顶部栏、底部导航、FAB、按钮、卡片、列表、底部弹层
@@ -306,6 +363,7 @@ elevation：
 - Live Capture 的录音状态可有轻微波形/脉冲，但不能分散操作注意力
 - Timeline 事件展开、播放态切换和状态 pill 更新应有简短过渡
 - Research Reconstruction 中 photo rail selection、原图/增强图切换和 OCR 状态变更使用克制过渡，不引入会影响阅读的动效
+- Reference Candidate Review 中 candidate expansion、confirm/reject 和 Brief section 保存使用低幅度状态过渡，优先保留文本可读性和 provenance 清晰度
 - 删除确认、权限请求、错误恢复优先清晰，不做花哨动画
 
 ## 9. 不允许实现阶段自行改变的关键视觉决策
@@ -315,5 +373,6 @@ elevation：
 - Live Capture 必须保留两个高强调主操作：`Mark Moment` 与 `Capture Slide`
 - Timeline 必须维持单条时间序列逻辑，不能拆散成多个互不相关的 tab 墙
 - Research Reconstruction 必须保持 seminar-scoped，不做跨 seminar 全局资料库
+- Reference Candidate Review 和 Seminar Brief 必须保持 seminar-scoped，不做全局搜索引擎 dashboard
 - 录音、照片、问题、笔记都必须持续显示其属于当前 seminar
 - 深色模式不能改成高饱和霓虹风

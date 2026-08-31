@@ -47,6 +47,16 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - 未来任何 cloud provider 都必须由用户主动触发，并在上传前显示 provider、资产范围、费用/配额和删除语义。
 - 应用自有 commercial API secret 不得嵌入 APK。
 
+## 0.3.x Reference Lookup 规划边界
+
+- `0.3.x` 计划加入的 reference lookup 必须由用户显式触发，不能在打开 seminar、运行 OCR 或导出时自动联网。
+- 默认只发送用户选择的最小 metadata evidence：规范化 DOI、用户确认的 title/author/year clue、或用户主动选择的 OCR 文本片段；不发送照片二进制、录音、完整 OCR 全文、完整 timeline、完整 Markdown/ZIP 或 app-private 文件路径。
+- DOI 精确查询暴露的内容相对较小，但仍会向 provider 暴露 DOI、IP 地址、User-Agent/contact 标识和请求时间；title/author/OCR search 可能暴露讲座主题、未公开题名片段或用户笔记，因此必须显示 query preview。
+- Crossref/OpenAlex/DataCite/Semantic Scholar 等外部 metadata provider 的 endpoint、query string、rate-limit header、错误码和返回 metadata 需要作为第三方网络处理披露；provider 返回的 title、authors、venue、year、DOI、URL、license/open-access metadata 可以缓存为 app-owned candidate metadata。
+- 删除 seminar 时，reference candidates、lookup evidence、lookup attempts、Seminar Brief 和相关 provider cache 必须随 seminar-owned Room 记录一起清理；用户已经导出的 Markdown/ZIP 外部副本不受应用删除影响。
+- 429、timeout、offline 或 provider unavailable 不能阻塞本地 Reconstruction、OCR 编辑、key-slide 标记或已有 Markdown/ZIP 导出。
+- 第一版不上传 seminar photos/recordings，不自动下载论文 PDF，不抓取 paywalled PDF，不接入 LLM summary、transcription、Notion 或 cloud upload。
+
 ## 用户责任
 
 用户应在录音前确认所在地法律、机构政策和现场活动规则允许录音。SeminarArc 的权限提示不替代用户获得必要许可。

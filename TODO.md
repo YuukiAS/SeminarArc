@@ -340,6 +340,8 @@ Notion 集成可使用官方 API 创建页面、追加 block，并在需要时�
 
 目标：把现场材料转化为研究线索。
 
+当前 `0.3.x` readiness gate 已通过，状态为 planning-ready / implementation-ready；本阶段尚未实现真实 API integration 或 Room migration。详细计划见 `docs/plans/0.3.x-reference-candidate-seminar-brief-plan.md`。
+
 范围：
 
 - 从 OCR 和用户输入抽取标题、作者、年份、期刊、DOI、方法和数据集线索。
