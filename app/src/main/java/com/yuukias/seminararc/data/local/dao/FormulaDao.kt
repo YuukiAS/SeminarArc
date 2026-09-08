@@ -35,6 +35,19 @@ interface FormulaDao {
     @Query("SELECT * FROM formula_results WHERE id = :resultId")
     suspend fun getResult(resultId: Long): FormulaResultEntity?
 
+    @Query(
+        """
+        SELECT * FROM formula_results
+        WHERE regionId = :regionId AND providerId = :providerId
+        ORDER BY updatedAt DESC, id DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getLatestResultForRegionProvider(
+        regionId: Long,
+        providerId: String,
+    ): FormulaResultEntity?
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertResult(entity: FormulaResultEntity): Long
 

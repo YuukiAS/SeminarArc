@@ -5,6 +5,11 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.yuukias.seminararc.data.local.AppDatabase
 import com.yuukias.seminararc.data.storage.MediaStorageManager
+import com.yuukias.seminararc.domain.formula.FormulaLanguageHint
+import com.yuukias.seminararc.domain.formula.FormulaOcrProvider
+import com.yuukias.seminararc.domain.formula.FormulaOcrRequest
+import com.yuukias.seminararc.domain.formula.FormulaOcrResult
+import com.yuukias.seminararc.domain.formula.FormulaRegionCrop
 import com.yuukias.seminararc.domain.image.FractionalCrop
 import com.yuukias.seminararc.domain.image.FractionalPerspective
 import com.yuukias.seminararc.domain.image.FractionalPoint
@@ -20,13 +25,16 @@ import com.yuukias.seminararc.domain.ocr.TextOcrLanguageMode
 import com.yuukias.seminararc.domain.ocr.TextOcrProvider
 import com.yuukias.seminararc.domain.ocr.TextOcrResult
 import com.yuukias.seminararc.domain.repository.CreateDerivedAssetInput
+import com.yuukias.seminararc.domain.repository.FormulaRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SaveOcrResultInput
+import com.yuukias.seminararc.domain.repository.SaveFormulaResultInput
 import com.yuukias.seminararc.domain.usecase.RunTranscriptionForRecordingUseCase
 import com.yuukias.seminararc.domain.usecase.RunTranscriptionResult
 import com.yuukias.seminararc.domain.usecase.DraftSummaryForSeminarUseCase
 import com.yuukias.seminararc.domain.usecase.DraftSummaryInput
 import com.yuukias.seminararc.domain.usecase.DraftSummaryResult
+import com.yuukias.seminararc.domain.model.FormulaResultState
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -74,9 +82,14 @@ class ProcessingWorker(
                     repository = repository,
                     draftSummaryForSeminar = dependencies.draftSummaryForSeminarUseCase(),
                 )
-                ProcessingJobType.NOTION_EXPORT_PREP,
-                ProcessingJobType.FORMULA_OCR,
-                -> fail(
+                ProcessingJobType.FORMULA_OCR -> runFormulaOcr(
+                    jobId = job.id,
+                    repository = repository,
+                    formulaRepository = dependencies.formulaRepository(),
+                    storage = dependencies.mediaStorageManager(),
+                    provider = dependencies.manualFormulaProvider(),
+                )
+                ProcessingJobType.NOTION_EXPORT_PREP -> fail(
                     repository = repository,
                     jobId = job.id,
                     message = "${job.type} is not wired to ProcessingWorker yet.",
@@ -89,6 +102,76 @@ class ProcessingWorker(
         } catch (throwable: Throwable) {
             repository.markJobFailed(jobId, throwable.message ?: "Processing failed.", isRetryable = true)
             Result.failure()
+        }
+    }
+
+    private suspend fun runFormulaOcr(
+        jobId: Long,
+        repository: ReconstructionRepository,
+        formulaRepository: FormulaRepository,
+        storage: MediaStorageManager,
+        provider: FormulaOcrProvider,
+    ): Result {
+        val payload = formulaPayloadFromInput()
+            ?: return fail(repository, jobId, "Formula OCR payload is missing or invalid.", isRetryable = false)
+        val region = formulaRepository.getRegion(payload.regionId)
+            ?: return fail(repository, jobId, "Formula region was not found.", isRetryable = false)
+        if (region.seminarId != payload.seminarId) {
+            return fail(repository, jobId, "Formula region does not belong to this seminar.", isRetryable = false)
+        }
+        val source = storage.resolveReadableRelativeFile(region.sourcePhotoPath)
+            ?: return fail(repository, jobId, "Formula source photo file is not readable.", isRetryable = true)
+        repository.markJobRunning(jobId)
+        val request = FormulaOcrRequest(
+            seminarId = region.seminarId,
+            regionId = region.id,
+            sourceAssetId = region.sourceAssetId,
+            sourcePhoto = source,
+            crop = FormulaRegionCrop(
+                normalizedX = region.normalizedX,
+                normalizedY = region.normalizedY,
+                normalizedWidth = region.normalizedWidth,
+                normalizedHeight = region.normalizedHeight,
+            ),
+            rotationDegrees = region.rotationDegrees,
+            languageHint = FormulaLanguageHint.AUTO,
+            requestFingerprint = payload.requestFingerprint,
+            manualLatex = payload.manualLatex,
+        )
+        return when (val result = provider.recognize(request)) {
+            is FormulaOcrResult.Recognized -> {
+                formulaRepository.saveFormulaResult(
+                    SaveFormulaResultInput(
+                        regionId = region.id,
+                        providerId = provider.providerId,
+                        providerVersion = provider.providerVersion,
+                        state = FormulaResultState.READY,
+                        latex = result.recognition.latex,
+                        confidence = result.recognition.confidence,
+                        isEdited = true,
+                        errorMessage = null,
+                        provenanceJson = result.recognition.provenanceJson,
+                    ),
+                )
+                repository.markJobSucceeded(jobId, outputAssetId = region.sourceAssetId)
+                Result.success()
+            }
+            is FormulaOcrResult.Failed -> {
+                formulaRepository.saveFormulaResult(
+                    SaveFormulaResultInput(
+                        regionId = region.id,
+                        providerId = provider.providerId,
+                        providerVersion = provider.providerVersion,
+                        state = FormulaResultState.FAILED,
+                        latex = "",
+                        confidence = null,
+                        isEdited = false,
+                        errorMessage = result.message,
+                        provenanceJson = "{}",
+                    ),
+                )
+                fail(repository, jobId, result.message, isRetryable = result.isRetryable)
+            }
         }
     }
 
@@ -308,6 +391,11 @@ class ProcessingWorker(
         return runCatching { json.decodeFromString<SummaryDraftWorkPayload>(payloadJson) }.getOrNull()
     }
 
+    private fun formulaPayloadFromInput(): FormulaOcrWorkPayload? {
+        val payloadJson = inputData.getString(KEY_FORMULA_PAYLOAD_JSON) ?: return null
+        return runCatching { json.decodeFromString<FormulaOcrWorkPayload>(payloadJson) }.getOrNull()
+    }
+
     private inline fun <reified T : Enum<T>> enumValueOrDefault(
         value: String?,
         default: T,
@@ -320,6 +408,7 @@ class ProcessingWorker(
         const val KEY_RECORDING_ID = "recording_id"
         const val KEY_LANGUAGE_HINT = "language_hint"
         const val KEY_SUMMARY_PAYLOAD_JSON = "summary_payload_json"
+        const val KEY_FORMULA_PAYLOAD_JSON = "formula_payload_json"
         const val KEY_LANGUAGE_MODE = "language_mode"
         const val KEY_ROTATION_DEGREES = "rotation_degrees"
         const val KEY_READABILITY = "readability"
@@ -350,9 +439,11 @@ class ProcessingWorker(
 interface ProcessingWorkerEntryPoint {
     fun appDatabase(): AppDatabase
     fun reconstructionRepository(): ReconstructionRepository
+    fun formulaRepository(): FormulaRepository
     fun mediaStorageManager(): MediaStorageManager
     fun imageEnhancementProvider(): ImageEnhancementProvider
     fun textOcrProvider(): TextOcrProvider
+    fun manualFormulaProvider(): com.yuukias.seminararc.media.formula.ManualFormulaProvider
     fun runTranscriptionForRecordingUseCase(): RunTranscriptionForRecordingUseCase
     fun draftSummaryForSeminarUseCase(): DraftSummaryForSeminarUseCase
     fun processingWorkScheduler(): ProcessingWorkScheduler

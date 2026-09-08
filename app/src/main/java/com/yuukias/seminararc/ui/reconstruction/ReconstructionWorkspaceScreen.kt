@@ -86,6 +86,7 @@ fun ReconstructionWorkspaceScreen(
         onEditOcrResult = viewModel::onEditOcrResult,
         onAddFormulaRegion = viewModel::onAddFormulaRegion,
         onDeleteFormulaRegion = viewModel::onDeleteFormulaRegion,
+        onSaveFormulaLatex = viewModel::onSaveFormulaLatex,
         onEnhancePhoto = { assetId -> viewModel.onEnhancePhoto(assetId) },
         onRunOcr = { assetId -> viewModel.onRunOcr(assetId) },
         onRetryJob = viewModel::onRetryJob,
@@ -109,6 +110,7 @@ fun ReconstructionWorkspaceScreenContent(
     onEditOcrResult: (Long, String) -> Unit,
     onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
     onDeleteFormulaRegion: (Long) -> Unit,
+    onSaveFormulaLatex: (Long, String) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
     onRunOcr: (Long) -> Unit,
     onRetryJob: (Long) -> Unit,
@@ -158,6 +160,7 @@ fun ReconstructionWorkspaceScreenContent(
                 onEditOcrResult = onEditOcrResult,
                 onAddFormulaRegion = onAddFormulaRegion,
                 onDeleteFormulaRegion = onDeleteFormulaRegion,
+                onSaveFormulaLatex = onSaveFormulaLatex,
                 onEnhancePhoto = onEnhancePhoto,
                 onRunOcr = onRunOcr,
                 onRetryJob = onRetryJob,
@@ -180,6 +183,7 @@ private fun ReconstructionReadyContent(
     onEditOcrResult: (Long, String) -> Unit,
     onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
     onDeleteFormulaRegion: (Long) -> Unit,
+    onSaveFormulaLatex: (Long, String) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
     onRunOcr: (Long) -> Unit,
     onRetryJob: (Long) -> Unit,
@@ -264,6 +268,7 @@ private fun ReconstructionReadyContent(
                     onEditOcrResult = onEditOcrResult,
                     onAddFormulaRegion = onAddFormulaRegion,
                     onDeleteFormulaRegion = onDeleteFormulaRegion,
+                    onSaveFormulaLatex = onSaveFormulaLatex,
                     onEnhancePhoto = onEnhancePhoto,
                     onRunOcr = onRunOcr,
                     onRetryJob = onRetryJob,
@@ -281,6 +286,7 @@ private fun ReconstructionAssetCard(
     onEditOcrResult: (Long, String) -> Unit,
     onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
     onDeleteFormulaRegion: (Long) -> Unit,
+    onSaveFormulaLatex: (Long, String) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
     onRunOcr: (Long) -> Unit,
     onRetryJob: (Long) -> Unit,
@@ -341,6 +347,7 @@ private fun ReconstructionAssetCard(
                 item = item,
                 onAddFormulaRegion = onAddFormulaRegion,
                 onDeleteFormulaRegion = onDeleteFormulaRegion,
+                onSaveFormulaLatex = onSaveFormulaLatex,
             )
             OutlinedTextField(
                 value = editedText,
@@ -404,6 +411,7 @@ private fun FormulaRegionSection(
     item: ReconstructionAssetUiItem,
     onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
     onDeleteFormulaRegion: (Long) -> Unit,
+    onSaveFormulaLatex: (Long, String) -> Unit,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
     var label by remember(item.asset.id) { mutableStateOf("Formula") }
@@ -422,20 +430,12 @@ private fun FormulaRegionSection(
     Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
         Text("Formula regions", style = MaterialTheme.typography.titleSmall)
         item.formulaRegions.forEach { region ->
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
-                Text(
-                    text = "${region.label ?: "Formula"}: x=${region.normalizedX}, y=${region.normalizedY}, w=${region.normalizedWidth}, h=${region.normalizedHeight}",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                TextButton(
-                    onClick = { onDeleteFormulaRegion(region.id) },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text("Delete")
-                }
-            }
+            FormulaRegionRow(
+                item = item,
+                region = region,
+                onDeleteFormulaRegion = onDeleteFormulaRegion,
+                onSaveFormulaLatex = onSaveFormulaLatex,
+            )
         }
         OutlinedTextField(
             value = label,
@@ -470,6 +470,59 @@ private fun FormulaRegionSection(
         ) {
             Icon(Icons.Outlined.NoteAlt, contentDescription = null)
             Text("Save formula region")
+        }
+    }
+}
+
+@Composable
+private fun FormulaRegionRow(
+    item: ReconstructionAssetUiItem,
+    region: com.yuukias.seminararc.domain.model.FormulaRegion,
+    onDeleteFormulaRegion: (Long) -> Unit,
+    onSaveFormulaLatex: (Long, String) -> Unit,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    val latestResult = item.formulaResults
+        .filter { result -> result.regionId == region.id }
+        .maxByOrNull { result -> result.updatedAt }
+    var latex by remember(region.id, latestResult?.updatedAt) {
+        mutableStateOf(latestResult?.latex.orEmpty())
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
+            Text(
+                text = "${region.label ?: "Formula"}: x=${region.normalizedX}, y=${region.normalizedY}, w=${region.normalizedWidth}, h=${region.normalizedHeight}",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(
+                onClick = { onDeleteFormulaRegion(region.id) },
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
+                Text("Delete")
+            }
+        }
+        if (latestResult != null) {
+            Text(
+                text = "Formula ${latestResult.state.name.lowercase()}: ${latestResult.latex.ifBlank { latestResult.errorMessage.orEmpty() }}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        OutlinedTextField(
+            value = latex,
+            onValueChange = { latex = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("LaTeX") },
+            minLines = 2,
+        )
+        TextButton(
+            onClick = { onSaveFormulaLatex(region.id, latex) },
+            enabled = latex.isNotBlank(),
+            modifier = Modifier.heightIn(min = 48.dp),
+        ) {
+            Text("Queue LaTeX")
         }
     }
 }

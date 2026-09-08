@@ -13,6 +13,7 @@ import com.yuukias.seminararc.domain.model.RecordingState
 import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
 import com.yuukias.seminararc.domain.ocr.TextOcrLanguageMode
 import com.yuukias.seminararc.domain.repository.EnqueueProcessingJobInput
+import com.yuukias.seminararc.domain.repository.FormulaRepository
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.TranscriptRepository
@@ -20,6 +21,8 @@ import com.yuukias.seminararc.domain.image.ImageEnhancementProvider
 import com.yuukias.seminararc.domain.ocr.TextOcrProvider
 import com.yuukias.seminararc.domain.summary.SummaryProvider
 import com.yuukias.seminararc.domain.transcription.TranscriptionProvider
+import com.yuukias.seminararc.media.formula.ManualFormulaProvider
+import java.security.MessageDigest
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -33,11 +36,13 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
     private val recordingRepository: RecordingRepository,
     private val reconstructionRepository: ReconstructionRepository,
+    private val formulaRepository: FormulaRepository,
     private val transcriptRepository: TranscriptRepository,
     private val imageEnhancementProvider: ImageEnhancementProvider,
     private val textOcrProvider: TextOcrProvider,
     private val transcriptionProvider: TranscriptionProvider,
     private val summaryProvider: SummaryProvider,
+    private val manualFormulaProvider: ManualFormulaProvider,
 ) : ProcessingWorkScheduler {
     private val workManager: WorkManager
         get() = WorkManager.getInstance(context)
@@ -130,6 +135,34 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
         return job
     }
 
+    override suspend fun enqueueManualFormulaOcr(
+        regionId: Long,
+        latex: String,
+    ): ProcessingJob? {
+        val trimmed = latex.trim()
+        if (trimmed.isBlank()) return null
+        val region = formulaRepository.getRegion(regionId) ?: return null
+        val payload = FormulaOcrWorkPayload(
+            seminarId = region.seminarId,
+            regionId = region.id,
+            manualLatex = trimmed,
+            requestFingerprint = fingerprint("${region.id}|${region.sourceAssetId}|$trimmed"),
+        )
+        val payloadJson = json.encodeToString(payload)
+        val job = reconstructionRepository.enqueueJob(
+            EnqueueProcessingJobInput(
+                seminarId = region.seminarId,
+                type = ProcessingJobType.FORMULA_OCR,
+                inputAssetId = region.sourceAssetId,
+                inputPayloadJson = payloadJson,
+                providerId = manualFormulaProvider.providerId,
+                providerVersion = manualFormulaProvider.providerVersion,
+            ),
+        )
+        enqueue(job, formulaOcrRequest(job.id, payloadJson), ExistingWorkPolicy.KEEP)
+        return job
+    }
+
     override suspend fun retry(jobId: Long): ProcessingJob? {
         val job = reconstructionRepository.requeueJob(jobId) ?: return null
         val request = requestFor(job) ?: return null
@@ -166,9 +199,8 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
             ProcessingJobType.TEXT_OCR -> textOcrRequest(job.id, TextOcrLanguageMode.LATIN_AND_CHINESE)
             ProcessingJobType.TRANSCRIPTION -> transcriptionRequestFor(job)
             ProcessingJobType.SUMMARY_DRAFT -> job.inputPayloadJson?.let { summaryDraftRequest(job.id, it) }
-            ProcessingJobType.NOTION_EXPORT_PREP,
-            ProcessingJobType.FORMULA_OCR,
-            -> null
+            ProcessingJobType.FORMULA_OCR -> job.inputPayloadJson?.let { formulaOcrRequest(job.id, it) }
+            ProcessingJobType.NOTION_EXPORT_PREP -> null
         }
     }
 
@@ -260,6 +292,22 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
             .build()
     }
 
+    private fun formulaOcrRequest(
+        jobId: Long,
+        payloadJson: String,
+    ): OneTimeWorkRequest {
+        return OneTimeWorkRequestBuilder<ProcessingWorker>()
+            .setInputData(
+                workDataOf(
+                    ProcessingWorker.KEY_JOB_ID to jobId,
+                    ProcessingWorker.KEY_OPERATION to ProcessingJobType.FORMULA_OCR.name,
+                    ProcessingWorker.KEY_FORMULA_PAYLOAD_JSON to payloadJson,
+                ),
+            )
+            .addTag(ProcessingWorker.WORK_TAG)
+            .build()
+    }
+
     private companion object {
         val json = Json {
             encodeDefaults = true
@@ -267,5 +315,10 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
         }
 
         fun workName(jobId: Long): String = "seminararc-processing-$jobId"
+
+        fun fingerprint(value: String): String {
+            val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+            return digest.joinToString("") { byte -> "%02x".format(byte) }
+        }
     }
 }

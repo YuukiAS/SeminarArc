@@ -10,6 +10,8 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.yuukias.seminararc.domain.model.FormulaRegion
+import com.yuukias.seminararc.domain.model.FormulaResult
+import com.yuukias.seminararc.domain.model.FormulaResultState
 import com.yuukias.seminararc.domain.model.OcrResult
 import com.yuukias.seminararc.domain.model.ProcessingJob
 import com.yuukias.seminararc.domain.model.ProcessingJobState
@@ -51,6 +53,7 @@ class ReconstructionWorkspaceScreenTest {
                     onEditOcrResult = { _, _ -> actions += "edit" },
                     onAddFormulaRegion = { _, _, _, _, _, _ -> },
                     onDeleteFormulaRegion = {},
+                    onSaveFormulaLatex = { _, _ -> },
                     onEnhancePhoto = { actions += "enhance" },
                     onRunOcr = { actions += "ocr" },
                     onRetryJob = { jobId -> actions += "retry:$jobId" },
@@ -93,6 +96,7 @@ class ReconstructionWorkspaceScreenTest {
                         actions += "formula:$assetId:$label:$x:$y:$width:$height"
                     },
                     onDeleteFormulaRegion = { regionId -> actions += "delete-formula:$regionId" },
+                    onSaveFormulaLatex = { regionId, latex -> actions += "latex:$regionId:$latex" },
                     onEnhancePhoto = {},
                     onRunOcr = {},
                     onRetryJob = {},
@@ -103,11 +107,13 @@ class ReconstructionWorkspaceScreenTest {
 
         composeRule.onNodeWithText("Formula regions").assertIsDisplayed()
         composeRule.onNodeWithText("Main equation: x=0.1, y=0.2, w=0.7, h=0.25").assertIsDisplayed()
+        composeRule.onNodeWithText("Formula ready: E = mc^2").assertIsDisplayed()
         composeRule.onAllNodesWithText("Save formula region")[0].performClick()
+        composeRule.onAllNodesWithText("Queue LaTeX")[0].performClick()
         composeRule.onAllNodesWithText("Delete")[0].performClick()
 
         assertEquals(
-            listOf("formula:10:Formula:0.1:0.1:0.8:0.3", "delete-formula:20"),
+            listOf("formula:10:Formula:0.1:0.1:0.8:0.3", "latex:20:E = mc^2", "delete-formula:20"),
             actions,
         )
     }
@@ -145,6 +151,7 @@ class ReconstructionWorkspaceScreenTest {
                     photoMissing = false,
                     ocrResult = ocrResult(asset.id),
                     formulaRegions = listOf(formulaRegion(asset.id)),
+                    formulaResults = listOf(formulaResult()),
                     jobs = listOf(
                         job(2L, ProcessingJobType.TEXT_OCR, ProcessingJobState.RUNNING, inputAssetId = asset.id, error = null),
                         job(3L, ProcessingJobType.IMAGE_ENHANCEMENT, ProcessingJobState.FAILED, inputAssetId = asset.id, error = "transform failed"),
@@ -158,6 +165,7 @@ class ReconstructionWorkspaceScreenTest {
                     photoMissing = false,
                     ocrResult = null,
                     formulaRegions = emptyList(),
+                    formulaResults = emptyList(),
                     jobs = listOf(
                         job(
                             id = 4L,
@@ -187,6 +195,24 @@ class ReconstructionWorkspaceScreenTest {
             normalizedHeight = 0.25f,
             rotationDegrees = 0,
             label = "Main equation",
+            createdAt = NOW,
+            updatedAt = NOW,
+        )
+    }
+
+    private fun formulaResult(): FormulaResult {
+        return FormulaResult(
+            id = 30L,
+            seminarId = 1L,
+            regionId = 20L,
+            providerId = "manual-formula",
+            providerVersion = "1",
+            state = FormulaResultState.READY,
+            latex = "E = mc^2",
+            confidence = 1f,
+            isEdited = true,
+            errorMessage = null,
+            provenanceJson = "{}",
             createdAt = NOW,
             updatedAt = NOW,
         )

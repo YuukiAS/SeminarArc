@@ -28,6 +28,11 @@ interface ProcessingWorkScheduler {
         userNotes: String = "",
     ): ProcessingJob?
 
+    suspend fun enqueueManualFormulaOcr(
+        regionId: Long,
+        latex: String,
+    ): ProcessingJob?
+
     suspend fun retry(jobId: Long): ProcessingJob?
 
     suspend fun cancel(jobId: Long)

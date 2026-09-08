@@ -9,9 +9,13 @@ interface FormulaRepository {
 
     fun observeResultsForSeminar(seminarId: Long): Flow<List<FormulaResult>>
 
+    suspend fun getRegion(regionId: Long): FormulaRegion?
+
     suspend fun createRegion(input: CreateFormulaRegionInput): FormulaRegion?
 
     suspend fun deleteRegion(regionId: Long): Boolean
+
+    suspend fun saveFormulaResult(input: SaveFormulaResultInput): FormulaResult?
 }
 
 data class CreateFormulaRegionInput(
@@ -36,5 +40,24 @@ data class CreateFormulaRegionInput(
         require(normalizedX + normalizedWidth <= 1.0001f) { "Region must fit within the source image width." }
         require(normalizedY + normalizedHeight <= 1.0001f) { "Region must fit within the source image height." }
         require(rotationDegrees in -359..359) { "Rotation degrees must be between -359 and 359." }
+    }
+}
+
+data class SaveFormulaResultInput(
+    val regionId: Long,
+    val providerId: String,
+    val providerVersion: String,
+    val state: com.yuukias.seminararc.domain.model.FormulaResultState,
+    val latex: String,
+    val confidence: Float?,
+    val isEdited: Boolean,
+    val errorMessage: String?,
+    val provenanceJson: String = "{}",
+) {
+    init {
+        require(regionId > 0L) { "Region id must be positive." }
+        require(providerId.isNotBlank()) { "Provider id must not be blank." }
+        require(providerVersion.isNotBlank()) { "Provider version must not be blank." }
+        confidence?.let { require(it in 0f..1f) { "Formula confidence must be between 0 and 1." } }
     }
 }

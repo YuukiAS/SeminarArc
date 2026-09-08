@@ -55,22 +55,27 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
         reconstructionRepository.observePhotoAssetsForSeminar(seminarId),
         reconstructionRepository.observeOcrResultsForSeminar(seminarId),
         formulaRepository.observeRegionsForSeminar(seminarId),
-        reconstructionRepository.observeJobsForSeminar(seminarId),
-    ) { detail, photoAssets, ocrResults, formulaRegions, jobs ->
+        formulaRepository.observeResultsForSeminar(seminarId),
+    ) { detail, photoAssets, ocrResults, formulaRegions, formulaResults ->
         ReconstructionWorkspaceData(
             detail = detail,
             photoAssets = photoAssets,
             ocrResults = ocrResults,
             formulaRegions = formulaRegions,
-            jobs = jobs,
+            formulaResults = formulaResults,
+            jobs = emptyList(),
             keySlideAssetIds = emptySet(),
         )
     }
     private val dataSnapshot = combine(
         contentSnapshot,
+        reconstructionRepository.observeJobsForSeminar(seminarId),
         reconstructionRepository.observeAssetIdsForSystemTag(seminarId, SeminarSystemTag.KEY_SLIDE),
-    ) { data, keySlideAssetIds ->
-        data.copy(keySlideAssetIds = keySlideAssetIds.toSet())
+    ) { data, jobs, keySlideAssetIds ->
+        data.copy(
+            jobs = jobs,
+            keySlideAssetIds = keySlideAssetIds.toSet(),
+        )
     }
 
     val uiState: StateFlow<ReconstructionWorkspaceUiState> = combine(
@@ -84,6 +89,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
             photoAssets = data.photoAssets,
             ocrResults = data.ocrResults,
             formulaRegions = data.formulaRegions,
+            formulaResults = data.formulaResults,
             jobs = data.jobs,
             keySlideAssetIds = data.keySlideAssetIds,
             searchQuery = query,
@@ -179,6 +185,16 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
         }
     }
 
+    fun onSaveFormulaLatex(regionId: Long, latex: String) {
+        viewModelScope.launch {
+            if (processingWorkScheduler.enqueueManualFormulaOcr(regionId, latex) == null) {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Formula LaTeX was not queued."))
+            } else {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Formula LaTeX queued."))
+            }
+        }
+    }
+
     fun onRetryJob(jobId: Long) {
         viewModelScope.launch {
             if (processingWorkScheduler.retry(jobId) == null) {
@@ -200,6 +216,9 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
         val currentDetail = detail ?: return ReconstructionWorkspaceUiState.Missing(seminarId)
         val ocrByAsset = ocrResults.associateBy { result -> result.assetId }
         val formulaRegionsByAsset = formulaRegions.groupBy { region -> region.sourceAssetId }
+        val formulaResultsByAsset = formulaResults.groupBy { result ->
+            formulaRegions.firstOrNull { region -> region.id == result.regionId }?.sourceAssetId ?: -1L
+        }
         val jobsByAsset = jobs.groupBy { job -> job.inputAssetId }
         val items = photoAssets.map { asset ->
             val file = asset.relativePath?.let { path -> mediaStorageManager.resolveReadableRelativeFile(path) }
@@ -209,6 +228,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
                 photoMissing = asset.relativePath != null && file == null,
                 ocrResult = ocrByAsset[asset.id],
                 formulaRegions = formulaRegionsByAsset[asset.id].orEmpty(),
+                formulaResults = formulaResultsByAsset[asset.id].orEmpty(),
                 jobs = jobsByAsset[asset.id].orEmpty(),
                 isKeySlide = asset.id in keySlideAssetIds,
             )
@@ -251,6 +271,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
             ocrResult?.recognizedText,
             ocrResult?.editedText,
             formulaRegions.joinToString(" ") { region -> region.label.orEmpty() },
+            formulaResults.joinToString(" ") { result -> result.latex },
         ).any { value -> value.contains(normalized, ignoreCase = true) }
     }
 }
@@ -260,6 +281,7 @@ private data class ReconstructionWorkspaceData(
     val photoAssets: List<com.yuukias.seminararc.domain.model.SeminarAsset>,
     val ocrResults: List<com.yuukias.seminararc.domain.model.OcrResult>,
     val formulaRegions: List<com.yuukias.seminararc.domain.model.FormulaRegion>,
+    val formulaResults: List<com.yuukias.seminararc.domain.model.FormulaResult>,
     val jobs: List<com.yuukias.seminararc.domain.model.ProcessingJob>,
     val keySlideAssetIds: Set<Long>,
 )
@@ -269,6 +291,7 @@ private data class ReconstructionWorkspaceInputs(
     val photoAssets: List<com.yuukias.seminararc.domain.model.SeminarAsset>,
     val ocrResults: List<com.yuukias.seminararc.domain.model.OcrResult>,
     val formulaRegions: List<com.yuukias.seminararc.domain.model.FormulaRegion>,
+    val formulaResults: List<com.yuukias.seminararc.domain.model.FormulaResult>,
     val jobs: List<com.yuukias.seminararc.domain.model.ProcessingJob>,
     val keySlideAssetIds: Set<Long>,
     val searchQuery: String,

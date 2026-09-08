@@ -150,6 +150,8 @@ Room version `7` adds `formula_regions` and `formula_results`. `FormulaDao` expo
 
 `FormulaRepository` validates source photo ownership before persisting regions. Reconstruction workspace observes formula regions through its ViewModel and exposes local create/delete controls; no composable accesses `FormulaDao` directly.
 
+`FORMULA_OCR` jobs now support the local manual LaTeX path through WorkManager. The scheduler persists `FormulaOcrWorkPayload` in `processing_jobs.inputPayloadJson`; Worker re-reads the formula region and source photo from Room/storage before invoking `ManualFormulaProvider`, then writes READY/FAILED formula results through `FormulaRepository`. Live cloud/model providers remain deferred.
+
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 
 ## Reference Candidate and Seminar Brief
