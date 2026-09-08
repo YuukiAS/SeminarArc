@@ -58,7 +58,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` summary draft apply foundation：Transcript Review 可由用户显式把某个 summary draft 应用到人工 `SeminarBrief`，让 transcript/summary 整理结果进入既有 Reference Review brief/export 闭环。
 - `0.4.x` Notion-ready share entry foundation：Seminar Detail 可通过 Android share sheet 分享本地生成的 Notion-ready Markdown 预览文本；该路径不包含 Notion OAuth、API client、token、backend 或上传行为。
 - `0.4.x` Notion-ready save entry foundation：Seminar Detail 可通过 Android document picker 保存本地生成的 Notion-ready Markdown 预览文本，便于后续手动导入 Notion 或其他知识库；该路径仍不上传、不持有 token。
-- `0.5.x` Formula / Research Export foundation：已形成 `docs/plans/0.5.x-formula-research-export-plan.md`；Room version `7` 已加入本地公式区域、公式结果、`FormulaDao`、domain model 和安全占位 `FORMULA_OCR` job 类型。Mathpix live provider、PaddleOCR/pix2tex bundling 和任何 cloud upload 均需后续 credential/backend/license 决策。
+- `0.5.x` Formula / Research Export foundation：已形成 `docs/plans/0.5.x-formula-research-export-plan.md`；Room version `7` 已加入本地公式区域、公式结果、`FormulaDao`、domain model 和安全占位 `FORMULA_OCR` job 类型；`FormulaOcrProvider`、manual/unavailable providers 和 JVM contract tests 已就位。Mathpix live provider、PaddleOCR/pix2tex bundling 和任何 cloud upload 均需后续 credential/backend/license 决策。
 
 尚未声明完成：
 

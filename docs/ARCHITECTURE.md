@@ -146,6 +146,8 @@ This foundation does not ship a real ASR engine, cloud transcription, live Notio
 
 Room version `7` adds `formula_regions` and `formula_results`. `FormulaDao` exposes local region/result persistence for later UI/provider tasks. `ProcessingJobType.FORMULA_OCR` is present as a reserved durable job type, but the current Worker marks it as not wired and WorkManager recovery does not enqueue it automatically until the dedicated formula queue task enables the provider path.
 
+`FormulaOcrProvider` defines the provider boundary for normalized crop input, request fingerprinting, LaTeX output, confidence, provenance, failure, and retryability. The production default is `UnavailableFormulaOcrProvider`; `ManualFormulaProvider` supports explicit user-supplied LaTeX without network or credential access.
+
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 
 ## Reference Candidate and Seminar Brief

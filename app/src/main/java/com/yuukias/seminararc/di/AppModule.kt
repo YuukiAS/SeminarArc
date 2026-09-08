@@ -30,6 +30,7 @@ import com.yuukias.seminararc.data.repository.TranscriptRepositoryImpl
 import com.yuukias.seminararc.data.storage.AppMediaStorageManager
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.image.ImageEnhancementProvider
+import com.yuukias.seminararc.domain.formula.FormulaOcrProvider
 import com.yuukias.seminararc.domain.ocr.TextOcrProvider
 import com.yuukias.seminararc.domain.repository.ReferenceLookupProvider
 import com.yuukias.seminararc.domain.repository.ReferenceRepository
@@ -47,6 +48,7 @@ import com.yuukias.seminararc.media.clip.ClipGenerator
 import com.yuukias.seminararc.media.clip.ClipWorkScheduler
 import com.yuukias.seminararc.media.clip.WorkManagerClipWorkScheduler
 import com.yuukias.seminararc.media.image.AndroidBitmapImageEnhancementProvider
+import com.yuukias.seminararc.media.formula.UnavailableFormulaOcrProvider
 import com.yuukias.seminararc.media.ocr.MlKitTextOcrProvider
 import com.yuukias.seminararc.media.playback.Media3RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
@@ -198,6 +200,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindSummaryProvider(impl: UnavailableSummaryProvider): SummaryProvider
+
+    @Binds
+    @Singleton
+    abstract fun bindFormulaOcrProvider(impl: UnavailableFormulaOcrProvider): FormulaOcrProvider
 
     @Binds
     @Singleton
