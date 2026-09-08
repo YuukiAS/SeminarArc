@@ -27,11 +27,26 @@ Updated: 2026-09-08
 - build/test/sign 在受控 Windows 本地环境完成；
 - accepted milestone 通过 test + Emulator + package/secret scan 后，本地生成签名 APK；
 - 由本地 `gh release create/upload` 或 GitHub API 上传 APK + SHA-256 + release notes；
-- GitHub Actions 只作为普通 CI，不是 APK 构建/发布硬依赖；
 - release APK signing key 永远留在本地/repo 外，不上传 GitHub；
 - 相同 internal application id + 相同 signer 才支持覆盖升级并保留数据。
 
 当前仓库为 public，因此 Release asset 也公开可下载；如果未来仓库转 private，再重新评估下载权限和 Actions 配额。
+
+## CI principle
+
+GitHub Actions 是**版本级远端验收**，不是每次 push 的持续构建器，也不是 APK 分发渠道。
+
+当前策略见 `docs/CI_POLICY.md`：
+
+- 普通代码 push 不自动跑；
+- docs/task/result/review/README/TODO/design 更新不自动跑；
+- push `v*` 版本 tag 时跑一次；
+- 必要时可 `workflow_dispatch` 手动跑一次；
+- 每个面向用户的 internal/alpha 版本至少有一次远端 version gate；
+- 远端 gate 至少执行 `testDebugUnitTest assembleDebug lintDebug`；
+- Windows Emulator connected/instrumentation 仍只在本地 Windows 运行。
+
+版本发布顺序固定为：本地完整验收 -> commit/push -> 本地签名 APK -> push version tag -> GitHub Actions version gate -> CI PASS -> GitHub Release。
 
 ## Milestone A — 0.3.1-internal Dogfood Distribution
 
@@ -47,7 +62,8 @@ Required work:
 - unit/build/lint + Windows Emulator regression；
 - APK package/version/signature/secret scan；
 - SHA-256；
-- Git tag + GitHub prerelease + APK release asset；
+- Git tag + version CI；
+- CI PASS 后创建 GitHub prerelease + APK release asset；
 - `docs/INTERNAL_DISTRIBUTION.md`；
 - 不提交 keystore/private key/password。
 
@@ -91,7 +107,9 @@ Required work:
 6. Notion 只实现安全 credential/privacy 架构允许的部分；
 7. Markdown/ZIP compatibility；
 8. Windows Emulator closeout；
-9. accepted milestone 后本地 build/sign 并发布 GitHub Release APK。
+9. accepted milestone 后本地 build/sign；
+10. push version tag 跑一次远端 CI；
+11. CI PASS 后发布 GitHub Release APK。
 
 如果某 provider 需要 app-owned secret/backend 且没有安全路径，只冻结该子路径，继续其他 local-safe work。
 
@@ -109,7 +127,9 @@ Targets:
 - research export polish；
 - no automatic paywalled PDF retrieval；
 - Windows Emulator regression；
-- accepted milestone 本地构建并发布 GitHub prerelease APK。
+- accepted milestone 本地构建/sign；
+- version tag remote CI；
+- CI PASS 后发布 GitHub prerelease APK。
 
 Paid API keys/commercial credentials 是 human-approval boundary，绝不提交 repo。
 
@@ -148,10 +168,10 @@ At each version line:
 5. Windows Emulator connected closeout；
 6. docs/README/TODO/CHANGELOG/architecture/privacy/design update；
 7. accepted milestone 本地生成 signed internal APK；
-8. 创建 tag + GitHub prerelease，上传 APK + SHA-256 + notes；
-9. 无 hard blocker 则继续下一版本。
-
-GitHub Actions 不承担 release APK 分发；普通 push/PR CI 可以继续保留。
+8. 创建并 push version tag；
+9. 等待 GitHub Actions version gate PASS；
+10. 创建 GitHub prerelease，上传 APK + SHA-256 + notes；
+11. 无 hard blocker 则继续下一版本。
 
 Codex 可以在已授权 master 下创建内部 task/result 并连续推进，无需每阶段等用户。
 
