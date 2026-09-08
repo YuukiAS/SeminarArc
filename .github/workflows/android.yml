@@ -1,11 +1,16 @@
-name: Android
+name: Android Version Gate
 
 on:
+  workflow_dispatch:
   push:
-  pull_request:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,7 +19,5 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
-      - name: Build debug APK
-        run: ./gradlew assembleDebug
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+      - name: Run unit tests, build, and lint
+        run: ./gradlew testDebugUnitTest assembleDebug lintDebug
