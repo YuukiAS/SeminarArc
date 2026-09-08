@@ -50,6 +50,27 @@ class TranscriptRepositoryImpl @Inject constructor(
         return dao.getSegments(transcriptId).map { it.toDomain() }
     }
 
+    override suspend fun editSegmentText(
+        segmentId: Long,
+        text: String,
+    ): TranscriptSegment? {
+        val normalized = text.trim()
+        require(normalized.isNotBlank()) { "Transcript segment text must not be blank." }
+        val existing = dao.getSegment(segmentId) ?: return null
+        val transcript = dao.getTranscript(existing.transcriptId) ?: return null
+        val now = clockProvider.now()
+        val updatedSegment = existing.copy(
+            text = normalized,
+            isEdited = true,
+            updatedAt = now,
+        )
+        dao.updateSegmentTextAndTranscript(
+            segment = updatedSegment,
+            transcript = transcript.copy(updatedAt = now),
+        )
+        return updatedSegment.toDomain()
+    }
+
     override suspend fun createTranscript(input: CreateTranscriptInput): Transcript {
         require(input.seminarId > 0L) { "Seminar id must be positive." }
         input.recordingId?.let { require(it > 0L) { "Recording id must be positive." } }

@@ -22,6 +22,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -75,6 +76,8 @@ fun TranscriptReviewScreen(
         onDraftSummary = viewModel::onDraftSummaryClicked,
         onRetryJob = viewModel::onRetryJob,
         onCancelJob = viewModel::onCancelJob,
+        onSegmentDraftChanged = viewModel::onSegmentDraftChanged,
+        onSaveSegment = viewModel::onSaveSegmentClicked,
         modifier = modifier,
     )
 }
@@ -90,6 +93,8 @@ fun TranscriptReviewScreenContent(
     onDraftSummary: () -> Unit,
     onRetryJob: (Long) -> Unit,
     onCancelJob: (Long) -> Unit,
+    onSegmentDraftChanged: (Long, String) -> Unit,
+    onSaveSegment: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -131,6 +136,8 @@ fun TranscriptReviewScreenContent(
                 onDraftSummary = onDraftSummary,
                 onRetryJob = onRetryJob,
                 onCancelJob = onCancelJob,
+                onSegmentDraftChanged = onSegmentDraftChanged,
+                onSaveSegment = onSaveSegment,
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -145,6 +152,8 @@ private fun TranscriptReviewReadyContent(
     onDraftSummary: () -> Unit,
     onRetryJob: (Long) -> Unit,
     onCancelJob: (Long) -> Unit,
+    onSegmentDraftChanged: (Long, String) -> Unit,
+    onSaveSegment: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
@@ -188,7 +197,12 @@ private fun TranscriptReviewReadyContent(
             TimelineWindowsCard(windows = state.timelineWindows)
         }
         item {
-            SegmentsCard(segments = state.segments)
+            SegmentsCard(
+                segments = state.segments,
+                segmentDrafts = state.segmentDrafts,
+                onSegmentDraftChanged = onSegmentDraftChanged,
+                onSaveSegment = onSaveSegment,
+            )
         }
         item {
             SummaryDraftsCard(
@@ -361,7 +375,12 @@ private fun TimelineWindowRow(window: TranscriptTimelineWindow) {
 }
 
 @Composable
-private fun SegmentsCard(segments: List<TranscriptSegment>) {
+private fun SegmentsCard(
+    segments: List<TranscriptSegment>,
+    segmentDrafts: Map<Long, String>,
+    onSegmentDraftChanged: (Long, String) -> Unit,
+    onSaveSegment: (Long) -> Unit,
+) {
     val spacing = SeminarArcThemeTokens.spacing
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -379,7 +398,22 @@ private fun SegmentsCard(segments: List<TranscriptSegment>) {
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                         )
-                        Text(segment.text)
+                        OutlinedTextField(
+                            value = segmentDrafts[segment.id] ?: segment.text,
+                            onValueChange = { text -> onSegmentDraftChanged(segment.id, text) },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Segment text") },
+                            minLines = 2,
+                        )
+                        TextButton(
+                            onClick = { onSaveSegment(segment.id) },
+                            enabled = (segmentDrafts[segment.id] ?: segment.text).isNotBlank() &&
+                                segmentDrafts[segment.id] != null &&
+                                segmentDrafts[segment.id] != segment.text,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) {
+                            Text("Save segment")
+                        }
                     }
                 }
             }

@@ -36,6 +36,9 @@ interface TranscriptDao {
     @Query("SELECT * FROM transcript_segments WHERE transcriptId = :transcriptId ORDER BY startOffsetMs ASC, id ASC")
     suspend fun getSegments(transcriptId: Long): List<TranscriptSegmentEntity>
 
+    @Query("SELECT * FROM transcript_segments WHERE id = :segmentId")
+    suspend fun getSegment(segmentId: Long): TranscriptSegmentEntity?
+
     @Query("SELECT * FROM summary_drafts WHERE id = :draftId")
     suspend fun getSummaryDraft(draftId: Long): SummaryDraftEntity?
 
@@ -54,6 +57,9 @@ interface TranscriptDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertSegments(entities: List<TranscriptSegmentEntity>): List<Long>
 
+    @Update
+    suspend fun updateSegment(entity: TranscriptSegmentEntity)
+
     @Query("DELETE FROM transcript_segments WHERE transcriptId = :transcriptId")
     suspend fun deleteSegments(transcriptId: Long): Int
 
@@ -68,5 +74,14 @@ interface TranscriptDao {
         deleteSegments(transcriptId)
         if (segments.isEmpty()) return emptyList()
         return insertSegments(segments)
+    }
+
+    @Transaction
+    suspend fun updateSegmentTextAndTranscript(
+        segment: TranscriptSegmentEntity,
+        transcript: TranscriptEntity,
+    ) {
+        updateSegment(segment)
+        updateTranscript(transcript)
     }
 }

@@ -287,6 +287,7 @@ private class FakeTranscriptRepository : TranscriptRepository {
         return transcripts.lastOrNull { it.seminarId == seminarId && it.recordingId == recordingId && it.providerId == providerId }
     }
     override suspend fun getSegments(transcriptId: Long): List<TranscriptSegment> = segmentRows.filter { it.transcriptId == transcriptId }
+    override suspend fun editSegmentText(segmentId: Long, text: String): TranscriptSegment? = null
     override suspend fun createTranscript(input: CreateTranscriptInput): Transcript {
         val transcript = Transcript(
             id = nextTranscriptId++,

@@ -47,24 +47,65 @@ class TranscriptReviewViewModel @Inject constructor(
         ?: savedStateHandle.toRoute<TranscriptReviewRoute>().seminarId
 
     private val selectedTranscriptId = MutableStateFlow<Long?>(null)
+    private val editedSegments = MutableStateFlow<Map<Long, String>>(emptyMap())
 
     private val _events = MutableSharedFlow<TranscriptReviewEvent>(replay = 0)
     val events: SharedFlow<TranscriptReviewEvent> = _events.asSharedFlow()
 
-    val uiState: StateFlow<TranscriptReviewUiState> = combine(
+    private val dataSnapshot = combine(
         seminarRepository.observeSeminarDetail(seminarId),
         transcriptRepository.observeTranscripts(seminarId),
         transcriptRepository.observeSummaryDrafts(seminarId),
         reconstructionRepository.observeJobsForSeminar(seminarId),
+    ) { detail, transcripts, drafts, jobs ->
+        TranscriptReviewData(
+            detail = detail,
+            transcripts = transcripts,
+            summaryDrafts = drafts,
+            processingJobs = jobs,
+        )
+    }
+
+    val uiState: StateFlow<TranscriptReviewUiState> = combine(
+        dataSnapshot,
         selectedTranscriptId,
-    ) { detail, transcripts, drafts, jobs, selectedId ->
-        TranscriptReviewSnapshot(detail, transcripts, drafts, jobs, selectedId)
+        editedSegments,
+    ) { data, selectedId, segmentDrafts ->
+        TranscriptReviewSnapshot(
+            detail = data.detail,
+            transcripts = data.transcripts,
+            summaryDrafts = data.summaryDrafts,
+            processingJobs = data.processingJobs,
+            selectedTranscriptId = selectedId,
+            segmentDrafts = segmentDrafts,
+        )
     }
         .mapLatest { snapshot -> snapshot.toUiState() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TranscriptReviewUiState.Loading)
 
     fun onTranscriptSelected(transcriptId: Long) {
         selectedTranscriptId.value = transcriptId
+    }
+
+    fun onSegmentDraftChanged(segmentId: Long, text: String) {
+        editedSegments.value = editedSegments.value + (segmentId to text)
+    }
+
+    fun onSaveSegmentClicked(segmentId: Long) {
+        viewModelScope.launch {
+            val text = editedSegments.value[segmentId]
+            if (text.isNullOrBlank()) {
+                _events.emit(TranscriptReviewEvent.ShowMessage("Transcript segment text cannot be blank."))
+                return@launch
+            }
+            val edited = transcriptRepository.editSegmentText(segmentId, text)
+            if (edited == null) {
+                _events.emit(TranscriptReviewEvent.ShowMessage("Transcript segment could not be updated."))
+            } else {
+                editedSegments.value = editedSegments.value - segmentId
+                _events.emit(TranscriptReviewEvent.ShowMessage("Transcript segment updated."))
+            }
+        }
     }
 
     fun onDraftSummaryClicked() {
@@ -162,6 +203,9 @@ class TranscriptReviewViewModel @Inject constructor(
             transcripts = orderedTranscripts,
             selectedTranscript = selected,
             segments = segments,
+            segmentDrafts = segments.associate { segment ->
+                segment.id to (segmentDrafts[segment.id] ?: segment.text)
+            },
             timelineWindows = windows,
             summaryDrafts = summaryDrafts.sortedWith(compareByDescending { draft -> draft.updatedAt }),
             processingJobs = processingJobs
@@ -188,4 +232,12 @@ private data class TranscriptReviewSnapshot(
     val summaryDrafts: List<com.yuukias.seminararc.domain.model.SummaryDraft>,
     val processingJobs: List<com.yuukias.seminararc.domain.model.ProcessingJob>,
     val selectedTranscriptId: Long?,
+    val segmentDrafts: Map<Long, String>,
+)
+
+private data class TranscriptReviewData(
+    val detail: com.yuukias.seminararc.domain.model.SeminarDetail?,
+    val transcripts: List<com.yuukias.seminararc.domain.model.Transcript>,
+    val summaryDrafts: List<com.yuukias.seminararc.domain.model.SummaryDraft>,
+    val processingJobs: List<com.yuukias.seminararc.domain.model.ProcessingJob>,
 )

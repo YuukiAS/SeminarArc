@@ -145,6 +145,7 @@ private class TimelineWindowFakeTranscriptRepository(
     override suspend fun getTranscript(transcriptId: Long): Transcript? = transcript?.takeIf { it.id == transcriptId }
     override suspend fun getLatestTranscriptForRecording(seminarId: Long, recordingId: Long, providerId: String): Transcript? = null
     override suspend fun getSegments(transcriptId: Long): List<TranscriptSegment> = segments.filter { it.transcriptId == transcriptId }
+    override suspend fun editSegmentText(segmentId: Long, text: String): TranscriptSegment? = null
     override suspend fun createTranscript(input: CreateTranscriptInput): Transcript = error("Not used.")
     override suspend fun markTranscriptRunning(transcriptId: Long): Transcript? = error("Not used.")
     override suspend fun saveTranscriptSegments(

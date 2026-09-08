@@ -88,6 +88,41 @@ class TranscriptRepositoryImplTest {
     }
 
     @Test
+    fun editSegmentTextMarksSegmentEditedAndRefreshesTranscript() = runTest {
+        val dao = FakeTranscriptDao()
+        val repository = TranscriptRepositoryImpl(dao, FixedClock)
+        val transcript = repository.createTranscript(
+            CreateTranscriptInput(
+                seminarId = 1L,
+                recordingId = 2L,
+                providerId = "fake-transcription",
+                providerVersion = "1",
+                languageHint = TranscriptLanguageHint.AUTO,
+                sourceType = TranscriptSourceType.RECORDING,
+                sourceAssetId = 3L,
+            ),
+        )
+        val original = repository.saveTranscriptSegments(
+            transcript.id,
+            listOf(TranscriptionSegmentDraft(0L, 1_000L, "old")),
+        ).single()
+
+        val edited = repository.editSegmentText(original.id, " edited segment ")
+
+        assertEquals("edited segment", edited?.text)
+        assertEquals(true, edited?.isEdited)
+        assertEquals(FixedClock.now(), edited?.updatedAt)
+        assertEquals(FixedClock.now(), dao.getTranscript(transcript.id)?.updatedAt)
+    }
+
+    @Test
+    fun editSegmentTextReturnsNullForMissingSegment() = runTest {
+        val repository = TranscriptRepositoryImpl(FakeTranscriptDao(), FixedClock)
+
+        assertNull(repository.editSegmentText(segmentId = 404L, text = "edited"))
+    }
+
+    @Test
     fun upsertSummaryDraftKeepsStableFingerprintIdentity() = runTest {
         val dao = FakeTranscriptDao()
         val repository = TranscriptRepositoryImpl(dao, FixedClock)
@@ -155,6 +190,8 @@ private class FakeTranscriptDao : TranscriptDao {
 
     override suspend fun getSegments(transcriptId: Long): List<TranscriptSegmentEntity> = getSegmentsSync(transcriptId)
 
+    override suspend fun getSegment(segmentId: Long): TranscriptSegmentEntity? = segments[segmentId]
+
     override suspend fun getSummaryDraft(draftId: Long): SummaryDraftEntity? = drafts[draftId]
 
     override suspend fun getSummaryDraftByFingerprint(
@@ -182,6 +219,10 @@ private class FakeTranscriptDao : TranscriptDao {
         }
     }
 
+    override suspend fun updateSegment(entity: TranscriptSegmentEntity) {
+        segments[entity.id] = entity
+    }
+
     override suspend fun deleteSegments(transcriptId: Long): Int {
         val ids = segments.values.filter { it.transcriptId == transcriptId }.map { it.id }
         ids.forEach { segments.remove(it) }
@@ -195,6 +236,14 @@ private class FakeTranscriptDao : TranscriptDao {
         val id = existing?.id ?: nextDraftId++
         drafts[id] = entity.copy(id = id)
         return id
+    }
+
+    override suspend fun updateSegmentTextAndTranscript(
+        segment: TranscriptSegmentEntity,
+        transcript: TranscriptEntity,
+    ) {
+        updateSegment(segment)
+        updateTranscript(transcript)
     }
 
     private fun getSegmentsSync(transcriptId: Long): List<TranscriptSegmentEntity> {

@@ -181,6 +181,7 @@ private class SummaryUseCaseFakeTranscriptRepository(
     override suspend fun getTranscript(transcriptId: Long) = null
     override suspend fun getLatestTranscriptForRecording(seminarId: Long, recordingId: Long, providerId: String) = null
     override suspend fun getSegments(transcriptId: Long): List<TranscriptSegment> = segments.filter { it.transcriptId == transcriptId }
+    override suspend fun editSegmentText(segmentId: Long, text: String): TranscriptSegment? = null
     override suspend fun createTranscript(input: com.yuukias.seminararc.domain.repository.CreateTranscriptInput) = error("Not used.")
     override suspend fun markTranscriptRunning(transcriptId: Long) = null
     override suspend fun saveTranscriptSegments(

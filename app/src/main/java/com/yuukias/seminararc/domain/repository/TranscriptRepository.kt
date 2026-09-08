@@ -27,6 +27,11 @@ interface TranscriptRepository {
 
     suspend fun getSegments(transcriptId: Long): List<TranscriptSegment>
 
+    suspend fun editSegmentText(
+        segmentId: Long,
+        text: String,
+    ): TranscriptSegment?
+
     suspend fun createTranscript(input: CreateTranscriptInput): Transcript
 
     suspend fun markTranscriptRunning(transcriptId: Long): Transcript?

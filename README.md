@@ -52,6 +52,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` summary durable queue foundation：Room version 6 为 `processing_jobs` 增加 `inputPayloadJson`，Transcript Review 可为当前 transcript segments 排入 durable `SUMMARY_DRAFT` WorkManager job；默认 `UnavailableSummaryProvider` 只记录未配置失败，不上传 transcript、references、notes 或伪造总结。
 - `0.4.x` Notion-ready export contract foundation：新增本地 `SeminarNotionReadyRenderer`，可从现有 export document 生成 block-like Notion-ready document 和 Markdown 预览；不包含 Notion OAuth、API client、token 或上传行为。
 - `0.4.x` transcript processing queue UI foundation：Transcript Review 现在展示本地 `TRANSCRIPTION` / `SUMMARY_DRAFT` job 状态，并支持对可重试/可取消 job 走 durable scheduler 的 retry/cancel。
+- `0.4.x` transcript segment edit foundation：Transcript Review 可在本地编辑并保存单条 timestamped segment 文本，更新 `isEdited` 与 transcript activity 时间，不触发 provider 或上传。
 
 尚未声明完成：
 
