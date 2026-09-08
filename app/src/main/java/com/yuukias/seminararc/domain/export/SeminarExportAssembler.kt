@@ -23,6 +23,7 @@ import com.yuukias.seminararc.domain.model.Transcript
 import com.yuukias.seminararc.domain.model.TranscriptSegment
 import java.util.Locale
 import javax.inject.Inject
+import kotlinx.serialization.json.Json
 
 class SeminarExportAssembler @Inject constructor() {
     suspend fun assemble(
@@ -150,11 +151,15 @@ class SeminarExportAssembler @Inject constructor() {
             followUpActions = brief.followUpActions,
             userNotes = brief.userNotes,
             references = references.map { (candidate, join) ->
+                val authors = candidate.authorsJson.decodeAuthors()
                 ExportReferenceItem(
                     title = candidate.title,
-                    authorsText = candidate.authorsJson.trim('[', ']').replace("\"", ""),
+                    authors = authors,
+                    authorsText = authors.joinToString("; "),
                     publicationYear = candidate.publicationYear,
                     venue = candidate.venue,
+                    sourceTitle = candidate.sourceTitle,
+                    publicationType = candidate.publicationType,
                     doi = candidate.canonicalDoi,
                     landingPageUrl = candidate.landingPageUrl,
                     note = join.note,
@@ -238,6 +243,13 @@ private fun List<SummaryDraft>.toExportSummaryDrafts(): List<ExportSummaryDraft>
 }
 
 private fun String.fileName(): String = substringAfterLast('/').ifBlank { "media" }
+
+private fun String.decodeAuthors(): List<String> {
+    return runCatching { Json.decodeFromString<List<String>>(this) }
+        .getOrDefault(emptyList())
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+}
 
 private fun String.toExportSlug(id: Long): String {
     val normalized = lowercase(Locale.US)

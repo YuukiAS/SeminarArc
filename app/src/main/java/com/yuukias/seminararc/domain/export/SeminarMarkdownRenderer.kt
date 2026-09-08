@@ -49,6 +49,8 @@ class SeminarMarkdownRenderer @Inject constructor() {
             if (brief.references.isEmpty()) {
                 appendLine("No confirmed references.")
             } else {
+                appendLine("ZIP export includes deterministic `references.bib` and `references.ris` files for these confirmed references.")
+                appendLine()
                 brief.references.forEach { reference ->
                     append("- ${reference.title.escapeInline()}")
                     reference.publicationYear?.let { append(" ($it)") }

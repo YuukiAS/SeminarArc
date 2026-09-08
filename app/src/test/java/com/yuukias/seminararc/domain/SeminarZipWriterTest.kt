@@ -48,6 +48,40 @@ class SeminarZipWriterTest {
             output.toZipEntries(),
         )
     }
+
+    @Test
+    fun write_includesReferenceBibliographyArtifactsWhenPresent() = runTest {
+        val export = SeminarExportPackage(
+            document = SeminarExportDocument(
+                slug = "seminar-42",
+                title = "Seminar",
+                speaker = null,
+                affiliation = null,
+                scheduledAt = null,
+                location = null,
+                abstractText = null,
+                recordingSummary = "No recording.",
+                timelineItems = emptyList(),
+                mediaAssets = emptyList(),
+                skippedMedia = emptyList(),
+            ),
+            markdown = "# Seminar\n",
+            bibTeX = "@misc{example,\n  title = {Example}\n}\n",
+            ris = "TY  - GEN\nTI  - Example\nER  -\n",
+        )
+        val output = ByteArrayOutputStream()
+
+        SeminarZipWriter().write(export, output) { null }
+
+        assertEquals(
+            mapOf(
+                "seminar-42/seminar.md" to "# Seminar\n",
+                "seminar-42/references.bib" to "@misc{example,\n  title = {Example}\n}\n",
+                "seminar-42/references.ris" to "TY  - GEN\nTI  - Example\nER  -\n",
+            ),
+            output.toZipEntries(),
+        )
+    }
 }
 
 private fun ByteArrayOutputStream.toZipEntries(): Map<String, String> {

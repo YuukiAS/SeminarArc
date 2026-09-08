@@ -32,6 +32,7 @@
 - 新增 `0.5.x` formula provider contract foundation：`FormulaOcrProvider`、normalized crop/request/result models、`ManualFormulaProvider`、production 默认 `UnavailableFormulaOcrProvider` 和 JVM contract tests。
 - 新增 `0.5.x` formula region UI foundation：Reconstruction workspace 可显示、创建和删除 seminar-owned photo 的本地公式区域记录，暂不启用 live OCR provider。
 - 新增 `0.5.x` formula processing queue foundation：saved formula region 可通过 durable `FORMULA_OCR` WorkManager job 写回 manual LaTeX result，支持 payload-based retry/recovery，不启用云 provider。
+- 新增 `0.5.x` research BibTeX/RIS export foundation：confirmed references 可生成 deterministic `references.bib` / `references.ris`，并随本地 ZIP export artifact 输出；pending/rejected candidates 不会导出为确定文献。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。

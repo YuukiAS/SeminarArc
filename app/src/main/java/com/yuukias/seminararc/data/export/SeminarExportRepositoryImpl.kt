@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.core.content.FileProvider
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.export.SeminarExportAssembler
+import com.yuukias.seminararc.domain.export.SeminarBibliographyRenderer
 import com.yuukias.seminararc.domain.export.SeminarMarkdownRenderer
 import com.yuukias.seminararc.domain.export.SeminarNotionReadyRenderer
 import com.yuukias.seminararc.domain.export.SeminarZipWriter
@@ -42,6 +43,7 @@ class SeminarExportRepositoryImpl @Inject constructor(
     private val buildTranscriptTimelineWindows: BuildTranscriptTimelineWindowsUseCase,
     private val mediaStorageManager: MediaStorageManager,
     private val assembler: SeminarExportAssembler,
+    private val bibliographyRenderer: SeminarBibliographyRenderer,
     private val markdownRenderer: SeminarMarkdownRenderer,
     private val notionReadyRenderer: SeminarNotionReadyRenderer,
     private val zipWriter: SeminarZipWriter,
@@ -88,7 +90,14 @@ class SeminarExportRepositoryImpl @Inject constructor(
         ) { sourcePath ->
             mediaStorageManager.resolveReadableRelativeFile(sourcePath) != null
         }
-        return SeminarExportPackage(document, markdownRenderer.render(document))
+        val bibTeX = bibliographyRenderer.renderBibTeX(document).takeIf { it.isNotBlank() }
+        val ris = bibliographyRenderer.renderRis(document).takeIf { it.isNotBlank() }
+        return SeminarExportPackage(
+            document = document,
+            markdown = markdownRenderer.render(document),
+            bibTeX = bibTeX,
+            ris = ris,
+        )
     }
 
     override suspend fun writeMarkdown(seminarId: Long, uriString: String): ExportWriteResult = withContext(Dispatchers.IO) {

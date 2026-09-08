@@ -144,13 +144,15 @@ This foundation does not ship a real ASR engine, cloud transcription, live Notio
 - `FormulaOcrProvider` is the future boundary for Mathpix, PaddleOCR, pix2tex/self-hosted, fake, and manual providers. Live Mathpix or other cloud providers require later credential/backend/user-key approval.
 - Research export should be deterministic and based only on confirmed references. BibTeX/RIS renderers must exclude pending/rejected candidates and avoid fabricating missing metadata.
 
-Room version `7` adds `formula_regions` and `formula_results`. `FormulaDao` exposes local region/result persistence for later UI/provider tasks. `ProcessingJobType.FORMULA_OCR` is present as a reserved durable job type, but the current Worker marks it as not wired and WorkManager recovery does not enqueue it automatically until the dedicated formula queue task enables the provider path.
+Room version `7` adds `formula_regions` and `formula_results`. `FormulaDao` exposes local region/result persistence for UI/provider tasks. `ProcessingJobType.FORMULA_OCR` is wired for the local manual LaTeX provider path; live cloud/model providers remain separate future implementations.
 
 `FormulaOcrProvider` defines the provider boundary for normalized crop input, request fingerprinting, LaTeX output, confidence, provenance, failure, and retryability. The production default is `UnavailableFormulaOcrProvider`; `ManualFormulaProvider` supports explicit user-supplied LaTeX without network or credential access.
 
 `FormulaRepository` validates source photo ownership before persisting regions. Reconstruction workspace observes formula regions through its ViewModel and exposes local create/delete controls; no composable accesses `FormulaDao` directly.
 
 `FORMULA_OCR` jobs now support the local manual LaTeX path through WorkManager. The scheduler persists `FormulaOcrWorkPayload` in `processing_jobs.inputPayloadJson`; Worker re-reads the formula region and source photo from Room/storage before invoking `ManualFormulaProvider`, then writes READY/FAILED formula results through `FormulaRepository`. Live cloud/model providers remain deferred.
+
+`SeminarBibliographyRenderer` generates deterministic BibTeX and RIS text from `SeminarExportDocument.brief.references`. The export assembler only populates those references from the confirmed Seminar Brief bundle, and ZIP export writes `references.bib` / `references.ris` only when at least one confirmed reference exists. Pending or rejected candidates are never promoted into bibliography artifacts.
 
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 

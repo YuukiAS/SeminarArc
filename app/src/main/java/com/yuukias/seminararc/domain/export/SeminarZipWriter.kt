@@ -17,6 +17,16 @@ class SeminarZipWriter @Inject constructor() {
             zip.putNextEntry(ZipEntry("${export.document.slug}/seminar.md"))
             zip.write(export.markdown.toByteArray(Charsets.UTF_8))
             zip.closeEntry()
+            export.bibTeX?.takeIf { it.isNotBlank() }?.let { content ->
+                zip.putNextEntry(ZipEntry("${export.document.slug}/references.bib"))
+                zip.write(content.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+            }
+            export.ris?.takeIf { it.isNotBlank() }?.let { content ->
+                zip.putNextEntry(ZipEntry("${export.document.slug}/references.ris"))
+                zip.write(content.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+            }
             export.document.mediaAssets.forEach { asset ->
                 val input = sourceResolver(asset.sourceRelativePath) ?: return@forEach
                 input.use {

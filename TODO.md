@@ -414,6 +414,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已完成 `0.5.x_formula_provider_contract`：新增 `FormulaOcrProvider` request/result contract、manual provider、production 默认 unavailable provider 和 JVM contract tests。
 - 已完成 `0.5.x_formula_region_ui`：Reconstruction workspace 可显示、创建和删除本地公式区域，创建前校验 source asset 属于当前 seminar photo。
 - 已完成 `0.5.x_formula_processing_queue`：本地 manual LaTeX 可通过 durable `FORMULA_OCR` WorkManager job 写回 formula result，支持 payload-based retry/recovery。
+- 已完成 `0.5.x_research_bibtex_ris_export`：confirmed references 可生成 deterministic `references.bib` / `references.ris`，并进入本地 ZIP export artifact。
 - Mathpix 是高准确度付费云候选，但需要 authenticated API、billing 和 credential/backend/user-key 决策；live provider 暂不进入 APK。
 - PaddleOCR formula recognition 和 pix2tex/LaTeX-OCR 可作为自建/本地候选继续评估，但需要模型大小、Android packaging、性能、耗电、依赖和模型权重 license 审计。
 - 第一阶段优先实现 formula region selection data model、可编辑 LaTeX result、`FormulaOcrProvider` fake/manual contract、BibTeX/RIS deterministic export 和 export polish。
@@ -428,7 +429,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 
 下一步：
 
-- 执行 `0.5.x_research_bibtex_ris_export_task`：从 confirmed references 生成 deterministic BibTeX/RIS，并接入本地 export artifact。
+- 执行 `0.5.x_export_polish_task`：补齐单独保存/分享 BibTeX/RIS 的用户入口、文件命名和导出说明 polish。
 
 ### `0.9.x` Google Play 内测与发布准备
 

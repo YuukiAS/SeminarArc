@@ -26,9 +26,12 @@ data class ExportSeminarBrief(
 
 data class ExportReferenceItem(
     val title: String,
+    val authors: List<String> = emptyList(),
     val authorsText: String,
     val publicationYear: Int?,
     val venue: String?,
+    val sourceTitle: String? = null,
+    val publicationType: String? = null,
     val doi: String?,
     val landingPageUrl: String?,
     val note: String?,
@@ -134,4 +137,6 @@ enum class ExportMediaKind {
 data class SeminarExportPackage(
     val document: SeminarExportDocument,
     val markdown: String,
+    val bibTeX: String? = null,
+    val ris: String? = null,
 )
