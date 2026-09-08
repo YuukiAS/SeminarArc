@@ -55,6 +55,7 @@ import com.yuukias.seminararc.ui.theme.SeminarArcThemeTokens
 @Composable
 fun ReconstructionWorkspaceScreen(
     onBack: () -> Unit,
+    onOpenReferenceReview: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ReconstructionWorkspaceViewModel = hiltViewModel(),
 ) {
@@ -73,6 +74,7 @@ fun ReconstructionWorkspaceScreen(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
+        onOpenReferenceReview = onOpenReferenceReview,
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
         onOcrStatusFilterChanged = viewModel::onOcrStatusFilterChanged,
         onKeySlidesOnlyChanged = viewModel::onKeySlidesOnlyChanged,
@@ -92,6 +94,7 @@ fun ReconstructionWorkspaceScreenContent(
     uiState: ReconstructionWorkspaceUiState,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
+    onOpenReferenceReview: (Long) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onOcrStatusFilterChanged: (OcrStatusFilter) -> Unit,
     onKeySlidesOnlyChanged: (Boolean) -> Unit,
@@ -137,6 +140,7 @@ fun ReconstructionWorkspaceScreenContent(
             }
             is ReconstructionWorkspaceUiState.Ready -> ReconstructionReadyContent(
                 state = uiState,
+                onOpenReferenceReview = onOpenReferenceReview,
                 onSearchQueryChanged = onSearchQueryChanged,
                 onOcrStatusFilterChanged = onOcrStatusFilterChanged,
                 onKeySlidesOnlyChanged = onKeySlidesOnlyChanged,
@@ -155,6 +159,7 @@ fun ReconstructionWorkspaceScreenContent(
 @Composable
 private fun ReconstructionReadyContent(
     state: ReconstructionWorkspaceUiState.Ready,
+    onOpenReferenceReview: (Long) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onOcrStatusFilterChanged: (OcrStatusFilter) -> Unit,
     onKeySlidesOnlyChanged: (Boolean) -> Unit,
@@ -181,6 +186,14 @@ private fun ReconstructionReadyContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Button(
+                    onClick = { onOpenReferenceReview(state.detail.id) },
+                    enabled = state.items.any { item -> item.ocrResult != null || item.isKeySlide },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Search, contentDescription = null)
+                    Text("Find references")
+                }
                 OutlinedTextField(
                     value = state.searchQuery,
                     onValueChange = onSearchQueryChanged,

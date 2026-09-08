@@ -14,6 +14,8 @@ import com.yuukias.seminararc.ui.library.SeminarLibraryScreen
 import com.yuukias.seminararc.ui.library.SeminarLibraryViewModel
 import com.yuukias.seminararc.ui.reconstruction.ReconstructionWorkspaceScreen
 import com.yuukias.seminararc.ui.reconstruction.ReconstructionWorkspaceViewModel
+import com.yuukias.seminararc.ui.reference.ReferenceReviewScreen
+import com.yuukias.seminararc.ui.reference.ReferenceReviewViewModel
 import com.yuukias.seminararc.ui.session.ActiveSessionScreen
 import com.yuukias.seminararc.ui.session.ActiveSessionViewModel
 import com.yuukias.seminararc.ui.timeline.SeminarTimelineScreen
@@ -107,6 +109,14 @@ fun SeminarNavHost(
         composable<ReconstructionWorkspaceRoute> {
             val viewModel: ReconstructionWorkspaceViewModel = hiltViewModel()
             ReconstructionWorkspaceScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onOpenReferenceReview = { seminarId -> navController.navigate(ReferenceReviewRoute(seminarId)) },
+            )
+        }
+        composable<ReferenceReviewRoute> {
+            val viewModel: ReferenceReviewViewModel = hiltViewModel()
+            ReferenceReviewScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
             )

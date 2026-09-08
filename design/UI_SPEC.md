@@ -266,7 +266,7 @@
 - 不自动确认 candidate。
 - 不自动生成 AI Seminar Brief。
 - 不自动下载或抓取论文 PDF。
-- 不在 `0.3.x` 引入 transcript、LLM summary、Notion、formula OCR、cloud upload、广告或支付。
+- `0.3.x` 已实现 opt-in metadata lookup、candidate review、Seminar Brief 和 confirmed reference/key-slide export；不引入 transcript、LLM summary、Notion、formula OCR、cloud upload、广告或支付。
 
 ## 3. 导航规则
 

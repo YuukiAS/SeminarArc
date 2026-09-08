@@ -4,6 +4,9 @@ import com.yuukias.seminararc.domain.export.SeminarMarkdownRenderer
 import com.yuukias.seminararc.domain.model.ClipState
 import com.yuukias.seminararc.domain.model.ExportMediaAsset
 import com.yuukias.seminararc.domain.model.ExportMediaKind
+import com.yuukias.seminararc.domain.model.ExportKeySlideItem
+import com.yuukias.seminararc.domain.model.ExportReferenceItem
+import com.yuukias.seminararc.domain.model.ExportSeminarBrief
 import com.yuukias.seminararc.domain.model.ExportTimelineItem
 import com.yuukias.seminararc.domain.model.SeminarExportDocument
 import com.yuukias.seminararc.domain.model.TimelineEventType
@@ -85,5 +88,58 @@ class SeminarMarkdownRendererTest {
             """.trimIndent().trim(),
             markdown.trim(),
         )
+    }
+
+    @Test
+    fun render_includesSeminarBriefConfirmedReferencesAndKeySlides() {
+        val markdown = SeminarMarkdownRenderer().render(
+            SeminarExportDocument(
+                slug = "seminar-7",
+                title = "Reference Seminar",
+                speaker = null,
+                affiliation = null,
+                scheduledAt = null,
+                location = null,
+                abstractText = null,
+                recordingSummary = "No recording.",
+                brief = ExportSeminarBrief(
+                    backgroundContext = "Bayesian inverse problems.",
+                    coreQuestion = "Can posterior geometry explain robustness?",
+                    methods = "Variational inference.",
+                    mainResults = "Stable under perturbation.",
+                    keyTakeaways = "Check the proof assumptions.",
+                    unresolvedQuestions = "What happens for misspecification?",
+                    followUpActions = "Read the appendix.",
+                    userNotes = "Ask speaker for code.",
+                    references = listOf(
+                        ExportReferenceItem(
+                            title = "A Probabilistic Theory of Deep Learning",
+                            authorsText = "Alice Example, Bob Example",
+                            publicationYear = 2024,
+                            venue = "Proceedings",
+                            doi = "10.1234/example",
+                            landingPageUrl = "https://doi.org/10.1234/example",
+                            note = "Confirmed from slide OCR.",
+                        ),
+                    ),
+                    keySlides = listOf(
+                        ExportKeySlideItem(
+                            caption = "Main theorem slide",
+                            photoPath = "seminar-7/media/key-slides/slide.jpg",
+                        ),
+                    ),
+                ),
+                timelineItems = emptyList(),
+                mediaAssets = emptyList(),
+                skippedMedia = emptyList(),
+            ),
+        )
+
+        org.junit.Assert.assertTrue(markdown.contains("## Seminar Brief"))
+        org.junit.Assert.assertTrue(markdown.contains("### Confirmed References"))
+        org.junit.Assert.assertTrue(markdown.contains("A Probabilistic Theory of Deep Learning"))
+        org.junit.Assert.assertTrue(markdown.contains("DOI: `10.1234/example`"))
+        org.junit.Assert.assertTrue(markdown.contains("Main theorem slide"))
+        org.junit.Assert.assertTrue(markdown.contains("seminar-7/media/key-slides/slide.jpg"))
     }
 }

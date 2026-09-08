@@ -97,7 +97,7 @@ Provider boundaries:
 - `TextOcrProvider` owns local OCR calls and returns app-owned domain models.
 - `ImageEnhancementProvider` owns rotate/crop/perspective/readability outputs and always writes derived assets instead of replacing original photos.
 - `CloudUploadPolicy` defaults to no upload in `0.2.x`.
-- `FormulaOcrProvider`, `TranscriptionProvider`, `SummaryProvider`, and `ReferenceLookupProvider` remain deferred boundaries; no real `0.3.x+` provider behavior ships in `0.2.x`.
+- `FormulaOcrProvider`, `TranscriptionProvider`, and `SummaryProvider` remain deferred boundaries; no formula OCR, transcription, AI summary, Notion, or cloud upload provider behavior ships in `0.3.x`.
 
 Local OCR now uses `MlKitTextOcrProvider` behind `TextOcrProvider`. The first implementation uses bundled Latin and Chinese ML Kit recognizers, stores recognized text and lightweight block JSON in `ocr_results`, and writes durable `TEXT_OCR` processing job state through `RunTextOcrForAssetUseCase`. OCR operates on app-owned photo assets only and does not upload seminar media.
 
@@ -108,6 +108,18 @@ Local OCR now uses `MlKitTextOcrProvider` behind `TextOcrProvider`. The first im
 `ReconstructionWorkspaceScreen` is now reachable from Seminar Detail for completed-seminar cleanup work. It renders searchable/filterable photo assets, ViewModel-resolved local image previews, key-slide toggles, local enhance/OCR commands, queued/running/failed/cancelled processing controls, retry/cancel, and editable OCR text. The screen is intentionally a thin Compose layer over the ViewModel; it does not call Room, WorkManager, ML Kit, CameraX, or storage repositories directly.
 
 Compose screens continue to call ViewModels for app actions. ViewModels call repository/use-case boundaries. Workers/use cases call providers and persist results. No composable reads Room, ML Kit, or bitmap processing providers directly.
+
+## Reference Candidate and Seminar Brief
+
+`0.3.x` adds the opt-in research metadata layer on top of local reconstruction while keeping user media local by default:
+
+- Room migrates explicitly from version `3` to version `4`; schema `4.json` is checked in.
+- `reference_evidence`, `reference_lookup_attempts`, `reference_candidates`, `reference_candidate_sources`, `seminar_briefs`, `brief_references`, and `brief_key_slides` are seminar-owned rows. `MIGRATION_3_4` only creates new tables/indexes and preserves all v3 assets, OCR results, processing jobs, tags, recordings, events, and clips.
+- `ReferenceEvidenceExtractor` derives safe DOI/title/author/year/venue clues from selected OCR, tags, seminar metadata, and manual user input. Speculative DOI repair is shown as a clue, but exact DOI lookup only uses a safely normalized DOI.
+- `ReferenceLookupProvider` implementations for Crossref, OpenAlex, and DataCite use public keyless metadata endpoints through `HttpReferenceClient`. Requests are user-triggered from the review flow and receive only the selected minimum query text/metadata.
+- `ReferenceMatcher` writes deterministic `reference-match-v1` scores, confidence bands, and match reasons. Candidates are app-owned canonical records; provider observations remain separate rows for provenance and dedup.
+- `ReferenceReviewViewModel` and `ReferenceReviewScreen` expose evidence selection, query preview, provider plan, lookup status, confirm/reject/reopen, editable brief fields, and selected key-slide linking.
+- Export assembly loads the `SeminarBriefBundle` and includes only confirmed references plus linked key slides in Markdown/ZIP output. Provider candidates that remain pending or rejected are not exported as confirmed knowledge.
 
 ## Planned ownership model
 

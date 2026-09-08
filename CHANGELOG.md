@@ -16,6 +16,7 @@
 - 新增 `0.2.x` Reconstruction workspace Compose UI：Seminar Detail 整理入口、照片预览、OCR 搜索/过滤、key-slide toggle、enhance/OCR 动作和 OCR 编辑保存路径。
 - 完成 `0.2.x` processing queue 收口：新增 WorkManager-backed OCR/enhancement worker、durable retry/cancel/idempotency、process-start recovery，以及 Reconstruction workspace 真实 queued/running/succeeded/failed/cancelled 控件。
 - 新增 Windows Emulator closeout 覆盖：`MIGRATION_2_3` connected、bundled ML Kit Latin/Chinese/mixed/empty OCR smoke、Android Bitmap enhancement smoke、WorkManager queue smoke、Reconstruction workspace UI regression 和既有 0.1.x connected regression。
+- 完成 `0.3.x` Reference Candidate + Seminar Brief production closeout：新增 Room v4 reference/brief schema、Crossref/OpenAlex/DataCite keyless provider、deterministic evidence extraction、`reference-match-v1` ranking/dedup、Reference Candidate Review UI、可编辑 Seminar Brief 和 confirmed references/key slides Markdown/ZIP export。
 - 完成 `0.1.2` 第一阶段 one-active-seminar invariant：新增 session start 结果语义、事务边界和 repository unit tests。
 - 新增 `0.1.2` foreground recording service 基础：microphone foreground service、`MediaRecorder` 本地 `.m4a` backend、recording notification channel、ongoing notification、seminar-owned recording file 和 `RecordingEntity` durable lifecycle。
 - 新增最小 recording start use case，让详情页可以在麦克风权限允许后通过 repository/session 语义启动 foreground service。
@@ -35,6 +36,7 @@
 ### 文档
 
 - 新增 `0.3.x` Reference Candidate + Seminar Brief readiness plan，明确 Crossref/OpenAlex/DataCite/Semantic Scholar 取舍、evidence extraction、candidate ranking/dedup、Room v4 设计、联网隐私边界和 Candidate Review / Brief UX。
+- 更新 README、TODO、架构、隐私、设计说明和 `0.3.x` 计划，记录 reference lookup 已实现为 opt-in metadata lookup，并继续明确不上传照片、录音、完整 OCR corpus、timeline 或导出包。
 - 更新 README、架构和隐私说明，准确记录 `0.1.5-dev` 已具备本地 capture/timeline/clip/export headless 实现，并明确真机完整 E2E 验收仍需后续授权设备会话。
 - 新增 `docs/notes/2026-08-08-remote-wsl-codex-handoff.md`，记录远端 WSL Codex 开发环境、Android Studio 安装判断、已完成线程上下文和后续开发入口。
 - 明确 changelog 后续使用中文维护。
@@ -45,6 +47,7 @@
 ### 修复
 
 - 修复 `0.2.x` closeout 期间暴露的 instrumentation 问题：旧 migration test 未在当前 v3 database builder 上注册 `MIGRATION_2_3`、mixed OCR fixture 断言过窄、workspace queue UI 只显示同类最新 job 导致 cancelled state 不可见。
+- 修复 `0.3.x` closeout 期间暴露的问题：Crossref DOI endpoint 携带 `select` 导致 400、Compose instrumentation 缺少稳定 debug host Activity、emulator screen-off 导致 UI hierarchy 不可见、低置信 DOI OCR repair 误用风险，以及 rejected/reopened candidate 与 brief reference 关系未及时收敛。
 - 修复 `gradlew` 在 Linux/WSL 远程开发环境中的可执行位，避免 `./gradlew: Permission denied`。
 - 修复 process-start recovery 竞态：启动恢复先捕获 stale recording IDs，再只标记这些 rows 为 `FAILED`，避免误杀当前进程中新建的 recording。
 - 修复 durable `RECORDING` row 被误当成 live recorder 的语义；当前进程没有 runtime recorder 时改为 recovery state。

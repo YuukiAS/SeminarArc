@@ -11,6 +11,7 @@ import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.ExportShareResult
 import com.yuukias.seminararc.domain.repository.ExportWriteResult
 import com.yuukias.seminararc.domain.repository.RecordingRepository
+import com.yuukias.seminararc.domain.repository.ReferenceRepository
 import com.yuukias.seminararc.domain.repository.SeminarExportRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
@@ -29,6 +30,7 @@ class SeminarExportRepositoryImpl @Inject constructor(
     private val recordingRepository: RecordingRepository,
     private val timelineRepository: TimelineRepository,
     private val clipRepository: ClipRepository,
+    private val referenceRepository: ReferenceRepository,
     private val mediaStorageManager: MediaStorageManager,
     private val assembler: SeminarExportAssembler,
     private val markdownRenderer: SeminarMarkdownRenderer,
@@ -40,7 +42,8 @@ class SeminarExportRepositoryImpl @Inject constructor(
         val events = timelineRepository.observeTimelineEvents(seminarId).first()
         val recordings = recordingRepository.observeRecordingsForSeminar(seminarId).first()
         val clips = clipRepository.observeClipsForSeminar(seminarId).first()
-        val document = assembler.assemble(detail, events, recordings, clips) { sourcePath ->
+        val briefBundle = referenceRepository.getBriefBundle(seminarId)
+        val document = assembler.assemble(detail, events, recordings, clips, briefBundle) { sourcePath ->
             mediaStorageManager.resolveReadableRelativeFile(sourcePath) != null
         }
         return SeminarExportPackage(document, markdownRenderer.render(document))

@@ -340,15 +340,16 @@ Notion 集成可使用官方 API 创建页面、追加 block，并在需要时�
 
 目标：把现场材料转化为研究线索。
 
-当前 `0.3.x` readiness gate 已通过，状态为 planning-ready / implementation-ready；本阶段尚未实现真实 API integration 或 Room migration。详细计划见 `docs/plans/0.3.x-reference-candidate-seminar-brief-plan.md`。
+当前 `0.3.x` 已完成 production closeout：Room v4 reference/brief schema、Crossref/OpenAlex/DataCite keyless provider、deterministic extraction/matching/dedup、Reference Candidate Review、Seminar Brief、confirmed reference/key-slide export 和 Windows Emulator regression 均已落地。详细计划与收口证据见 `docs/plans/0.3.x-reference-candidate-seminar-brief-plan.md` 和 `prompts/tasks/0.3.x_reference_candidate_and_brief_production_master_result.md`。
 
 范围：
 
 - 从 OCR 和用户输入抽取标题、作者、年份、期刊、DOI、方法和数据集线索。
-- Crossref 等开放元数据检索。
+- Crossref、OpenAlex、DataCite 开放元数据检索。
 - 候选匹配、人工确认和拒绝。
-- 会后 Research Reconstruction 工作区。
+- 会后 Research Reconstruction 工作区到 Reference Candidate Review 的入口。
 - 可编辑 Seminar Brief：背景、方法、结果、关键幻灯片、问题、参考文献、后续动作。
+- confirmed references 与 key slides 进入 Markdown/ZIP export。
 - 不自动下载无合法访问权的 PDF。
 
 ### `0.4.x` 可插拔转写、总结和 Notion

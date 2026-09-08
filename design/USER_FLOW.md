@@ -81,7 +81,7 @@
 11. 用户编辑 Brief 的 background、core question、methods、main results、takeaways、unresolved questions、follow-up actions 和 user notes
 12. 用户从 Brief 进入现有 Markdown/ZIP export，导出 confirmed references、key slides 和手工编辑内容
 
-0.3.x 第一版不自动确认参考文献，不自动下载 PDF，不生成 AI brief，不接入 transcription、Notion、formula OCR 或 cloud upload。
+0.3.x 第一版已实现人工复核式 reference lookup 和 Seminar Brief；不自动确认参考文献，不自动下载 PDF，不生成 AI brief，不接入 transcription、Notion、formula OCR 或 cloud upload。
 
 ## 9. 异常与边界
 

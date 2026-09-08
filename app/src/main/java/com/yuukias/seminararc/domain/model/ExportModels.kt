@@ -9,6 +9,34 @@ data class ExportOptions(
     val includeReadyClips: Boolean = true,
 )
 
+data class ExportSeminarBrief(
+    val backgroundContext: String,
+    val coreQuestion: String,
+    val methods: String,
+    val mainResults: String,
+    val keyTakeaways: String,
+    val unresolvedQuestions: String,
+    val followUpActions: String,
+    val userNotes: String,
+    val references: List<ExportReferenceItem>,
+    val keySlides: List<ExportKeySlideItem>,
+)
+
+data class ExportReferenceItem(
+    val title: String,
+    val authorsText: String,
+    val publicationYear: Int?,
+    val venue: String?,
+    val doi: String?,
+    val landingPageUrl: String?,
+    val note: String?,
+)
+
+data class ExportKeySlideItem(
+    val caption: String?,
+    val photoPath: String?,
+)
+
 data class SeminarExportDocument(
     val slug: String,
     val title: String,
@@ -18,6 +46,7 @@ data class SeminarExportDocument(
     val location: String?,
     val abstractText: String?,
     val recordingSummary: String,
+    val brief: ExportSeminarBrief? = null,
     val timelineItems: List<ExportTimelineItem>,
     val mediaAssets: List<ExportMediaAsset>,
     val skippedMedia: List<String>,
@@ -43,6 +72,7 @@ enum class ExportMediaKind {
     ABSTRACT,
     PHOTO,
     CLIP,
+    KEY_SLIDE,
 }
 
 data class SeminarExportPackage(

@@ -1,7 +1,7 @@
 package com.yuukias.seminararc.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import com.yuukias.seminararc.domain.model.SeminarDetail
@@ -17,7 +17,7 @@ import org.junit.Test
 class SeminarDetailScreenTest {
 
     @get:Rule
-    val composeRule = createComposeRule()
+    val composeRule = createAndroidComposeRule<ComposeTestActivity>()
 
     @Test
     fun noAbstractState_isVisible() {

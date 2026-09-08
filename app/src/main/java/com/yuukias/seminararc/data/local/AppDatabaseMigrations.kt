@@ -207,3 +207,184 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         )
     }
 }
+
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `reference_evidence` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `seminarId` INTEGER NOT NULL,
+                `sourceType` TEXT NOT NULL,
+                `sourceId` INTEGER,
+                `sourceAssetId` INTEGER,
+                `selectedText` TEXT NOT NULL,
+                `extractedDoi` TEXT,
+                `titleClue` TEXT,
+                `authorCluesJson` TEXT,
+                `yearClue` INTEGER,
+                `venueClue` TEXT,
+                `evidenceQuality` TEXT NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`sourceAssetId`) REFERENCES `seminar_assets`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_evidence_seminarId` ON `reference_evidence` (`seminarId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_evidence_sourceType` ON `reference_evidence` (`sourceType`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_evidence_sourceId` ON `reference_evidence` (`sourceId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_evidence_sourceAssetId` ON `reference_evidence` (`sourceAssetId`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `reference_lookup_attempts` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `seminarId` INTEGER NOT NULL,
+                `provider` TEXT NOT NULL,
+                `queryType` TEXT NOT NULL,
+                `evidenceIdsJson` TEXT NOT NULL,
+                `queryPreview` TEXT NOT NULL,
+                `requestFingerprint` TEXT NOT NULL,
+                `state` TEXT NOT NULL,
+                `httpStatus` INTEGER,
+                `resultCount` INTEGER NOT NULL,
+                `cacheHit` INTEGER NOT NULL,
+                `errorMessage` TEXT,
+                `retryAfterEpochMs` INTEGER,
+                `createdAt` INTEGER NOT NULL,
+                `completedAt` INTEGER,
+                FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_lookup_attempts_seminarId` ON `reference_lookup_attempts` (`seminarId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_lookup_attempts_provider` ON `reference_lookup_attempts` (`provider`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_lookup_attempts_state` ON `reference_lookup_attempts` (`state`)")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_reference_lookup_attempts_requestFingerprint` ON `reference_lookup_attempts` (`requestFingerprint`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `reference_candidates` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `seminarId` INTEGER NOT NULL,
+                `canonicalDoi` TEXT,
+                `normalizedDoi` TEXT,
+                `title` TEXT NOT NULL,
+                `normalizedTitle` TEXT NOT NULL,
+                `authorsJson` TEXT NOT NULL,
+                `publicationYear` INTEGER,
+                `venue` TEXT,
+                `sourceTitle` TEXT,
+                `publicationType` TEXT,
+                `landingPageUrl` TEXT,
+                `openAccessUrl` TEXT,
+                `licenseUrl` TEXT,
+                `matcherVersion` TEXT NOT NULL,
+                `matchScore` INTEGER NOT NULL,
+                `confidenceBand` TEXT NOT NULL,
+                `matchReasonsJson` TEXT NOT NULL,
+                `status` TEXT NOT NULL,
+                `evidenceFingerprint` TEXT NOT NULL,
+                `lookupAttemptId` INTEGER,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                `reviewedAt` INTEGER,
+                FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`lookupAttemptId`) REFERENCES `reference_lookup_attempts`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_candidates_seminarId` ON `reference_candidates` (`seminarId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_candidates_seminarId_normalizedDoi` ON `reference_candidates` (`seminarId`, `normalizedDoi`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_candidates_seminarId_normalizedTitle_publicationYear` ON `reference_candidates` (`seminarId`, `normalizedTitle`, `publicationYear`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_candidates_seminarId_status` ON `reference_candidates` (`seminarId`, `status`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_candidates_seminarId_evidenceFingerprint` ON `reference_candidates` (`seminarId`, `evidenceFingerprint`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_candidates_lookupAttemptId` ON `reference_candidates` (`lookupAttemptId`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `reference_candidate_sources` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `candidateId` INTEGER NOT NULL,
+                `provider` TEXT NOT NULL,
+                `providerWorkId` TEXT,
+                `doi` TEXT,
+                `normalizedDoi` TEXT,
+                `title` TEXT,
+                `normalizedTitle` TEXT,
+                `authorsJson` TEXT NOT NULL,
+                `publicationYear` INTEGER,
+                `venue` TEXT,
+                `sourceTitle` TEXT,
+                `publicationType` TEXT,
+                `landingPageUrl` TEXT,
+                `openAccessUrl` TEXT,
+                `licenseUrl` TEXT,
+                `providerRawScore` REAL,
+                `providerPayloadJson` TEXT,
+                `metadataVersion` TEXT NOT NULL,
+                `fetchedAt` INTEGER NOT NULL,
+                FOREIGN KEY(`candidateId`) REFERENCES `reference_candidates`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_candidate_sources_candidateId` ON `reference_candidate_sources` (`candidateId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_candidate_sources_provider` ON `reference_candidate_sources` (`provider`)")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_reference_candidate_sources_candidateId_provider_providerWorkId` ON `reference_candidate_sources` (`candidateId`, `provider`, `providerWorkId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_reference_candidate_sources_candidateId_normalizedDoi` ON `reference_candidate_sources` (`candidateId`, `normalizedDoi`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `seminar_briefs` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `seminarId` INTEGER NOT NULL,
+                `backgroundContext` TEXT NOT NULL,
+                `coreQuestion` TEXT NOT NULL,
+                `methods` TEXT NOT NULL,
+                `mainResults` TEXT NOT NULL,
+                `keyTakeaways` TEXT NOT NULL,
+                `unresolvedQuestions` TEXT NOT NULL,
+                `followUpActions` TEXT NOT NULL,
+                `userNotes` TEXT NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_seminar_briefs_seminarId` ON `seminar_briefs` (`seminarId`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `brief_references` (
+                `briefId` INTEGER NOT NULL,
+                `referenceCandidateId` INTEGER NOT NULL,
+                `orderIndex` INTEGER NOT NULL,
+                `note` TEXT,
+                PRIMARY KEY(`briefId`, `referenceCandidateId`),
+                FOREIGN KEY(`briefId`) REFERENCES `seminar_briefs`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`referenceCandidateId`) REFERENCES `reference_candidates`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_brief_references_briefId` ON `brief_references` (`briefId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_brief_references_referenceCandidateId` ON `brief_references` (`referenceCandidateId`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `brief_key_slides` (
+                `briefId` INTEGER NOT NULL,
+                `assetId` INTEGER NOT NULL,
+                `orderIndex` INTEGER NOT NULL,
+                `caption` TEXT,
+                PRIMARY KEY(`briefId`, `assetId`),
+                FOREIGN KEY(`briefId`) REFERENCES `seminar_briefs`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`assetId`) REFERENCES `seminar_assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_brief_key_slides_briefId` ON `brief_key_slides` (`briefId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_brief_key_slides_assetId` ON `brief_key_slides` (`assetId`)")
+    }
+}

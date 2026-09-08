@@ -10,7 +10,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 ## 当前状态
 
-仓库当前已完成 `0.2.x` Local Visual Reconstruction 收口，可进入 `0.3.x` planning。
+仓库当前已完成 `0.3.x` Reference Candidate + Seminar Brief 收口；`0.1.x` 本地采集、`0.2.x` Local Visual Reconstruction 和 `0.3.x` 人工复核式论文候选/brief/export 闭环均已落地。
 
 已经具备：
 
@@ -34,11 +34,16 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.2.x` Reconstruction workspace 基础：照片 asset、OCR result、processing job、key-slide tag、搜索 query 和 OCR 状态过滤组合成可渲染 UI state，并从 Seminar Detail 进入 Compose 工作区进行照片预览、增强、OCR、OCR 编辑和 key-slide 标记。
 - `0.2.x` WorkManager-backed processing queue：OCR 和 image enhancement 支持 durable `QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED`，并具备 duplicate idempotency、retry、cancel 和 process-start recovery。
 - Windows Emulator closeout：`MIGRATION_2_3`、bundled ML Kit Latin/Chinese/mixed/empty OCR、Android Bitmap enhancement、Reconstruction workspace UI 和 0.1.x regression 已在 `Pixel_8` API 36 Emulator 上通过 connected 验证。
+- `0.3.x` Room version 4 reference/brief 数据基础：reference evidence、lookup attempts、canonical candidates、provider observations、Seminar Brief、confirmed references 和 key-slide join tables。
+- `0.3.x` opt-in metadata lookup：Crossref、OpenAlex、DataCite keyless provider 边界，用户显式选择 evidence 后才发送最小 DOI/title/author/year clue，不发送照片、录音、完整 OCR corpus、timeline、导出包或 app-private 路径。
+- `0.3.x` deterministic candidate ranking/dedup：`reference-match-v1` 记录 match reason、score、confidence band、normalized DOI/title/year/source provenance，并支持 confirm/reject/reopen。
+- `0.3.x` Reference Candidate Review / Seminar Brief UI：从 Reconstruction workspace 进入，展示 evidence picker、query preview、provider plan、lookup status、候选复核、可编辑 brief 和 key-slide linking。
+- `0.3.x` Markdown/ZIP export：导出 confirmed references、brief sections 和 key slides；未确认候选不会自动写入 brief。
 
 尚未声明完成：
 
 - 非破坏性真机完整 E2E 验收：创建 seminar、录音、拍照、timeline、clip、重启后持久化、离线导出和删除清理仍需在用户授权的设备会话中执行。
-- 转写、AI 总结、Notion、cloud sync、Reference lookup、公式 OCR、广告或支付。
+- 转写、AI 总结、Notion、cloud sync、公式 OCR、广告或支付。
 
 ## 文档入口
 
@@ -61,6 +66,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 4. `0.1.4` clip：WorkManager、clip 状态、retry 和 full-recording fallback。
 5. `0.1.5` local MVP：Markdown/ZIP 导出、数据清理、验收、README/隐私/CI 收口。
 6. `0.2.x` implementation：asset/job/OCR/tag data foundation、WorkManager processing queue、local image enhancement、local OCR、搜索、标签和 Research Reconstruction workspace UI。
+7. `0.3.x` implementation：reference schema/domain、Crossref/OpenAlex/DataCite provider、evidence extraction、candidate ranking/dedup、Reference Review、Seminar Brief 和 brief export。
 
 实际执行时必须先写入 `prompts/tasks/<id>_task.md`，再由 Codex 按任务单执行并回写 `prompts/tasks/<id>_result.md`。
 
@@ -106,8 +112,8 @@ Windows PowerShell 可使用：
 
 - 强制登录或云同步。
 - 自动上传全部录音或全部照片。
-- formula OCR、转写、AI 总结、Reference lookup、Notion 或 cloud provider API 接入。
+- formula OCR、转写、AI 总结、Notion 或 cloud upload。
 - 广告、订阅、支付。
 - iOS 或 web 客户端。
 
-普通本地 OCR、图像增强和 Reconstruction workspace 已在 `0.2.x` 实现；上述能力可以保留在 roadmap 中，但不能在 UI 中伪装成已完成。
+普通本地 OCR、图像增强和 Reconstruction workspace 已在 `0.2.x` 实现；opt-in reference lookup、候选复核和 Seminar Brief 已在 `0.3.x` 实现。其余上述能力可以保留在 roadmap 中，但不能在 UI 中伪装成已完成。

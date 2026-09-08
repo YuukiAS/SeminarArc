@@ -4,11 +4,15 @@ import com.yuukias.seminararc.domain.model.AudioClip
 import com.yuukias.seminararc.domain.model.ClipState
 import com.yuukias.seminararc.domain.model.ExportMediaAsset
 import com.yuukias.seminararc.domain.model.ExportMediaKind
+import com.yuukias.seminararc.domain.model.ExportReferenceItem
+import com.yuukias.seminararc.domain.model.ExportKeySlideItem
+import com.yuukias.seminararc.domain.model.ExportSeminarBrief
 import com.yuukias.seminararc.domain.model.ExportTimelineItem
 import com.yuukias.seminararc.domain.model.RecordingSession
 import com.yuukias.seminararc.domain.model.RecordingState
 import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarExportDocument
+import com.yuukias.seminararc.domain.model.SeminarBriefBundle
 import com.yuukias.seminararc.domain.model.TimelineEvent
 import java.util.Locale
 import javax.inject.Inject
@@ -19,6 +23,7 @@ class SeminarExportAssembler @Inject constructor() {
         events: List<TimelineEvent>,
         recordings: List<RecordingSession>,
         clips: List<AudioClip>,
+        briefBundle: SeminarBriefBundle? = null,
         isMediaReadable: suspend (String) -> Boolean,
     ): SeminarExportDocument {
         val slug = detail.title.toExportSlug(detail.id)
@@ -35,6 +40,7 @@ class SeminarExportAssembler @Inject constructor() {
             )
         }
         val clipsByEvent = clips.associateBy { it.sourceEventId }
+        val exportBrief = briefBundle?.toExportBrief(slug, assets, skipped, isMediaReadable)
         val timelineItems = events
             .sortedWith(compareBy<TimelineEvent> { it.offsetMs }.thenBy { it.createdAt }.thenBy { it.id })
             .map { event ->
@@ -68,6 +74,7 @@ class SeminarExportAssembler @Inject constructor() {
             location = detail.location,
             abstractText = detail.abstractText,
             recordingSummary = recordings.recordingSummary(),
+            brief = exportBrief,
             timelineItems = timelineItems,
             mediaAssets = assets.distinctBy { it.exportRelativePath },
             skippedMedia = skipped.distinct(),
@@ -106,6 +113,44 @@ class SeminarExportAssembler @Inject constructor() {
             ClipState.PROCESSING -> "Clip is processing; use full recording from this offset."
             ClipState.FAILED -> "Clip failed; use full recording from this offset."
         }
+    }
+
+    private suspend fun SeminarBriefBundle.toExportBrief(
+        slug: String,
+        assets: MutableList<ExportMediaAsset>,
+        skipped: MutableList<String>,
+        isMediaReadable: suspend (String) -> Boolean,
+    ): ExportSeminarBrief {
+        val slideItems = keySlides.map { (asset, join) ->
+            val exportPath = asset.relativePath?.let { path ->
+                val target = "$slug/media/key-slides/${path.fileName()}"
+                addAssetIfReadable(path, target, ExportMediaKind.KEY_SLIDE, isMediaReadable, assets, skipped)
+                target
+            }
+            ExportKeySlideItem(caption = join.caption, photoPath = exportPath)
+        }
+        return ExportSeminarBrief(
+            backgroundContext = brief.backgroundContext,
+            coreQuestion = brief.coreQuestion,
+            methods = brief.methods,
+            mainResults = brief.mainResults,
+            keyTakeaways = brief.keyTakeaways,
+            unresolvedQuestions = brief.unresolvedQuestions,
+            followUpActions = brief.followUpActions,
+            userNotes = brief.userNotes,
+            references = references.map { (candidate, join) ->
+                ExportReferenceItem(
+                    title = candidate.title,
+                    authorsText = candidate.authorsJson.trim('[', ']').replace("\"", ""),
+                    publicationYear = candidate.publicationYear,
+                    venue = candidate.venue,
+                    doi = candidate.canonicalDoi,
+                    landingPageUrl = candidate.landingPageUrl,
+                    note = join.note,
+                )
+            },
+            keySlides = slideItems,
+        )
     }
 }
 

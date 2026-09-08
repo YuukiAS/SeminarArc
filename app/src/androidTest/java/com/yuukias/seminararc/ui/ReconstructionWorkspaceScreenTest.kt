@@ -5,7 +5,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -29,7 +29,7 @@ import org.junit.Test
 
 class ReconstructionWorkspaceScreenTest {
     @get:Rule
-    val composeRule = createComposeRule()
+    val composeRule = createAndroidComposeRule<ComposeTestActivity>()
 
     @Test
     fun processingControlsExposeQueuedRunningFailedCancelledStates() {
@@ -41,6 +41,7 @@ class ReconstructionWorkspaceScreenTest {
                     uiState = readyState(),
                     snackbarHostState = snackbarHostState,
                     onBack = {},
+                    onOpenReferenceReview = {},
                     onSearchQueryChanged = {},
                     onOcrStatusFilterChanged = {},
                     onKeySlidesOnlyChanged = {},

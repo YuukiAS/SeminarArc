@@ -72,7 +72,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
         database.openHelper.readableDatabase.query("SELECT retryCount FROM audio_clips WHERE id = 1").use { cursor ->
             cursor.moveToFirst()
@@ -133,7 +133,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB_V2_TO_V3,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
         database.openHelper.readableDatabase.query(
             "SELECT type, relativePath FROM seminar_assets ORDER BY type ASC",
@@ -158,7 +158,85 @@ class AppDatabaseMigrationTest {
         }
         database.close()
     }
+
+    @Test
+    fun migrate3To4_addsReferenceTablesAndPreservesReconstructionRows() {
+        helper.createDatabase(TEST_DB_V3_TO_V4, 3).apply {
+            execSQL(
+                """
+                INSERT INTO seminars (
+                    id, title, speaker, affiliation, scheduledAt, location, abstractText,
+                    abstractPdfPath, status, rating, isFavorite, createdAt, updatedAt,
+                    sessionStartedAt, sessionEndedAt
+                ) VALUES (
+                    1, 'Reference seminar', NULL, NULL, NULL, NULL, NULL,
+                    NULL, 'COMPLETED', NULL, 0, 100, 200, 100, 200
+                )
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO seminar_assets (
+                    id, seminarId, type, originAssetId, sourceTimelineEventId, sourceRecordingId, sourceClipId,
+                    relativePath, mimeType, displayName, createdAt, updatedAt
+                ) VALUES (
+                    1, 1, 'PHOTO_ORIGINAL', NULL, NULL, NULL, NULL,
+                    'seminars/1/photos/reference.jpg', 'image/jpeg', 'reference.jpg', 100, 100
+                )
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO processing_jobs (
+                    id, seminarId, type, state, inputAssetId, outputAssetId, providerId, providerVersion,
+                    createdAt, startedAt, completedAt, retryCount, isRetryable, errorMessage
+                ) VALUES (
+                    1, 1, 'TEXT_OCR', 'SUCCEEDED', 1, NULL, 'mlkit-text', '1', 100, 100, 101, 0, 0, NULL
+                )
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO ocr_results (
+                    id, seminarId, assetId, recognizedText, editedText, blockJson, languageHint, confidence,
+                    providerId, providerVersion, isEdited, createdAt, updatedAt
+                ) VALUES (
+                    1, 1, 1, 'Important DOI 10.1145/3368089.3409710', NULL, NULL, 'latin', NULL,
+                    'mlkit-text', '1', 0, 100, 101
+                )
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB_V3_TO_V4, 4, true, MIGRATION_3_4)
+
+        val database = Room.databaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            AppDatabase::class.java,
+            TEST_DB_V3_TO_V4,
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .build()
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM seminar_assets").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(1, cursor.getInt(0))
+        }
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM ocr_results").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(1, cursor.getInt(0))
+        }
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM seminar_briefs").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(0, cursor.getInt(0))
+        }
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM reference_candidates").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(0, cursor.getInt(0))
+        }
+        database.close()
+    }
 }
 
 private const val TEST_DB = "migration-test"
 private const val TEST_DB_V2_TO_V3 = "migration-test-v2-to-v3"
+private const val TEST_DB_V3_TO_V4 = "migration-test-v3-to-v4"

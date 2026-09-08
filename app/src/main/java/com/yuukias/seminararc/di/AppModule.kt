@@ -6,14 +6,17 @@ import com.yuukias.seminararc.data.local.AppDatabase
 import com.yuukias.seminararc.data.local.DatabaseTransactionRunner
 import com.yuukias.seminararc.data.local.MIGRATION_1_2
 import com.yuukias.seminararc.data.local.MIGRATION_2_3
+import com.yuukias.seminararc.data.local.MIGRATION_3_4
 import com.yuukias.seminararc.data.local.RoomDatabaseTransactionRunner
 import com.yuukias.seminararc.data.export.SeminarExportRepositoryImpl
 import com.yuukias.seminararc.data.local.dao.ClipDao
+import com.yuukias.seminararc.data.local.dao.ReferenceDao
 import com.yuukias.seminararc.data.local.dao.ReconstructionDao
 import com.yuukias.seminararc.data.local.dao.RecordingDao
 import com.yuukias.seminararc.data.local.dao.SeminarDao
 import com.yuukias.seminararc.data.local.dao.TimelineDao
 import com.yuukias.seminararc.data.repository.ReconstructionRepositoryImpl
+import com.yuukias.seminararc.data.repository.ReferenceRepositoryImpl
 import com.yuukias.seminararc.data.repository.RecordingRepositoryImpl
 import com.yuukias.seminararc.data.repository.SeminarRepositoryImpl
 import com.yuukias.seminararc.data.repository.ClipRepositoryImpl
@@ -22,6 +25,8 @@ import com.yuukias.seminararc.data.storage.AppMediaStorageManager
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.image.ImageEnhancementProvider
 import com.yuukias.seminararc.domain.ocr.TextOcrProvider
+import com.yuukias.seminararc.domain.repository.ReferenceLookupProvider
+import com.yuukias.seminararc.domain.repository.ReferenceRepository
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
@@ -38,6 +43,9 @@ import com.yuukias.seminararc.media.playback.Media3RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
 import com.yuukias.seminararc.media.processing.ProcessingWorkScheduler
 import com.yuukias.seminararc.media.processing.WorkManagerProcessingWorkScheduler
+import com.yuukias.seminararc.data.reference.CrossrefReferenceLookupProvider
+import com.yuukias.seminararc.data.reference.DataCiteReferenceLookupProvider
+import com.yuukias.seminararc.data.reference.OpenAlexReferenceLookupProvider
 import com.yuukias.seminararc.recording.controller.AndroidMediaRecorderControllerFactory
 import com.yuukias.seminararc.recording.controller.RecorderControllerFactory
 import com.yuukias.seminararc.recording.service.AndroidRecordingPermissionChecker
@@ -51,6 +59,7 @@ import com.yuukias.seminararc.util.ClockProvider
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
+import dagger.multibindings.IntoSet
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.components.ViewModelComponent
@@ -67,7 +76,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "seminararc.db",
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
     }
 
@@ -85,6 +94,9 @@ object DatabaseModule {
 
     @Provides
     fun provideReconstructionDao(database: AppDatabase): ReconstructionDao = database.reconstructionDao()
+
+    @Provides
+    fun provideReferenceDao(database: AppDatabase): ReferenceDao = database.referenceDao()
 
     @Provides
     @Singleton
@@ -148,6 +160,10 @@ abstract class AppBindingsModule {
 
     @Binds
     @Singleton
+    abstract fun bindReferenceRepository(impl: ReferenceRepositoryImpl): ReferenceRepository
+
+    @Binds
+    @Singleton
     abstract fun bindImageEnhancementProvider(impl: AndroidBitmapImageEnhancementProvider): ImageEnhancementProvider
 
     @Binds
@@ -165,6 +181,18 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindProcessingWorkScheduler(impl: WorkManagerProcessingWorkScheduler): ProcessingWorkScheduler
+
+    @Binds
+    @IntoSet
+    abstract fun bindCrossrefReferenceLookupProvider(impl: CrossrefReferenceLookupProvider): ReferenceLookupProvider
+
+    @Binds
+    @IntoSet
+    abstract fun bindOpenAlexReferenceLookupProvider(impl: OpenAlexReferenceLookupProvider): ReferenceLookupProvider
+
+    @Binds
+    @IntoSet
+    abstract fun bindDataCiteReferenceLookupProvider(impl: DataCiteReferenceLookupProvider): ReferenceLookupProvider
 }
 
 @Module

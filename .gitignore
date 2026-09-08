@@ -14,6 +14,8 @@ app/build/
 app/release/
 captures/
 .gradle/
+.gradle-user-home/
+.android-user-home/
 .cxx/
 .externalNativeBuild/
 .m2/
