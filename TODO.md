@@ -385,6 +385,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已新增 transcription durable queue foundation：完成录音可进入 `TRANSCRIPTION` durable job / WorkManager 链路；默认 provider 为 unavailable boundary，不上传音频、不伪造成功结果。
 - 已新增 transcript review queue entry foundation：Transcript Review 可从最新完成录音创建 transcription durable job，并明确提示真实 provider 尚未配置。
 - 已新增 summary durable queue foundation：Room v6 为 `processing_jobs` 增加 `inputPayloadJson`，Transcript Review 可从当前 transcript segments 创建 `SUMMARY_DRAFT` durable job；默认 provider 为 unavailable boundary，不上传 transcript、references、notes、不伪造成功总结。
+- 已新增 Notion-ready export contract foundation：本地 `SeminarNotionReadyRenderer` 可将 export document 转为 block-like Notion-ready document 和 Markdown 预览；不包含 OAuth、API client、token 或上传行为。
 
 范围：
 
@@ -392,7 +393,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 时间戳 transcript segment 与照片窗口关联：domain foundation 和第一版 review UI 消费已完成。
 - `SummaryProvider` 基于用户选定材料生成草稿，不覆盖人工内容。
 - `SummaryProvider` durable queue 已接线到 WorkManager；后续仍需真实 provider/privacy/credential 决策才能产出可读总结正文。
-- Notion：Markdown 友好 transcript/summary export foundation 已完成；后续再实现官方 API 页面、block 和文件上传。
+- Notion：Markdown 友好 transcript/summary export foundation 和 block-like local contract 已完成；后续再实现官方 API 页面创建、block 追加和文件上传。
 - 公开 Notion OAuth 和应用自有付费 API 需要后端后再开放给普通用户。
 - provider 费用、配额、取消和删除说明。
 

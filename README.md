@@ -50,6 +50,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` transcription durable queue foundation：`ProcessingWorkScheduler` 可为完成录音创建 durable `TRANSCRIPTION` job 并交给 WorkManager；默认 `UnavailableTranscriptionProvider` 只记录未配置失败，不上传音频或伪造转写。
 - `0.4.x` transcript review queue entry foundation：Transcript Review 的转写动作会为最新完成录音排入 durable transcription job，并用 snackbar 明确提示仍需配置真实 provider 才会产生 segments。
 - `0.4.x` summary durable queue foundation：Room version 6 为 `processing_jobs` 增加 `inputPayloadJson`，Transcript Review 可为当前 transcript segments 排入 durable `SUMMARY_DRAFT` WorkManager job；默认 `UnavailableSummaryProvider` 只记录未配置失败，不上传 transcript、references、notes 或伪造总结。
+- `0.4.x` Notion-ready export contract foundation：新增本地 `SeminarNotionReadyRenderer`，可从现有 export document 生成 block-like Notion-ready document 和 Markdown 预览；不包含 Notion OAuth、API client、token 或上传行为。
 
 尚未声明完成：
 
