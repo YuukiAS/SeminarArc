@@ -14,7 +14,7 @@ requires_human_approval: false
 
 ## Objective
 
-在用户无法频繁参与接力时，按仓库 roadmap 尽可能自动推进 SeminarArc：先完成 `0.3.1-internal` 可下载安装分发，再依次推进 `0.4.x`、`0.5.x` 的 readiness -> implementation -> Emulator closeout -> GitHub Release APK。
+在用户无法频繁参与接力时，按仓库 roadmap 尽可能自动推进 SeminarArc：先完成 `0.3.1-internal` 可下载安装分发，再依次推进 `0.4.x`、`0.5.x` 的 readiness -> implementation -> Emulator closeout -> version CI -> GitHub Release APK。
 
 不要自动进入 Google Play/public release。`0.9.x` 只允许 readiness/audit，不允许生产签名、Play Console、公开发布或 ads/payment。
 
@@ -22,7 +22,7 @@ requires_human_approval: false
 
 - GitHub `origin/main` 是唯一源码事实来源。
 - 开始时同步最新 `main`。
-- 必须读取：`AGENTS.md`、`prompts/AGENT_RULES.md`、`prompts/CHATGPT_RULES.md`、`docs/plans/post-0.3-autonomous-roadmap.md`、README/TODO/CHANGELOG/ARCHITECTURE/PRIVACY/DEVICE_TESTING 与当前 design/plans/tasks/results。
+- 必须读取：`AGENTS.md`、`prompts/AGENT_RULES.md`、`prompts/CHATGPT_RULES.md`、`docs/plans/post-0.3-autonomous-roadmap.md`、`docs/CI_POLICY.md`、README/TODO/CHANGELOG/ARCHITECTURE/PRIVACY/DEVICE_TESTING 与当前 design/plans/tasks/results。
 
 ## Execution environment
 
@@ -36,25 +36,55 @@ Windows Emulator 是默认 connected/instrumentation target。GM1910 不参与�
 
 如果当前是 WSL 且 Windows-only gate 暂时不可用：继续 research/docs/headless/code-safe 工作，把 connected/release gate 留给后续 Windows native 阶段；不得通过 usbipd/WSL transport/physical device 绕过。
 
+## CI policy
+
+GitHub Actions 是**版本级远端验收**，不是每次 push 的持续构建器，也不是 APK 分发渠道。
+
+当前 `.github/workflows/android.yml` 只应在：
+
+- push `v*` version tag；
+- `workflow_dispatch` 手动触发；
+
+时运行。
+
+普通代码 push、文档更新、task/result/review、README/TODO/design 同步都不应自动触发 Actions。
+
+每个对用户有意义的安装版本至少跑一次远端 CI，例如：
+
+- `v0.3.1-internal.1`
+- `v0.4.0-internal.1`
+- `v0.5.0-alpha.1`
+
+远端 gate 至少执行：
+
+- `testDebugUnitTest`
+- `assembleDebug`
+- `lintDebug`
+
+Windows Emulator connected/instrumentation 仍只在本地 Windows 环境运行。
+
 ## Release distribution policy
 
 **GitHub Releases 是用户 APK 下载入口；GitHub Actions 不是 APK 分发依赖。**
 
-Accepted milestone 的 APK 流程：
+Accepted milestone 的标准发布顺序：
 
-1. Windows 本地 build/test/lint；
-2. Windows Emulator connected closeout；
-3. package/version/signature/secret scan；
-4. 使用稳定 repo 外 internal signer 签名；
-5. 计算 SHA-256；
-6. commit + push main；
-7. 创建 version tag；
-8. 本地通过 `gh release create/upload` 或等价 GitHub API 创建 prerelease；
-9. 上传已签名 APK + `.sha256` + release notes。
+1. 完成实现、tests、docs/result；
+2. commit + push `main`；
+3. 在 clean Windows checkout 上针对该 release commit 运行本地 unit/build/lint；
+4. Windows Emulator connected closeout；
+5. package/version/signature/secret scan；
+6. 使用稳定 repo 外 internal signer 生成签名 APK；
+7. 计算 SHA-256；
+8. 创建并 push version tag；
+9. version tag 触发一次 GitHub Actions remote version gate；
+10. 等待远端 CI PASS；
+11. 本地通过 `gh release create/upload` 或等价 GitHub API 创建 prerelease/release；
+12. 上传已签名 APK + `.sha256` + release notes。
+
+如果远端 CI 因 GitHub 基础设施瞬时失败，可以重跑该 version gate；不要通过新的无意义 commit 或 docs push 触发 CI。
 
 用户已明确授权：可以把 SeminarArc internal/pre-release APK、checksum 和 release notes 上传到本仓库 GitHub Releases。禁止上传用户数据、测试媒体、keystore/private key/password/token。
-
-GitHub Actions 仅保留 ordinary CI。不要为了 APK 发布新增每次 push 都运行的 packaging workflow。
 
 ## Phase A — 0.3.1 Internal Dogfood
 
@@ -70,6 +100,7 @@ GitHub Actions 仅保留 ordinary CI。不要为了 APK 发布新增每次 push 
 - `.internal` identity；
 - Windows local build/sign；
 - Emulator regression；
+- version tag remote CI；
 - release asset；
 - install/update docs。
 
@@ -102,7 +133,7 @@ Readiness PASS 后自动创建 production master 并连续执行到 `0.4.x COMPL
 
 原则：provider-independent domain first；fake/contract tests before live；local/self-hosted 优先；cloud processing opt-in；Summary 仅 editable draft；Notion 没有安全 OAuth/backend 时允许只做 Markdown-friendly/export boundary；不嵌入私人 key；不使用真实 seminar 内容做 live smoke。
 
-Closeout：Windows Emulator + 0.1/0.2/0.3 regression。通过后按 Release policy 发布 `0.4.x-internal.*` APK。
+Closeout：Windows Emulator + 0.1/0.2/0.3 regression。通过后按 CI + Release policy 发布 `0.4.x-internal.*` APK。
 
 ## Phase D — 0.5.x Readiness
 
@@ -127,7 +158,7 @@ Readiness PASS 后连续执行到 `0.5.x COMPLETE`。
 
 Closeout 至少：JVM/build/lint、Windows Emulator connected、old Room migrations reopen current、0.1/0.2/0.3/0.4 regression、export golden tests、secret scan、docs/design/privacy/roadmap sync。
 
-通过后按 Release policy 发布 `0.5.x-alpha.*` APK。
+通过后按 CI + Release policy 发布 `0.5.x-alpha.*` APK。
 
 ## Phase F — Stop before external release
 
@@ -149,9 +180,11 @@ Within this master，Codex 可创建所需 subtask/result 并在无 hard blocker
 
 每个宏阶段：
 
-research/readiness -> plan -> implementation -> tests -> Emulator closeout -> docs/result -> commit/push -> local APK build/sign -> GitHub prerelease -> continue。
+research/readiness -> plan -> implementation -> tests -> Emulator closeout -> docs/result -> commit/push -> local APK build/sign -> version tag -> remote version CI -> GitHub prerelease -> continue。
 
 普通 compile/unit/instrumentation/lint/parser/mock/Emulator/docs drift/temporary provider failure 均不是人工 blocker，应修复后继续。
+
+文档或普通开发 push 不要手动触发 GitHub Actions；只有准备版本验收或确有远端独立验证需要时才使用 `workflow_dispatch`。
 
 ## Hard stops / human approval
 
@@ -172,4 +205,4 @@ research/readiness -> plan -> implementation -> tests -> Emulator closeout -> do
 
 创建：`prompts/tasks/post_0.3_autonomous_roadmap_master_result.md`
 
-总结：completed versions、Room version、GitHub Release tags/assets、signing status、0.4/0.5 decisions/implementation、regression、deferred hardware/provider work、0.9.x 前所需 human approvals、final commit SHA。
+总结：completed versions、Room version、GitHub Release tags/assets、version CI status、signing status、0.4/0.5 decisions/implementation、regression、deferred hardware/provider work、0.9.x 前所需 human approvals、final commit SHA。
