@@ -80,6 +80,7 @@ fun TranscriptReviewScreen(
         onSaveSegment = viewModel::onSaveSegmentClicked,
         onSummaryDraftFieldChanged = viewModel::onSummaryDraftFieldChanged,
         onSaveSummaryDraft = viewModel::onSaveSummaryDraftClicked,
+        onApplySummaryDraftToBrief = viewModel::onApplySummaryDraftToBriefClicked,
         onManualTranscriptDraftChanged = viewModel::onManualTranscriptDraftChanged,
         onImportManualTranscript = viewModel::onImportManualTranscriptClicked,
         modifier = modifier,
@@ -101,6 +102,7 @@ fun TranscriptReviewScreenContent(
     onSaveSegment: (Long) -> Unit,
     onSummaryDraftFieldChanged: (Long, SummaryDraftField, String) -> Unit,
     onSaveSummaryDraft: (Long) -> Unit,
+    onApplySummaryDraftToBrief: (Long) -> Unit,
     onManualTranscriptDraftChanged: (String) -> Unit,
     onImportManualTranscript: () -> Unit,
     modifier: Modifier = Modifier,
@@ -148,6 +150,7 @@ fun TranscriptReviewScreenContent(
                 onSaveSegment = onSaveSegment,
                 onSummaryDraftFieldChanged = onSummaryDraftFieldChanged,
                 onSaveSummaryDraft = onSaveSummaryDraft,
+                onApplySummaryDraftToBrief = onApplySummaryDraftToBrief,
                 onManualTranscriptDraftChanged = onManualTranscriptDraftChanged,
                 onImportManualTranscript = onImportManualTranscript,
                 modifier = Modifier.padding(innerPadding),
@@ -168,6 +171,7 @@ private fun TranscriptReviewReadyContent(
     onSaveSegment: (Long) -> Unit,
     onSummaryDraftFieldChanged: (Long, SummaryDraftField, String) -> Unit,
     onSaveSummaryDraft: (Long) -> Unit,
+    onApplySummaryDraftToBrief: (Long) -> Unit,
     onManualTranscriptDraftChanged: (String) -> Unit,
     onImportManualTranscript: () -> Unit,
     modifier: Modifier = Modifier,
@@ -235,6 +239,7 @@ private fun TranscriptReviewReadyContent(
                 onDraftSummary = onDraftSummary,
                 onDraftFieldChanged = onSummaryDraftFieldChanged,
                 onSaveDraft = onSaveSummaryDraft,
+                onApplyToBrief = onApplySummaryDraftToBrief,
             )
         }
     }
@@ -493,6 +498,7 @@ private fun SummaryDraftsCard(
     onDraftSummary: () -> Unit,
     onDraftFieldChanged: (Long, SummaryDraftField, String) -> Unit,
     onSaveDraft: (Long) -> Unit,
+    onApplyToBrief: (Long) -> Unit,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -585,6 +591,15 @@ private fun SummaryDraftsCard(
                             modifier = Modifier.heightIn(min = 48.dp),
                         ) {
                             Text("Save summary draft")
+                        }
+                        OutlinedButton(
+                            onClick = { onApplyToBrief(draft.id) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp),
+                        ) {
+                            Icon(Icons.Outlined.NoteAlt, contentDescription = null)
+                            Text("Apply to Seminar Brief")
                         }
                     }
                 }

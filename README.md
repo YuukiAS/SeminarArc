@@ -55,6 +55,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` transcript segment edit foundation：Transcript Review 可在本地编辑并保存单条 timestamped segment 文本，更新 `isEdited` 与 transcript activity 时间，不触发 provider 或上传。
 - `0.4.x` manual transcript import foundation：Transcript Review 可把粘贴的本地文本导入为 `MANUAL` transcript，每个非空行成为可编辑 coarse segment，供 summary/export 后续使用。
 - `0.4.x` summary draft edit foundation：Transcript Review 可在本地编辑并保存 generated summary draft 的各个 brief 字段，保存后作为 `DRAFT` 继续供 Markdown/ZIP 和 Notion-ready export 使用。
+- `0.4.x` summary draft apply foundation：Transcript Review 可由用户显式把某个 summary draft 应用到人工 `SeminarBrief`，让 transcript/summary 整理结果进入既有 Reference Review brief/export 闭环。
 
 尚未声明完成：
 

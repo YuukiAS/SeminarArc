@@ -11,8 +11,10 @@ import com.yuukias.seminararc.domain.model.TranscriptSourceType
 import com.yuukias.seminararc.domain.model.TranscriptState
 import com.yuukias.seminararc.domain.repository.CreateTranscriptInput
 import com.yuukias.seminararc.domain.repository.EditSummaryDraftInput
+import com.yuukias.seminararc.domain.repository.ReferenceRepository
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
+import com.yuukias.seminararc.domain.repository.SaveSeminarBriefInput
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.TranscriptRepository
 import com.yuukias.seminararc.domain.transcription.TranscriptionSegmentDraft
@@ -43,6 +45,7 @@ class TranscriptReviewViewModel @Inject constructor(
     private val seminarRepository: SeminarRepository,
     private val recordingRepository: RecordingRepository,
     private val reconstructionRepository: ReconstructionRepository,
+    private val referenceRepository: ReferenceRepository,
     private val transcriptRepository: TranscriptRepository,
     private val buildTranscriptTimelineWindows: BuildTranscriptTimelineWindowsUseCase,
     private val processingWorkScheduler: ProcessingWorkScheduler,
@@ -131,6 +134,25 @@ class TranscriptReviewViewModel @Inject constructor(
                 editedSummaryDrafts.value = editedSummaryDrafts.value - draftId
                 _events.emit(TranscriptReviewEvent.ShowMessage("Summary draft updated."))
             }
+        }
+    }
+
+    fun onApplySummaryDraftToBriefClicked(draftId: Long) {
+        viewModelScope.launch {
+            val readyState = uiState.value as? TranscriptReviewUiState.Ready
+            val draft = editedSummaryDrafts.value[draftId]
+                ?: readyState?.summaryDrafts?.firstOrNull { item -> item.id == draftId }?.toEditDraft()
+            if (draft == null) {
+                _events.emit(TranscriptReviewEvent.ShowMessage("Summary draft could not be applied."))
+                return@launch
+            }
+            val saved = referenceRepository.saveBrief(draft.toBriefInput(seminarId))
+            val message = if (saved == null) {
+                "Seminar Brief could not be updated from this draft."
+            } else {
+                "Summary draft applied to Seminar Brief."
+            }
+            _events.emit(TranscriptReviewEvent.ShowMessage(message))
         }
     }
 
@@ -376,6 +398,20 @@ private fun SummaryDraftEditDraft.withField(
 private fun SummaryDraftEditDraft.toEditInput(draftId: Long): EditSummaryDraftInput {
     return EditSummaryDraftInput(
         draftId = draftId,
+        backgroundContext = backgroundContext,
+        coreQuestion = coreQuestion,
+        methods = methods,
+        mainResults = mainResults,
+        keyTakeaways = keyTakeaways,
+        unresolvedQuestions = unresolvedQuestions,
+        followUpActions = followUpActions,
+        userNotes = userNotes,
+    )
+}
+
+private fun SummaryDraftEditDraft.toBriefInput(seminarId: Long): SaveSeminarBriefInput {
+    return SaveSeminarBriefInput(
+        seminarId = seminarId,
         backgroundContext = backgroundContext,
         coreQuestion = coreQuestion,
         methods = methods,

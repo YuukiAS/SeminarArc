@@ -390,6 +390,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已新增 transcript segment edit foundation：Transcript Review 支持本地编辑/保存单条 timestamped segment 文本，保存后标记 `isEdited` 并刷新 transcript activity 时间。
 - 已新增 manual transcript import foundation：Transcript Review 支持把本地粘贴文本导入为 `MANUAL` transcript，按非空行生成可编辑 coarse segments。
 - 已新增 summary draft edit foundation：Transcript Review 支持本地编辑/保存 generated summary draft 的各个 brief 字段，保存后标记 `DRAFT` 并继续进入 Markdown/ZIP 与 Notion-ready export。
+- 已新增 summary draft apply foundation：Transcript Review 支持用户显式将某个 summary draft 应用到人工 `SeminarBrief`，不后台覆盖、不调用 provider。
 - `0.4.x` 本地 headless gate 已持续通过；connected Emulator closeout 尚未完成。sandbox 内 Windows `adb.exe devices -l` 会先失败在 `\.android` home 解析；非 sandbox + D-home preflight 可枚举设备，但当前同时看到 protected physical serial `8cc54656` 和 `emulator-5554`，不满足“只看到 emulator-*”安全门。
 
 范围：
