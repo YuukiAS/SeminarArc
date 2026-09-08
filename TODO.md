@@ -387,7 +387,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已新增 summary durable queue foundation：Room v6 为 `processing_jobs` 增加 `inputPayloadJson`，Transcript Review 可从当前 transcript segments 创建 `SUMMARY_DRAFT` durable job；默认 provider 为 unavailable boundary，不上传 transcript、references、notes、不伪造成功总结。
 - 已新增 Notion-ready export contract foundation：本地 `SeminarNotionReadyRenderer` 可将 export document 转为 block-like Notion-ready document 和 Markdown 预览；不包含 OAuth、API client、token 或上传行为。
 - 已新增 transcript processing queue UI foundation：Transcript Review 展示本地 transcription/summary durable job 状态，并提供 retry/cancel 控制。
-- `0.4.x` 本地 headless gate 已持续通过；connected Emulator closeout 尚未完成，因为当前 Windows `adb.exe devices -l` 在设备枚举前尝试写入 `\.android` 并失败，无法安全证明只看到 `emulator-*`。
+- `0.4.x` 本地 headless gate 已持续通过；connected Emulator closeout 尚未完成。sandbox 内 Windows `adb.exe devices -l` 会先失败在 `\.android` home 解析；非 sandbox + D-home preflight 可枚举设备，但当前同时看到 protected physical serial `8cc54656` 和 `emulator-5554`，不满足“只看到 emulator-*”安全门。
 
 范围：
 
