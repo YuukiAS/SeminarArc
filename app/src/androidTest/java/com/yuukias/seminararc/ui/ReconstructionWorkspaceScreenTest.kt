@@ -42,6 +42,7 @@ class ReconstructionWorkspaceScreenTest {
                     snackbarHostState = snackbarHostState,
                     onBack = {},
                     onOpenReferenceReview = {},
+                    onOpenTranscriptReview = { actions += "transcripts:$it" },
                     onSearchQueryChanged = {},
                     onOcrStatusFilterChanged = {},
                     onKeySlidesOnlyChanged = {},
@@ -56,6 +57,7 @@ class ReconstructionWorkspaceScreenTest {
         }
 
         composeRule.onNodeWithText("OCR running").assertIsDisplayed()
+        composeRule.onNodeWithText("Review transcripts").assertIsDisplayed()
         composeRule.onNodeWithText("Enhancement failed: transform failed").assertIsDisplayed()
         composeRule.onNodeWithText("Enhancement cancelled").assertIsDisplayed()
         composeRule.onNodeWithText("OCR").assertIsNotEnabled()

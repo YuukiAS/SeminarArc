@@ -22,3 +22,6 @@ data class ReconstructionWorkspaceRoute(val seminarId: Long)
 
 @Serializable
 data class ReferenceReviewRoute(val seminarId: Long)
+
+@Serializable
+data class TranscriptReviewRoute(val seminarId: Long)

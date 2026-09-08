@@ -56,6 +56,7 @@ import com.yuukias.seminararc.ui.theme.SeminarArcThemeTokens
 fun ReconstructionWorkspaceScreen(
     onBack: () -> Unit,
     onOpenReferenceReview: (Long) -> Unit,
+    onOpenTranscriptReview: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ReconstructionWorkspaceViewModel = hiltViewModel(),
 ) {
@@ -75,6 +76,7 @@ fun ReconstructionWorkspaceScreen(
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onOpenReferenceReview = onOpenReferenceReview,
+        onOpenTranscriptReview = onOpenTranscriptReview,
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
         onOcrStatusFilterChanged = viewModel::onOcrStatusFilterChanged,
         onKeySlidesOnlyChanged = viewModel::onKeySlidesOnlyChanged,
@@ -95,6 +97,7 @@ fun ReconstructionWorkspaceScreenContent(
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onOpenReferenceReview: (Long) -> Unit,
+    onOpenTranscriptReview: (Long) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onOcrStatusFilterChanged: (OcrStatusFilter) -> Unit,
     onKeySlidesOnlyChanged: (Boolean) -> Unit,
@@ -141,6 +144,7 @@ fun ReconstructionWorkspaceScreenContent(
             is ReconstructionWorkspaceUiState.Ready -> ReconstructionReadyContent(
                 state = uiState,
                 onOpenReferenceReview = onOpenReferenceReview,
+                onOpenTranscriptReview = onOpenTranscriptReview,
                 onSearchQueryChanged = onSearchQueryChanged,
                 onOcrStatusFilterChanged = onOcrStatusFilterChanged,
                 onKeySlidesOnlyChanged = onKeySlidesOnlyChanged,
@@ -160,6 +164,7 @@ fun ReconstructionWorkspaceScreenContent(
 private fun ReconstructionReadyContent(
     state: ReconstructionWorkspaceUiState.Ready,
     onOpenReferenceReview: (Long) -> Unit,
+    onOpenTranscriptReview: (Long) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onOcrStatusFilterChanged: (OcrStatusFilter) -> Unit,
     onKeySlidesOnlyChanged: (Boolean) -> Unit,
@@ -193,6 +198,13 @@ private fun ReconstructionReadyContent(
                 ) {
                     Icon(Icons.Outlined.Search, contentDescription = null)
                     Text("Find references")
+                }
+                Button(
+                    onClick = { onOpenTranscriptReview(state.detail.id) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.NoteAlt, contentDescription = null)
+                    Text("Review transcripts")
                 }
                 OutlinedTextField(
                     value = state.searchQuery,

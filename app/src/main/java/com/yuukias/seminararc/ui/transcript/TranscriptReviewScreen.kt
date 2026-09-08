@@ -1,0 +1,372 @@
+package com.yuukias.seminararc.ui.transcript
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.NoteAlt
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.yuukias.seminararc.domain.model.SummaryDraft
+import com.yuukias.seminararc.domain.model.TimelineEventType
+import com.yuukias.seminararc.domain.model.Transcript
+import com.yuukias.seminararc.domain.model.TranscriptSegment
+import com.yuukias.seminararc.domain.usecase.TranscriptTimelineWindow
+import com.yuukias.seminararc.ui.theme.SeminarArcThemeTokens
+
+@Composable
+fun TranscriptReviewScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: TranscriptReviewViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is TranscriptReviewEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
+            }
+        }
+    }
+    TranscriptReviewScreenContent(
+        uiState = uiState,
+        snackbarHostState = snackbarHostState,
+        onBack = onBack,
+        onTranscriptSelected = viewModel::onTranscriptSelected,
+        onRunTranscription = viewModel::onRunTranscriptionClicked,
+        onDraftSummary = viewModel::onDraftSummaryClicked,
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TranscriptReviewScreenContent(
+    uiState: TranscriptReviewUiState,
+    snackbarHostState: SnackbarHostState,
+    onBack: () -> Unit,
+    onTranscriptSelected: (Long) -> Unit,
+    onRunTranscription: () -> Unit,
+    onDraftSummary: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Transcripts") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        when (uiState) {
+            TranscriptReviewUiState.Loading -> Text(
+                "Loading transcripts...",
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .padding(SeminarArcThemeTokens.spacing.space5),
+            )
+            is TranscriptReviewUiState.Missing -> Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .padding(SeminarArcThemeTokens.spacing.space5),
+                verticalArrangement = Arrangement.spacedBy(SeminarArcThemeTokens.spacing.space3),
+            ) {
+                Text("Seminar not found", style = MaterialTheme.typography.titleLarge)
+                TextButton(onClick = onBack) {
+                    Text("Back")
+                }
+            }
+            is TranscriptReviewUiState.Ready -> TranscriptReviewReadyContent(
+                state = uiState,
+                onTranscriptSelected = onTranscriptSelected,
+                onRunTranscription = onRunTranscription,
+                onDraftSummary = onDraftSummary,
+                modifier = Modifier.padding(innerPadding),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TranscriptReviewReadyContent(
+    state: TranscriptReviewUiState.Ready,
+    onTranscriptSelected: (Long) -> Unit,
+    onRunTranscription: () -> Unit,
+    onDraftSummary: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(spacing.space5)
+            .testTag("transcriptReviewList"),
+        verticalArrangement = Arrangement.spacedBy(spacing.space4),
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
+                Text(
+                    state.detail.title,
+                    modifier = Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                Text(
+                    "${state.transcripts.size} transcripts | ${state.segments.size} segments | ${state.timelineWindows.size} timeline windows",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        item {
+            TranscriptPickerCard(
+                transcripts = state.transcripts,
+                selectedTranscript = state.selectedTranscript,
+                onTranscriptSelected = onTranscriptSelected,
+                onRunTranscription = onRunTranscription,
+            )
+        }
+        item {
+            TimelineWindowsCard(windows = state.timelineWindows)
+        }
+        item {
+            SegmentsCard(segments = state.segments)
+        }
+        item {
+            SummaryDraftsCard(
+                drafts = state.summaryDrafts,
+                canDraft = state.segments.isNotEmpty(),
+                onDraftSummary = onDraftSummary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TranscriptPickerCard(
+    transcripts: List<Transcript>,
+    selectedTranscript: Transcript?,
+    onTranscriptSelected: (Long) -> Unit,
+    onRunTranscription: () -> Unit,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(spacing.space4),
+            verticalArrangement = Arrangement.spacedBy(spacing.space3),
+        ) {
+            Text("Transcript source", style = MaterialTheme.typography.titleMedium)
+            if (transcripts.isEmpty()) {
+                Text(
+                    "No transcripts yet. Provider selection is planned for the next processing step.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = onRunTranscription,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp),
+                ) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = null)
+                    Text("Prepare transcription")
+                }
+            } else {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.space2),
+                ) {
+                    transcripts.forEach { transcript ->
+                        FilterChip(
+                            selected = selectedTranscript?.id == transcript.id,
+                            onClick = { onTranscriptSelected(transcript.id) },
+                            label = { Text("${transcript.providerId} ${transcript.state.name}") },
+                        )
+                    }
+                }
+                selectedTranscript?.let { transcript ->
+                    Text(
+                        "Provider ${transcript.providerId} ${transcript.providerVersion} | ${transcript.languageHint.name} | ${transcript.sourceType.name}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    transcript.errorMessage?.takeIf { it.isNotBlank() }?.let { message ->
+                        Text(message, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineWindowsCard(windows: List<TranscriptTimelineWindow>) {
+    val spacing = SeminarArcThemeTokens.spacing
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(spacing.space4),
+            verticalArrangement = Arrangement.spacedBy(spacing.space3),
+        ) {
+            Text("Timeline windows", style = MaterialTheme.typography.titleMedium)
+            if (windows.isEmpty()) {
+                Text(
+                    "No ready transcript windows are available for the current timeline.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                windows.forEach { window ->
+                    TimelineWindowRow(window = window)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineWindowRow(window: TranscriptTimelineWindow) {
+    Column(verticalArrangement = Arrangement.spacedBy(SeminarArcThemeTokens.spacing.space1)) {
+        Text(
+            "${window.event.type.label()} ${formatDuration(window.event.offsetMs)}",
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            "${formatDuration(window.windowStartOffsetMs)} - ${formatDuration(window.windowEndOffsetMs)} | ${window.segments.size} segments",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (window.photoAsset != null) {
+            Text(
+                window.photoAsset.displayName ?: window.photoAsset.relativePath.orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            window.previewText.ifBlank { "No transcript text in this window." },
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
+@Composable
+private fun SegmentsCard(segments: List<TranscriptSegment>) {
+    val spacing = SeminarArcThemeTokens.spacing
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(spacing.space4),
+            verticalArrangement = Arrangement.spacedBy(spacing.space3),
+        ) {
+            Text("Transcript segments", style = MaterialTheme.typography.titleMedium)
+            if (segments.isEmpty()) {
+                Text("No segments for the selected transcript.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                segments.forEach { segment ->
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.space1)) {
+                        Text(
+                            "${formatDuration(segment.startOffsetMs)} - ${formatDuration(segment.endOffsetMs)}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(segment.text)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryDraftsCard(
+    drafts: List<SummaryDraft>,
+    canDraft: Boolean,
+    onDraftSummary: () -> Unit,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(spacing.space4),
+            verticalArrangement = Arrangement.spacedBy(spacing.space3),
+        ) {
+            Text("Summary drafts", style = MaterialTheme.typography.titleMedium)
+            Button(
+                onClick = onDraftSummary,
+                enabled = canDraft,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+            ) {
+                Icon(Icons.Outlined.NoteAlt, contentDescription = null)
+                Text("Prepare summary draft")
+            }
+            if (drafts.isEmpty()) {
+                Text("No summary drafts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                drafts.forEach { draft ->
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.space1)) {
+                        Text("${draft.providerId} ${draft.state.name}", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            draft.mainResults.ifBlank { draft.errorMessage ?: "Draft has no generated prose yet." },
+                            maxLines = 3,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun TimelineEventType.label(): String {
+    return when (this) {
+        TimelineEventType.MARK -> "Mark"
+        TimelineEventType.PHOTO -> "Photo"
+        TimelineEventType.NOTE -> "Note"
+        TimelineEventType.QUESTION -> "Question"
+    }
+}
+
+private fun formatDuration(offsetMs: Long): String {
+    val totalSeconds = (offsetMs / 1_000L).coerceAtLeast(0L)
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return "%d:%02d".format(minutes, seconds)
+}

@@ -20,6 +20,8 @@ import com.yuukias.seminararc.ui.session.ActiveSessionScreen
 import com.yuukias.seminararc.ui.session.ActiveSessionViewModel
 import com.yuukias.seminararc.ui.timeline.SeminarTimelineScreen
 import com.yuukias.seminararc.ui.timeline.SeminarTimelineViewModel
+import com.yuukias.seminararc.ui.transcript.TranscriptReviewScreen
+import com.yuukias.seminararc.ui.transcript.TranscriptReviewViewModel
 
 @Composable
 fun SeminarNavHost(
@@ -112,11 +114,19 @@ fun SeminarNavHost(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onOpenReferenceReview = { seminarId -> navController.navigate(ReferenceReviewRoute(seminarId)) },
+                onOpenTranscriptReview = { seminarId -> navController.navigate(TranscriptReviewRoute(seminarId)) },
             )
         }
         composable<ReferenceReviewRoute> {
             val viewModel: ReferenceReviewViewModel = hiltViewModel()
             ReferenceReviewScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<TranscriptReviewRoute> {
+            val viewModel: TranscriptReviewViewModel = hiltViewModel()
+            TranscriptReviewScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
             )
