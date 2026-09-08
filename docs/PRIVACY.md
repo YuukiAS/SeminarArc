@@ -67,6 +67,14 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - 当前没有接入真实 ASR provider、AI summary runtime、Notion live OAuth/upload、backend、private API credential 或 recurring-cost service。
 - 后续任何 cloud transcription、AI summary 或 Notion upload 都必须保持 opt-in，并在上传前显示 provider、素材范围、费用/配额、删除语义和 credential/backend 边界。
 
+## 0.5.x 公式与科研导出边界
+
+- `0.5.x` 第一阶段只推进本地公式区域、可编辑 LaTeX、provider contract 和 BibTeX/RIS deterministic export；默认不需要网络。
+- 公式识别必须由用户选择具体图片区域后显式触发，不能自动上传或批量处理所有 seminar photos。
+- Mathpix live provider 需要付费 API credential 或安全 token/backend 策略；在获得后续批准前不得把 app-owned key 写入 APK 或仓库。
+- PaddleOCR、pix2tex 或其他自建 provider 在进入 APK 前必须完成模型权重 license、依赖、体积、性能、耗电和数据保留审计。
+- BibTeX/RIS 导出只包含已确认 references；pending/rejected candidates 不作为确定知识导出。
+
 ## 0.3.x Reference Lookup 边界
 
 - `0.3.x` 已加入 opt-in reference metadata lookup：必须由用户在 Reference Candidate Review 中显式触发，不能在打开 seminar、运行 OCR 或导出时自动联网。

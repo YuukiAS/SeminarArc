@@ -58,11 +58,12 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` summary draft apply foundation：Transcript Review 可由用户显式把某个 summary draft 应用到人工 `SeminarBrief`，让 transcript/summary 整理结果进入既有 Reference Review brief/export 闭环。
 - `0.4.x` Notion-ready share entry foundation：Seminar Detail 可通过 Android share sheet 分享本地生成的 Notion-ready Markdown 预览文本；该路径不包含 Notion OAuth、API client、token、backend 或上传行为。
 - `0.4.x` Notion-ready save entry foundation：Seminar Detail 可通过 Android document picker 保存本地生成的 Notion-ready Markdown 预览文本，便于后续手动导入 Notion 或其他知识库；该路径仍不上传、不持有 token。
+- `0.5.x` Formula / Research Export readiness：已形成 `docs/plans/0.5.x-formula-research-export-plan.md`，第一阶段只推进本地公式区域、可编辑 LaTeX、provider-independent contract、BibTeX/RIS deterministic export；Mathpix live provider、PaddleOCR/pix2tex bundling 和任何 cloud upload 均需后续 credential/backend/license 决策。
 
 尚未声明完成：
 
 - 非破坏性真机完整 E2E 验收：创建 seminar、录音、拍照、timeline、clip、重启后持久化、离线导出和删除清理仍需在用户授权的设备会话中执行。
-- 真实 ASR provider 接入、AI 总结 provider 运行时、Notion live OAuth/upload、cloud sync、公式 OCR、广告或支付。
+- 真实 ASR provider 接入、AI 总结 provider 运行时、Notion live OAuth/upload、cloud sync、live 公式 OCR provider、广告或支付。
 
 ## 文档入口
 

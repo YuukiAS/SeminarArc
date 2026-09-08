@@ -135,6 +135,17 @@ Compose screens continue to call ViewModels for app actions. ViewModels call rep
 
 This foundation does not ship a real ASR engine, cloud transcription, live Notion OAuth/upload, or AI summary runtime yet.
 
+## Formula and research export readiness
+
+`0.5.x` starts with local formula and research-export contracts:
+
+- Formula OCR must be region-scoped. Users select a seminar-owned photo region before any provider runs; the app must not process every photo automatically.
+- Formula results are editable local records. Provider output, user-corrected LaTeX, confidence, provenance, and retryable error state remain separate.
+- `FormulaOcrProvider` is the future boundary for Mathpix, PaddleOCR, pix2tex/self-hosted, fake, and manual providers. Live Mathpix or other cloud providers require later credential/backend/user-key approval.
+- Research export should be deterministic and based only on confirmed references. BibTeX/RIS renderers must exclude pending/rejected candidates and avoid fabricating missing metadata.
+
+The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
+
 ## Reference Candidate and Seminar Brief
 
 `0.3.x` adds the opt-in research metadata layer on top of local reconstruction while keeping user media local by default:

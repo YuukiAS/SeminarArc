@@ -407,6 +407,13 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 
 ### `0.5.x` 公式与高级科研导出
 
+当前进展：
+
+- 已完成 `0.5.x` readiness gate：第一阶段可在无 Mathpix credential、无 backend、无外部上传、无 connected device 的情况下推进本地安全 foundation。
+- Mathpix 是高准确度付费云候选，但需要 authenticated API、billing 和 credential/backend/user-key 决策；live provider 暂不进入 APK。
+- PaddleOCR formula recognition 和 pix2tex/LaTeX-OCR 可作为自建/本地候选继续评估，但需要模型大小、Android packaging、性能、耗电、依赖和模型权重 license 审计。
+- 第一阶段优先实现 formula region selection data model、可编辑 LaTeX result、`FormulaOcrProvider` fake/manual contract、BibTeX/RIS deterministic export 和 export polish。
+
 范围：
 
 - 框选公式区域。
