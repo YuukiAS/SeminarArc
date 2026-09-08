@@ -198,7 +198,7 @@ private fun TranscriptPickerCard(
             Text("Transcript source", style = MaterialTheme.typography.titleMedium)
             if (transcripts.isEmpty()) {
                 Text(
-                    "No transcripts yet. Provider selection is planned for the next processing step.",
+                    "No transcripts yet. A durable transcription job can be queued for a completed recording.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedButton(

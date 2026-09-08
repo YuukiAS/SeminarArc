@@ -48,6 +48,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` transcript review UI foundation：从 Reconstruction workspace 进入，查看 transcript 列表、segments、timeline/photo windows 和 summary draft 状态；真实 provider 执行入口仍未接线。
 - `0.4.x` Markdown/ZIP transcript summary export foundation：本地导出现在包含 transcript review metadata、timestamped segments、timeline windows 和 editable generated summary drafts；ZIP 继续写入增强后的 `seminar.md` 与可读媒体。
 - `0.4.x` transcription durable queue foundation：`ProcessingWorkScheduler` 可为完成录音创建 durable `TRANSCRIPTION` job 并交给 WorkManager；默认 `UnavailableTranscriptionProvider` 只记录未配置失败，不上传音频或伪造转写。
+- `0.4.x` transcript review queue entry foundation：Transcript Review 的转写动作会为最新完成录音排入 durable transcription job，并用 snackbar 明确提示仍需配置真实 provider 才会产生 segments。
 
 尚未声明完成：
 

@@ -383,6 +383,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已新增 transcript review UI foundation：`TranscriptReviewScreen` 从 Reconstruction workspace 进入，展示 transcript 列表、timestamped segments、timeline/photo windows 和 summary draft 状态；真实 provider 执行入口保持未接线提示。
 - 已新增 Markdown/ZIP transcript summary export foundation：本地导出包包含 transcript review metadata、timestamped segments、timeline windows 和 editable generated summary drafts；生成总结不会覆盖人工 Seminar Brief。
 - 已新增 transcription durable queue foundation：完成录音可进入 `TRANSCRIPTION` durable job / WorkManager 链路；默认 provider 为 unavailable boundary，不上传音频、不伪造成功结果。
+- 已新增 transcript review queue entry foundation：Transcript Review 可从最新完成录音创建 transcription durable job，并明确提示真实 provider 尚未配置。
 
 范围：
 

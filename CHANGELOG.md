@@ -17,6 +17,7 @@
 - 新增 `0.4.x` transcript review UI foundation：从 Reconstruction workspace 进入，展示 transcript 列表、timestamped segments、timeline/photo windows 和 summary draft 状态；真实 ASR/summary provider 入口保持未接线提示。
 - 新增 `0.4.x` Markdown/ZIP transcript summary export foundation：导出 Markdown 现在包含 transcript review metadata、timestamped segments、timeline windows 和 editable generated summary drafts，ZIP 继续封装增强后的 `seminar.md` 和可读媒体。
 - 新增 `0.4.x` transcription durable queue foundation：完成录音可创建/恢复/重试 durable `TRANSCRIPTION` WorkManager job；默认 `UnavailableTranscriptionProvider` 明确失败，避免上传音频或伪造转写。
+- 新增 `0.4.x` transcript review queue entry foundation：Transcript Review 的转写动作会为最新完成录音排入 durable job，并通过 snackbar 标明仍需配置真实 provider。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。

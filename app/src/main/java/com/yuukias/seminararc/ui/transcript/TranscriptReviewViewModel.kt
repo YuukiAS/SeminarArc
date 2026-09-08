@@ -4,12 +4,16 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.yuukias.seminararc.domain.model.RecordingState
+import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
 import com.yuukias.seminararc.domain.model.TranscriptState
+import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.TranscriptRepository
 import com.yuukias.seminararc.domain.usecase.BuildTranscriptTimelineWindowsUseCase
 import com.yuukias.seminararc.domain.usecase.TranscriptTimelineWindowInput
 import com.yuukias.seminararc.domain.usecase.TranscriptTimelineWindowResult
+import com.yuukias.seminararc.media.processing.ProcessingWorkScheduler
 import com.yuukias.seminararc.ui.navigation.TranscriptReviewRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -21,6 +25,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -30,8 +35,10 @@ import kotlinx.coroutines.launch
 class TranscriptReviewViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val seminarRepository: SeminarRepository,
+    private val recordingRepository: RecordingRepository,
     private val transcriptRepository: TranscriptRepository,
     private val buildTranscriptTimelineWindows: BuildTranscriptTimelineWindowsUseCase,
+    private val processingWorkScheduler: ProcessingWorkScheduler,
 ) : ViewModel() {
     private val seminarId: Long = savedStateHandle["seminarId"]
         ?: savedStateHandle.toRoute<TranscriptReviewRoute>().seminarId
@@ -64,7 +71,21 @@ class TranscriptReviewViewModel @Inject constructor(
 
     fun onRunTranscriptionClicked() {
         viewModelScope.launch {
-            _events.emit(TranscriptReviewEvent.ShowMessage("Transcription provider selection is not wired yet."))
+            val recording = recordingRepository.observeRecordingsForSeminar(seminarId)
+                .first()
+                .filter { it.state == RecordingState.COMPLETED }
+                .maxByOrNull { it.endedAt ?: it.startedAt }
+            if (recording == null) {
+                _events.emit(TranscriptReviewEvent.ShowMessage("No completed recording is available for transcription."))
+                return@launch
+            }
+            val job = processingWorkScheduler.enqueueTranscription(recording.id, TranscriptLanguageHint.AUTO)
+            val message = if (job == null) {
+                "Transcription could not be queued for this recording."
+            } else {
+                "Transcription job queued. Configure a live provider to produce transcript segments."
+            }
+            _events.emit(TranscriptReviewEvent.ShowMessage(message))
         }
     }
 
