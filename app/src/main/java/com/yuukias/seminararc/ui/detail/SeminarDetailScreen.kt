@@ -109,6 +109,9 @@ fun SeminarDetailScreen(
     val markdownExportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/markdown"),
     ) { uri -> uri?.let { viewModel.onMarkdownDestinationSelected(it.toString()) } }
+    val notionReadyMarkdownExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/markdown"),
+    ) { uri -> uri?.let { viewModel.onNotionReadyMarkdownDestinationSelected(it.toString()) } }
     val zipExportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
     ) { uri -> uri?.let { viewModel.onZipDestinationSelected(it.toString()) } }
@@ -164,6 +167,7 @@ fun SeminarDetailScreen(
         onOpenTimeline = viewModel::onOpenTimelineClicked,
         onOpenReconstruction = { ready -> onOpenReconstruction(ready.detail.id) },
         onSaveMarkdown = { markdownExportLauncher.launch("seminar.md") },
+        onSaveNotionReadyMarkdown = { notionReadyMarkdownExportLauncher.launch("seminar-notion-ready.md") },
         onSaveZip = { zipExportLauncher.launch("seminar.zip") },
         onShareMarkdown = viewModel::onShareMarkdownClicked,
         onShareNotionReadyMarkdown = viewModel::onShareNotionReadyMarkdownClicked,
@@ -189,6 +193,7 @@ fun SeminarDetailScreenContent(
     onOpenTimeline: () -> Unit,
     onOpenReconstruction: (SeminarDetailUiState.Ready) -> Unit,
     onSaveMarkdown: () -> Unit,
+    onSaveNotionReadyMarkdown: () -> Unit,
     onSaveZip: () -> Unit,
     onShareMarkdown: () -> Unit,
     onShareNotionReadyMarkdown: () -> Unit,
@@ -278,6 +283,7 @@ fun SeminarDetailScreenContent(
                         isExporting = uiState.isExporting,
                         exportMessage = uiState.exportMessage,
                         onSaveMarkdown = onSaveMarkdown,
+                        onSaveNotionReadyMarkdown = onSaveNotionReadyMarkdown,
                         onSaveZip = onSaveZip,
                         onShareMarkdown = onShareMarkdown,
                         onShareNotionReadyMarkdown = onShareNotionReadyMarkdown,
@@ -327,6 +333,7 @@ private fun SeminarExportSection(
     isExporting: Boolean,
     exportMessage: String?,
     onSaveMarkdown: () -> Unit,
+    onSaveNotionReadyMarkdown: () -> Unit,
     onSaveZip: () -> Unit,
     onShareMarkdown: () -> Unit,
     onShareNotionReadyMarkdown: () -> Unit,
@@ -362,6 +369,14 @@ private fun SeminarExportSection(
                     Icon(Icons.Outlined.SaveAlt, contentDescription = null)
                     Text("ZIP")
                 }
+            }
+            TextButton(
+                onClick = onSaveNotionReadyMarkdown,
+                enabled = !isExporting,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Outlined.SaveAlt, contentDescription = null)
+                Text("Save Notion-ready Markdown")
             }
             Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
                 TextButton(

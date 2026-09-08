@@ -193,6 +193,10 @@ class SeminarDetailViewModel @Inject constructor(
         exportToUri { exportRepository.writeMarkdown(seminarId, uriString) }
     }
 
+    fun onNotionReadyMarkdownDestinationSelected(uriString: String) {
+        exportToUri { exportRepository.writeNotionReadyMarkdown(seminarId, uriString) }
+    }
+
     fun onZipDestinationSelected(uriString: String) {
         exportToUri { exportRepository.writeZip(seminarId, uriString) }
     }

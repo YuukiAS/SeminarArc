@@ -96,6 +96,12 @@ class SeminarExportRepositoryImpl @Inject constructor(
         writeUri(uriString) { output -> output.write(export.markdown.toByteArray(Charsets.UTF_8)) }
     }
 
+    override suspend fun writeNotionReadyMarkdown(seminarId: Long, uriString: String): ExportWriteResult = withContext(Dispatchers.IO) {
+        val export = buildExportPackage(seminarId) ?: return@withContext ExportWriteResult.Failed("Seminar was not found.")
+        val markdown = notionReadyRenderer.renderMarkdownPreview(export.document)
+        writeUri(uriString) { output -> output.write(markdown.toByteArray(Charsets.UTF_8)) }
+    }
+
     override suspend fun writeZip(seminarId: Long, uriString: String): ExportWriteResult = withContext(Dispatchers.IO) {
         val export = buildExportPackage(seminarId) ?: return@withContext ExportWriteResult.Failed("Seminar was not found.")
         val bytes = zipBytes(export)

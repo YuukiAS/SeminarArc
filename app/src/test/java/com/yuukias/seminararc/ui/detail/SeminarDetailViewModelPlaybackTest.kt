@@ -294,6 +294,7 @@ private fun viewModel(
 private class DetailFakeExportRepository : SeminarExportRepository {
     override suspend fun buildExportPackage(seminarId: Long): com.yuukias.seminararc.domain.model.SeminarExportPackage? = null
     override suspend fun writeMarkdown(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
+    override suspend fun writeNotionReadyMarkdown(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
     override suspend fun writeZip(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
     override suspend fun prepareMarkdownShare(seminarId: Long): ExportShareResult = ExportShareResult.TextReady("markdown", "text/markdown", "seminar.md")
     override suspend fun prepareNotionReadyMarkdownShare(seminarId: Long): ExportShareResult = ExportShareResult.TextReady("notion", "text/markdown", "seminar-notion-ready.md")

@@ -16,6 +16,7 @@ sealed interface ExportShareResult {
 interface SeminarExportRepository {
     suspend fun buildExportPackage(seminarId: Long): SeminarExportPackage?
     suspend fun writeMarkdown(seminarId: Long, uriString: String): ExportWriteResult
+    suspend fun writeNotionReadyMarkdown(seminarId: Long, uriString: String): ExportWriteResult
     suspend fun writeZip(seminarId: Long, uriString: String): ExportWriteResult
     suspend fun prepareMarkdownShare(seminarId: Long): ExportShareResult
     suspend fun prepareNotionReadyMarkdownShare(seminarId: Long): ExportShareResult
