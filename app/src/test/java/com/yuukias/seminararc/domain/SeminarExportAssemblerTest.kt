@@ -1,5 +1,6 @@
 package com.yuukias.seminararc.domain
 
+import com.yuukias.seminararc.domain.export.TranscriptExportBundle
 import com.yuukias.seminararc.domain.export.SeminarExportAssembler
 import com.yuukias.seminararc.domain.model.AbstractAttachment
 import com.yuukias.seminararc.domain.model.AudioClip
@@ -10,8 +11,16 @@ import com.yuukias.seminararc.domain.model.RecordingSession
 import com.yuukias.seminararc.domain.model.RecordingState
 import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarStatus
+import com.yuukias.seminararc.domain.model.SummaryDraft
+import com.yuukias.seminararc.domain.model.SummaryDraftState
 import com.yuukias.seminararc.domain.model.TimelineEvent
 import com.yuukias.seminararc.domain.model.TimelineEventType
+import com.yuukias.seminararc.domain.model.Transcript
+import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
+import com.yuukias.seminararc.domain.model.TranscriptSegment
+import com.yuukias.seminararc.domain.model.TranscriptSourceType
+import com.yuukias.seminararc.domain.model.TranscriptState
+import com.yuukias.seminararc.domain.usecase.TranscriptTimelineWindow
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -108,6 +117,62 @@ class SeminarExportAssemblerTest {
         assertEquals("中文-bayesian-seminar-42/media/photos/missing.jpg", document.timelineItems[1].photoPath)
         assertEquals("Clip failed; use full recording from this offset.", document.timelineItems[2].clipFallbackText)
     }
+
+    @Test
+    fun assemble_mapsTranscriptReviewDataAndSummaryDraftsIntoExportDocument() = runTest {
+        val document = SeminarExportAssembler().assemble(
+            detail = seminarDetail(id = 42L, title = "Transcript Export"),
+            events = emptyList(),
+            recordings = emptyList(),
+            clips = emptyList(),
+            transcriptBundles = listOf(
+                TranscriptExportBundle(
+                    transcript = transcript(id = 8L),
+                    segments = listOf(transcriptSegment(id = 14L)),
+                    timelineWindows = listOf(
+                        TranscriptTimelineWindow(
+                            event = timelineEvent(id = 3L, type = TimelineEventType.PHOTO, offsetMs = 60_000L),
+                            windowStartOffsetMs = 30_000L,
+                            windowEndOffsetMs = 105_000L,
+                            segments = listOf(transcriptSegment(id = 14L)),
+                            photoAsset = null,
+                            previewText = "Important proof context.",
+                        ),
+                    ),
+                ),
+            ),
+            summaryDrafts = listOf(summaryDraft(id = 12L)),
+        ) { true }
+
+        assertEquals(listOf(8L), document.transcripts.map { it.id })
+        assertEquals(listOf(14L), document.transcripts.single().segments.map { it.id })
+        assertEquals(listOf(14L), document.transcripts.single().timelineWindows.single().segmentIds)
+        assertEquals("Important proof context.", document.transcripts.single().timelineWindows.single().previewText)
+        assertEquals(listOf(12L), document.summaryDrafts.map { it.id })
+        assertEquals("A generated draft result.", document.summaryDrafts.single().mainResults)
+    }
+}
+
+private fun seminarDetail(id: Long, title: String): SeminarDetail {
+    return SeminarDetail(
+        id = id,
+        title = title,
+        speaker = "Alice",
+        affiliation = "CUHK",
+        scheduledAt = Instant.parse("2026-08-29T08:00:00Z"),
+        location = "LT1",
+        abstractText = "Abstract",
+        abstractAttachment = null,
+        status = SeminarStatus.COMPLETED,
+        sessionStartedAt = Instant.parse("2026-08-29T08:00:00Z"),
+        sessionEndedAt = Instant.parse("2026-08-29T09:00:00Z"),
+        rating = 5,
+        isFavorite = true,
+        photoCount = 0,
+        clipCount = 0,
+        recordingDurationMs = 3_600_000L,
+        timelinePreview = emptyList(),
+    )
 }
 
 private fun timelineEvent(
@@ -126,3 +191,61 @@ private fun timelineEvent(
     text = text,
     photoPath = photoPath,
 )
+
+private fun transcript(id: Long): Transcript {
+    return Transcript(
+        id = id,
+        seminarId = 42L,
+        recordingId = 7L,
+        providerId = "fake-transcriber",
+        providerVersion = "0.4-contract",
+        languageHint = TranscriptLanguageHint.MIXED,
+        state = TranscriptState.READY,
+        sourceType = TranscriptSourceType.RECORDING,
+        sourceAssetId = null,
+        errorMessage = null,
+        createdAt = Instant.parse("2026-08-29T08:00:00Z"),
+        updatedAt = Instant.parse("2026-08-29T08:10:00Z"),
+    )
+}
+
+private fun transcriptSegment(id: Long): TranscriptSegment {
+    return TranscriptSegment(
+        id = id,
+        transcriptId = 8L,
+        seminarId = 42L,
+        recordingId = 7L,
+        startOffsetMs = 45_000L,
+        endOffsetMs = 70_000L,
+        speakerLabel = "Speaker",
+        language = "en",
+        text = "Important proof context.",
+        confidence = 0.9f,
+        isEdited = false,
+        providerSegmentId = "s-$id",
+        createdAt = Instant.parse("2026-08-29T08:00:00Z"),
+        updatedAt = Instant.parse("2026-08-29T08:10:00Z"),
+    )
+}
+
+private fun summaryDraft(id: Long): SummaryDraft {
+    return SummaryDraft(
+        id = id,
+        seminarId = 42L,
+        providerId = "fake-summary",
+        inputFingerprint = "fingerprint",
+        state = SummaryDraftState.READY,
+        backgroundContext = "Background",
+        coreQuestion = "Question",
+        methods = "Methods",
+        mainResults = "A generated draft result.",
+        keyTakeaways = "Takeaways",
+        unresolvedQuestions = "Open questions",
+        followUpActions = "Follow up",
+        userNotes = "Notes",
+        provenanceJson = "{}",
+        errorMessage = null,
+        createdAt = Instant.parse("2026-08-29T08:00:00Z"),
+        updatedAt = Instant.parse("2026-08-29T08:10:00Z"),
+    )
+}

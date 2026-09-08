@@ -6,7 +6,9 @@ import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.export.SeminarExportAssembler
 import com.yuukias.seminararc.domain.export.SeminarMarkdownRenderer
 import com.yuukias.seminararc.domain.export.SeminarZipWriter
+import com.yuukias.seminararc.domain.export.TranscriptExportBundle
 import com.yuukias.seminararc.domain.model.SeminarExportPackage
+import com.yuukias.seminararc.domain.model.TranscriptState
 import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.ExportShareResult
 import com.yuukias.seminararc.domain.repository.ExportWriteResult
@@ -15,6 +17,10 @@ import com.yuukias.seminararc.domain.repository.ReferenceRepository
 import com.yuukias.seminararc.domain.repository.SeminarExportRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
+import com.yuukias.seminararc.domain.repository.TranscriptRepository
+import com.yuukias.seminararc.domain.usecase.BuildTranscriptTimelineWindowsUseCase
+import com.yuukias.seminararc.domain.usecase.TranscriptTimelineWindowInput
+import com.yuukias.seminararc.domain.usecase.TranscriptTimelineWindowResult
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -31,6 +37,8 @@ class SeminarExportRepositoryImpl @Inject constructor(
     private val timelineRepository: TimelineRepository,
     private val clipRepository: ClipRepository,
     private val referenceRepository: ReferenceRepository,
+    private val transcriptRepository: TranscriptRepository,
+    private val buildTranscriptTimelineWindows: BuildTranscriptTimelineWindowsUseCase,
     private val mediaStorageManager: MediaStorageManager,
     private val assembler: SeminarExportAssembler,
     private val markdownRenderer: SeminarMarkdownRenderer,
@@ -43,7 +51,39 @@ class SeminarExportRepositoryImpl @Inject constructor(
         val recordings = recordingRepository.observeRecordingsForSeminar(seminarId).first()
         val clips = clipRepository.observeClipsForSeminar(seminarId).first()
         val briefBundle = referenceRepository.getBriefBundle(seminarId)
-        val document = assembler.assemble(detail, events, recordings, clips, briefBundle) { sourcePath ->
+        val transcripts = transcriptRepository.observeTranscripts(seminarId).first()
+        val transcriptBundles = transcripts.map { transcript ->
+            val windows = if (transcript.state == TranscriptState.READY) {
+                when (
+                    val result = buildTranscriptTimelineWindows(
+                        TranscriptTimelineWindowInput(
+                            seminarId = seminarId,
+                            transcriptId = transcript.id,
+                        ),
+                    )
+                ) {
+                    is TranscriptTimelineWindowResult.Ready -> result.windows
+                    is TranscriptTimelineWindowResult.Failed -> emptyList()
+                }
+            } else {
+                emptyList()
+            }
+            TranscriptExportBundle(
+                transcript = transcript,
+                segments = transcriptRepository.getSegments(transcript.id),
+                timelineWindows = windows,
+            )
+        }
+        val summaryDrafts = transcriptRepository.observeSummaryDrafts(seminarId).first()
+        val document = assembler.assemble(
+            detail = detail,
+            events = events,
+            recordings = recordings,
+            clips = clips,
+            briefBundle = briefBundle,
+            transcriptBundles = transcriptBundles,
+            summaryDrafts = summaryDrafts,
+        ) { sourcePath ->
             mediaStorageManager.resolveReadableRelativeFile(sourcePath) != null
         }
         return SeminarExportPackage(document, markdownRenderer.render(document))

@@ -7,8 +7,16 @@ import com.yuukias.seminararc.domain.model.ExportMediaKind
 import com.yuukias.seminararc.domain.model.ExportKeySlideItem
 import com.yuukias.seminararc.domain.model.ExportReferenceItem
 import com.yuukias.seminararc.domain.model.ExportSeminarBrief
+import com.yuukias.seminararc.domain.model.ExportSummaryDraft
 import com.yuukias.seminararc.domain.model.ExportTimelineItem
+import com.yuukias.seminararc.domain.model.ExportTranscript
+import com.yuukias.seminararc.domain.model.ExportTranscriptSegment
+import com.yuukias.seminararc.domain.model.ExportTranscriptTimelineWindow
 import com.yuukias.seminararc.domain.model.SeminarExportDocument
+import com.yuukias.seminararc.domain.model.SummaryDraftState
+import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
+import com.yuukias.seminararc.domain.model.TranscriptSourceType
+import com.yuukias.seminararc.domain.model.TranscriptState
 import com.yuukias.seminararc.domain.model.TimelineEventType
 import java.time.Instant
 import org.junit.Assert.assertEquals
@@ -72,6 +80,16 @@ class SeminarMarkdownRendererTest {
             ## Recording
 
             Completed recording: 120000 ms.
+
+            ## Transcript Review
+
+            No transcript review data.
+
+            ## Generated Summary Drafts
+
+            These are editable generated drafts and do not replace the user-authored Seminar Brief.
+
+            No generated summary drafts.
 
             ## Timeline
 
@@ -141,5 +159,88 @@ class SeminarMarkdownRendererTest {
         org.junit.Assert.assertTrue(markdown.contains("DOI: `10.1234/example`"))
         org.junit.Assert.assertTrue(markdown.contains("Main theorem slide"))
         org.junit.Assert.assertTrue(markdown.contains("seminar-7/media/key-slides/slide.jpg"))
+    }
+
+    @Test
+    fun render_includesTranscriptReviewWindowsAndGeneratedDrafts() {
+        val markdown = SeminarMarkdownRenderer().render(
+            SeminarExportDocument(
+                slug = "seminar-9",
+                title = "Transcript Seminar",
+                speaker = null,
+                affiliation = null,
+                scheduledAt = null,
+                location = null,
+                abstractText = null,
+                recordingSummary = "Completed recording: 120000 ms.",
+                transcripts = listOf(
+                    ExportTranscript(
+                        id = 5L,
+                        recordingId = 2L,
+                        providerId = "fake-transcriber",
+                        providerVersion = "0.4-contract",
+                        languageHint = TranscriptLanguageHint.MIXED,
+                        state = TranscriptState.READY,
+                        sourceType = TranscriptSourceType.RECORDING,
+                        errorMessage = null,
+                        segments = listOf(
+                            ExportTranscriptSegment(
+                                id = 21L,
+                                recordingId = 2L,
+                                startOffsetMs = 10_000L,
+                                endOffsetMs = 20_000L,
+                                speakerLabel = "Speaker",
+                                language = "en",
+                                text = "Key theorem appears here.",
+                                confidence = 0.91f,
+                                isEdited = true,
+                            ),
+                        ),
+                        timelineWindows = listOf(
+                            ExportTranscriptTimelineWindow(
+                                eventType = TimelineEventType.PHOTO,
+                                eventOffsetMs = 15_000L,
+                                windowStartOffsetMs = 0L,
+                                windowEndOffsetMs = 60_000L,
+                                previewText = "Key theorem appears here.",
+                                segmentIds = listOf(21L),
+                                photoPath = "seminars/9/photos/slide.jpg",
+                            ),
+                        ),
+                    ),
+                ),
+                summaryDrafts = listOf(
+                    ExportSummaryDraft(
+                        id = 6L,
+                        providerId = "fake-summary",
+                        inputFingerprint = "abc123",
+                        state = SummaryDraftState.READY,
+                        backgroundContext = "Prior work.",
+                        coreQuestion = "What changed?",
+                        methods = "Proof sketch.",
+                        mainResults = "A stable draft result.",
+                        keyTakeaways = "Review before using.",
+                        unresolvedQuestions = "Need references.",
+                        followUpActions = "Ask speaker.",
+                        userNotes = "Generated only.",
+                        provenanceJson = """{"segmentIds":[21]}""",
+                        errorMessage = null,
+                    ),
+                ),
+                timelineItems = emptyList(),
+                mediaAssets = emptyList(),
+                skippedMedia = emptyList(),
+            ),
+        )
+
+        org.junit.Assert.assertTrue(markdown.contains("## Transcript Review"))
+        org.junit.Assert.assertTrue(markdown.contains("### Transcript 5"))
+        org.junit.Assert.assertTrue(markdown.contains("`00:10-00:20` **Speaker** Key theorem appears here."))
+        org.junit.Assert.assertTrue(markdown.contains("#### Timeline windows"))
+        org.junit.Assert.assertTrue(markdown.contains("Segment ids: `21`"))
+        org.junit.Assert.assertTrue(markdown.contains("## Generated Summary Drafts"))
+        org.junit.Assert.assertTrue(markdown.contains("These are editable generated drafts"))
+        org.junit.Assert.assertTrue(markdown.contains("A stable draft result."))
+        org.junit.Assert.assertTrue(markdown.contains("""Provenance: `{"segmentIds":[21]}`"""))
     }
 }

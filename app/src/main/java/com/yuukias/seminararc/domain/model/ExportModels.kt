@@ -7,6 +7,8 @@ data class ExportOptions(
     val includeAbstract: Boolean = true,
     val includePhotos: Boolean = true,
     val includeReadyClips: Boolean = true,
+    val includeTranscripts: Boolean = true,
+    val includeSummaryDrafts: Boolean = true,
 )
 
 data class ExportSeminarBrief(
@@ -47,9 +49,63 @@ data class SeminarExportDocument(
     val abstractText: String?,
     val recordingSummary: String,
     val brief: ExportSeminarBrief? = null,
+    val transcripts: List<ExportTranscript> = emptyList(),
+    val summaryDrafts: List<ExportSummaryDraft> = emptyList(),
     val timelineItems: List<ExportTimelineItem>,
     val mediaAssets: List<ExportMediaAsset>,
     val skippedMedia: List<String>,
+)
+
+data class ExportTranscript(
+    val id: Long,
+    val recordingId: Long?,
+    val providerId: String,
+    val providerVersion: String,
+    val languageHint: TranscriptLanguageHint,
+    val state: TranscriptState,
+    val sourceType: TranscriptSourceType,
+    val errorMessage: String?,
+    val segments: List<ExportTranscriptSegment>,
+    val timelineWindows: List<ExportTranscriptTimelineWindow>,
+)
+
+data class ExportTranscriptSegment(
+    val id: Long,
+    val recordingId: Long?,
+    val startOffsetMs: Long,
+    val endOffsetMs: Long,
+    val speakerLabel: String?,
+    val language: String?,
+    val text: String,
+    val confidence: Float?,
+    val isEdited: Boolean,
+)
+
+data class ExportTranscriptTimelineWindow(
+    val eventType: TimelineEventType,
+    val eventOffsetMs: Long,
+    val windowStartOffsetMs: Long,
+    val windowEndOffsetMs: Long,
+    val previewText: String,
+    val segmentIds: List<Long>,
+    val photoPath: String?,
+)
+
+data class ExportSummaryDraft(
+    val id: Long,
+    val providerId: String,
+    val inputFingerprint: String,
+    val state: SummaryDraftState,
+    val backgroundContext: String,
+    val coreQuestion: String,
+    val methods: String,
+    val mainResults: String,
+    val keyTakeaways: String,
+    val unresolvedQuestions: String,
+    val followUpActions: String,
+    val userNotes: String,
+    val provenanceJson: String,
+    val errorMessage: String?,
 )
 
 data class ExportTimelineItem(

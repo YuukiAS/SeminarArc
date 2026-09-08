@@ -46,6 +46,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` summary draft use case foundation：新增 `DraftSummaryForSeminarUseCase`，基于用户选择的 transcript segments、已确认 references、key-slide captions 和 notes 构造 provider-independent summary request，并把 provider 成功/失败结果写入 `summary_drafts`；不会覆盖人工 `SeminarBrief`。
 - `0.4.x` transcript timeline windows foundation：新增 `BuildTranscriptTimelineWindowsUseCase`，可按 timeline/photo offset 生成 transcript segment windows、关联 photo asset，并输出未来 UI/export 可复用 preview。
 - `0.4.x` transcript review UI foundation：从 Reconstruction workspace 进入，查看 transcript 列表、segments、timeline/photo windows 和 summary draft 状态；真实 provider 执行入口仍未接线。
+- `0.4.x` Markdown/ZIP transcript summary export foundation：本地导出现在包含 transcript review metadata、timestamped segments、timeline windows 和 editable generated summary drafts；ZIP 继续写入增强后的 `seminar.md` 与可读媒体。
 
 尚未声明完成：
 

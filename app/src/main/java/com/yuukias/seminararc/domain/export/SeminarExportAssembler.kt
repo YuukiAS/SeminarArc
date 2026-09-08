@@ -6,14 +6,21 @@ import com.yuukias.seminararc.domain.model.ExportMediaAsset
 import com.yuukias.seminararc.domain.model.ExportMediaKind
 import com.yuukias.seminararc.domain.model.ExportReferenceItem
 import com.yuukias.seminararc.domain.model.ExportKeySlideItem
+import com.yuukias.seminararc.domain.model.ExportSummaryDraft
 import com.yuukias.seminararc.domain.model.ExportSeminarBrief
 import com.yuukias.seminararc.domain.model.ExportTimelineItem
+import com.yuukias.seminararc.domain.model.ExportTranscript
+import com.yuukias.seminararc.domain.model.ExportTranscriptSegment
+import com.yuukias.seminararc.domain.model.ExportTranscriptTimelineWindow
 import com.yuukias.seminararc.domain.model.RecordingSession
 import com.yuukias.seminararc.domain.model.RecordingState
 import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarExportDocument
 import com.yuukias.seminararc.domain.model.SeminarBriefBundle
+import com.yuukias.seminararc.domain.model.SummaryDraft
 import com.yuukias.seminararc.domain.model.TimelineEvent
+import com.yuukias.seminararc.domain.model.Transcript
+import com.yuukias.seminararc.domain.model.TranscriptSegment
 import java.util.Locale
 import javax.inject.Inject
 
@@ -24,6 +31,8 @@ class SeminarExportAssembler @Inject constructor() {
         recordings: List<RecordingSession>,
         clips: List<AudioClip>,
         briefBundle: SeminarBriefBundle? = null,
+        transcriptBundles: List<TranscriptExportBundle> = emptyList(),
+        summaryDrafts: List<SummaryDraft> = emptyList(),
         isMediaReadable: suspend (String) -> Boolean,
     ): SeminarExportDocument {
         val slug = detail.title.toExportSlug(detail.id)
@@ -75,6 +84,8 @@ class SeminarExportAssembler @Inject constructor() {
             abstractText = detail.abstractText,
             recordingSummary = recordings.recordingSummary(),
             brief = exportBrief,
+            transcripts = transcriptBundles.toExportTranscripts(),
+            summaryDrafts = summaryDrafts.toExportSummaryDrafts(),
             timelineItems = timelineItems,
             mediaAssets = assets.distinctBy { it.exportRelativePath },
             skippedMedia = skipped.distinct(),
@@ -152,6 +163,78 @@ class SeminarExportAssembler @Inject constructor() {
             keySlides = slideItems,
         )
     }
+}
+
+data class TranscriptExportBundle(
+    val transcript: Transcript,
+    val segments: List<TranscriptSegment>,
+    val timelineWindows: List<com.yuukias.seminararc.domain.usecase.TranscriptTimelineWindow>,
+)
+
+private fun List<TranscriptExportBundle>.toExportTranscripts(): List<ExportTranscript> {
+    return sortedWith(compareByDescending<TranscriptExportBundle> { it.transcript.updatedAt }.thenByDescending { it.transcript.id })
+        .map { bundle ->
+            ExportTranscript(
+                id = bundle.transcript.id,
+                recordingId = bundle.transcript.recordingId,
+                providerId = bundle.transcript.providerId,
+                providerVersion = bundle.transcript.providerVersion,
+                languageHint = bundle.transcript.languageHint,
+                state = bundle.transcript.state,
+                sourceType = bundle.transcript.sourceType,
+                errorMessage = bundle.transcript.errorMessage,
+                segments = bundle.segments
+                    .sortedWith(compareBy<TranscriptSegment> { it.startOffsetMs }.thenBy { it.endOffsetMs }.thenBy { it.id })
+                    .map { segment ->
+                        ExportTranscriptSegment(
+                            id = segment.id,
+                            recordingId = segment.recordingId,
+                            startOffsetMs = segment.startOffsetMs,
+                            endOffsetMs = segment.endOffsetMs,
+                            speakerLabel = segment.speakerLabel,
+                            language = segment.language,
+                            text = segment.text,
+                            confidence = segment.confidence,
+                            isEdited = segment.isEdited,
+                        )
+                    },
+                timelineWindows = bundle.timelineWindows
+                    .sortedWith(compareBy({ it.event.offsetMs }, { it.event.createdAt }, { it.event.id }))
+                    .map { window ->
+                        ExportTranscriptTimelineWindow(
+                            eventType = window.event.type,
+                            eventOffsetMs = window.event.offsetMs,
+                            windowStartOffsetMs = window.windowStartOffsetMs,
+                            windowEndOffsetMs = window.windowEndOffsetMs,
+                            previewText = window.previewText,
+                            segmentIds = window.segments.map { it.id },
+                            photoPath = window.photoAsset?.relativePath ?: window.event.photoPath,
+                        )
+                    },
+            )
+        }
+}
+
+private fun List<SummaryDraft>.toExportSummaryDrafts(): List<ExportSummaryDraft> {
+    return sortedWith(compareByDescending<SummaryDraft> { it.updatedAt }.thenByDescending { it.id })
+        .map { draft ->
+            ExportSummaryDraft(
+                id = draft.id,
+                providerId = draft.providerId,
+                inputFingerprint = draft.inputFingerprint,
+                state = draft.state,
+                backgroundContext = draft.backgroundContext,
+                coreQuestion = draft.coreQuestion,
+                methods = draft.methods,
+                mainResults = draft.mainResults,
+                keyTakeaways = draft.keyTakeaways,
+                unresolvedQuestions = draft.unresolvedQuestions,
+                followUpActions = draft.followUpActions,
+                userNotes = draft.userNotes,
+                provenanceJson = draft.provenanceJson,
+                errorMessage = draft.errorMessage,
+            )
+        }
 }
 
 private fun String.fileName(): String = substringAfterLast('/').ifBlank { "media" }

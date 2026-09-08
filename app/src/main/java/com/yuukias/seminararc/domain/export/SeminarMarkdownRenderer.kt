@@ -3,7 +3,10 @@ package com.yuukias.seminararc.domain.export
 import com.yuukias.seminararc.domain.model.ClipState
 import com.yuukias.seminararc.domain.model.ExportMediaKind
 import com.yuukias.seminararc.domain.model.SeminarExportDocument
+import com.yuukias.seminararc.domain.model.SummaryDraftState
 import com.yuukias.seminararc.domain.model.TimelineEventType
+import com.yuukias.seminararc.domain.model.TranscriptState
+import java.util.Locale
 import javax.inject.Inject
 
 class SeminarMarkdownRenderer @Inject constructor() {
@@ -26,6 +29,8 @@ class SeminarMarkdownRenderer @Inject constructor() {
         appendLine("## Recording")
         appendLine()
         appendLine(document.recordingSummary)
+        appendTranscripts(document)
+        appendSummaryDrafts(document)
         document.brief?.let { brief ->
             appendLine()
             appendLine("## Seminar Brief")
@@ -105,6 +110,95 @@ class SeminarMarkdownRenderer @Inject constructor() {
         appendLine()
         appendLine(value.takeIf { it.isNotBlank() }?.escapeInline() ?: "Not provided.")
         appendLine()
+    }
+
+    private fun StringBuilder.appendTranscripts(document: SeminarExportDocument) {
+        appendLine()
+        appendLine("## Transcript Review")
+        appendLine()
+        if (document.transcripts.isEmpty()) {
+            appendLine("No transcript review data.")
+            return
+        }
+        document.transcripts.forEach { transcript ->
+            appendLine("### Transcript ${transcript.id}")
+            appendLine()
+            appendLine("- Provider: `${transcript.providerId.escapeInline()}` `${transcript.providerVersion.escapeInline()}`")
+            appendLine("- State: ${transcript.state.name}")
+            appendLine("- Source: ${transcript.sourceType.name}")
+            appendLine("- Language hint: ${transcript.languageHint.name}")
+            transcript.recordingId?.let { appendLine("- Recording id: `$it`") }
+            transcript.errorMessage?.takeIf { it.isNotBlank() }?.let { appendLine("- Error: ${it.escapeInline()}") }
+            appendLine()
+            if (transcript.segments.isEmpty()) {
+                appendLine("No transcript segments.")
+            } else {
+                transcript.segments.forEach { segment ->
+                    append("- `${formatDuration(segment.startOffsetMs)}-${formatDuration(segment.endOffsetMs)}`")
+                    segment.speakerLabel?.takeIf { it.isNotBlank() }?.let { append(" **${it.escapeInline()}**") }
+                    append(" ${segment.text.escapeInline()}")
+                    val annotations = listOfNotNull(
+                        segment.language?.takeIf { it.isNotBlank() }?.let { "lang=$it" },
+                        segment.confidence?.let { "confidence=${"%.2f".format(Locale.US, it)}" },
+                        "edited=${segment.isEdited}",
+                    )
+                    appendLine(" (${annotations.joinToString(", ")})")
+                }
+            }
+            if (transcript.state == TranscriptState.READY) {
+                appendLine()
+                appendLine("#### Timeline windows")
+                appendLine()
+                if (transcript.timelineWindows.isEmpty()) {
+                    appendLine("No timeline windows matched this transcript.")
+                } else {
+                    transcript.timelineWindows.forEach { window ->
+                        appendLine("- `${formatDuration(window.eventOffsetMs)}` **${window.eventType.label()}** window `${formatDuration(window.windowStartOffsetMs)}-${formatDuration(window.windowEndOffsetMs)}`")
+                        window.previewText.takeIf { it.isNotBlank() }?.let { appendLine("  - Preview: ${it.escapeInline()}") }
+                        if (window.segmentIds.isNotEmpty()) {
+                            appendLine("  - Segment ids: ${window.segmentIds.joinToString(", ") { "`$it`" }}")
+                        }
+                        window.photoPath?.let { appendLine("  - Source photo: `${it.escapeInline()}`") }
+                    }
+                }
+            }
+            appendLine()
+        }
+    }
+
+    private fun StringBuilder.appendSummaryDrafts(document: SeminarExportDocument) {
+        appendLine()
+        appendLine("## Generated Summary Drafts")
+        appendLine()
+        appendLine("These are editable generated drafts and do not replace the user-authored Seminar Brief.")
+        appendLine()
+        if (document.summaryDrafts.isEmpty()) {
+            appendLine("No generated summary drafts.")
+            return
+        }
+        document.summaryDrafts.forEach { draft ->
+            appendLine("### Draft ${draft.id}")
+            appendLine()
+            appendLine("- Provider: `${draft.providerId.escapeInline()}`")
+            appendLine("- State: ${draft.state.name}")
+            appendLine("- Input fingerprint: `${draft.inputFingerprint.escapeInline()}`")
+            draft.errorMessage?.takeIf { it.isNotBlank() }?.let { appendLine("- Error: ${it.escapeInline()}") }
+            if (draft.state == SummaryDraftState.READY || draft.state == SummaryDraftState.DRAFT) {
+                appendLine()
+                appendBriefSection("Background", draft.backgroundContext)
+                appendBriefSection("Core question", draft.coreQuestion)
+                appendBriefSection("Methods", draft.methods)
+                appendBriefSection("Main results", draft.mainResults)
+                appendBriefSection("Key takeaways", draft.keyTakeaways)
+                appendBriefSection("Unresolved questions", draft.unresolvedQuestions)
+                appendBriefSection("Follow-up actions", draft.followUpActions)
+                appendBriefSection("User notes", draft.userNotes)
+            }
+            draft.provenanceJson.takeIf { it.isNotBlank() }?.let {
+                appendLine("- Provenance: `${it.escapeInline()}`")
+            }
+            appendLine()
+        }
     }
 }
 
