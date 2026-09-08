@@ -197,6 +197,14 @@ class SeminarDetailViewModel @Inject constructor(
         exportToUri { exportRepository.writeNotionReadyMarkdown(seminarId, uriString) }
     }
 
+    fun onBibTeXDestinationSelected(uriString: String) {
+        exportToUri { exportRepository.writeBibTeX(seminarId, uriString) }
+    }
+
+    fun onRisDestinationSelected(uriString: String) {
+        exportToUri { exportRepository.writeRis(seminarId, uriString) }
+    }
+
     fun onZipDestinationSelected(uriString: String) {
         exportToUri { exportRepository.writeZip(seminarId, uriString) }
     }
@@ -207,6 +215,14 @@ class SeminarDetailViewModel @Inject constructor(
 
     fun onShareNotionReadyMarkdownClicked() {
         share { exportRepository.prepareNotionReadyMarkdownShare(seminarId) }
+    }
+
+    fun onShareBibTeXClicked() {
+        share { exportRepository.prepareBibTeXShare(seminarId) }
+    }
+
+    fun onShareRisClicked() {
+        share { exportRepository.prepareRisShare(seminarId) }
     }
 
     fun onShareZipClicked() {

@@ -295,9 +295,13 @@ private class DetailFakeExportRepository : SeminarExportRepository {
     override suspend fun buildExportPackage(seminarId: Long): com.yuukias.seminararc.domain.model.SeminarExportPackage? = null
     override suspend fun writeMarkdown(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
     override suspend fun writeNotionReadyMarkdown(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
+    override suspend fun writeBibTeX(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
+    override suspend fun writeRis(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
     override suspend fun writeZip(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
     override suspend fun prepareMarkdownShare(seminarId: Long): ExportShareResult = ExportShareResult.TextReady("markdown", "text/markdown", "seminar.md")
     override suspend fun prepareNotionReadyMarkdownShare(seminarId: Long): ExportShareResult = ExportShareResult.TextReady("notion", "text/markdown", "seminar-notion-ready.md")
+    override suspend fun prepareBibTeXShare(seminarId: Long): ExportShareResult = ExportShareResult.TextReady("bib", "application/x-bibtex", "references.bib")
+    override suspend fun prepareRisShare(seminarId: Long): ExportShareResult = ExportShareResult.TextReady("ris", "application/x-research-info-systems", "references.ris")
     override suspend fun prepareZipShare(seminarId: Long): ExportShareResult = ExportShareResult.Failed("Not used")
 }
 

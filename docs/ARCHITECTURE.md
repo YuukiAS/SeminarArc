@@ -154,6 +154,8 @@ Room version `7` adds `formula_regions` and `formula_results`. `FormulaDao` expo
 
 `SeminarBibliographyRenderer` generates deterministic BibTeX and RIS text from `SeminarExportDocument.brief.references`. The export assembler only populates those references from the confirmed Seminar Brief bundle, and ZIP export writes `references.bib` / `references.ris` only when at least one confirmed reference exists. Pending or rejected candidates are never promoted into bibliography artifacts.
 
+Seminar Detail exposes local save/share entry points for BibTeX and RIS through `SeminarExportRepository.writeBibTeX`, `writeRis`, `prepareBibTeXShare`, and `prepareRisShare`. These paths write or share text only when confirmed references exist; otherwise the repository returns a local failure message instead of creating an empty artifact.
+
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 
 ## Reference Candidate and Seminar Brief

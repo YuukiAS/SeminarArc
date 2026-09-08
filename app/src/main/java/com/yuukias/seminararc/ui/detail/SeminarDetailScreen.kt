@@ -112,6 +112,12 @@ fun SeminarDetailScreen(
     val notionReadyMarkdownExportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/markdown"),
     ) { uri -> uri?.let { viewModel.onNotionReadyMarkdownDestinationSelected(it.toString()) } }
+    val bibTeXExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/x-bibtex"),
+    ) { uri -> uri?.let { viewModel.onBibTeXDestinationSelected(it.toString()) } }
+    val risExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/x-research-info-systems"),
+    ) { uri -> uri?.let { viewModel.onRisDestinationSelected(it.toString()) } }
     val zipExportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
     ) { uri -> uri?.let { viewModel.onZipDestinationSelected(it.toString()) } }
@@ -168,9 +174,13 @@ fun SeminarDetailScreen(
         onOpenReconstruction = { ready -> onOpenReconstruction(ready.detail.id) },
         onSaveMarkdown = { markdownExportLauncher.launch("seminar.md") },
         onSaveNotionReadyMarkdown = { notionReadyMarkdownExportLauncher.launch("seminar-notion-ready.md") },
+        onSaveBibTeX = { bibTeXExportLauncher.launch("references.bib") },
+        onSaveRis = { risExportLauncher.launch("references.ris") },
         onSaveZip = { zipExportLauncher.launch("seminar.zip") },
         onShareMarkdown = viewModel::onShareMarkdownClicked,
         onShareNotionReadyMarkdown = viewModel::onShareNotionReadyMarkdownClicked,
+        onShareBibTeX = viewModel::onShareBibTeXClicked,
+        onShareRis = viewModel::onShareRisClicked,
         onShareZip = viewModel::onShareZipClicked,
         onPlaybackPlayPause = viewModel::onPlaybackPlayPauseClicked,
         onPlaybackSeek = viewModel::onPlaybackSeek,
@@ -194,9 +204,13 @@ fun SeminarDetailScreenContent(
     onOpenReconstruction: (SeminarDetailUiState.Ready) -> Unit,
     onSaveMarkdown: () -> Unit,
     onSaveNotionReadyMarkdown: () -> Unit,
+    onSaveBibTeX: () -> Unit,
+    onSaveRis: () -> Unit,
     onSaveZip: () -> Unit,
     onShareMarkdown: () -> Unit,
     onShareNotionReadyMarkdown: () -> Unit,
+    onShareBibTeX: () -> Unit,
+    onShareRis: () -> Unit,
     onShareZip: () -> Unit,
     onPlaybackPlayPause: () -> Unit,
     onPlaybackSeek: (Long) -> Unit,
@@ -284,9 +298,13 @@ fun SeminarDetailScreenContent(
                         exportMessage = uiState.exportMessage,
                         onSaveMarkdown = onSaveMarkdown,
                         onSaveNotionReadyMarkdown = onSaveNotionReadyMarkdown,
+                        onSaveBibTeX = onSaveBibTeX,
+                        onSaveRis = onSaveRis,
                         onSaveZip = onSaveZip,
                         onShareMarkdown = onShareMarkdown,
                         onShareNotionReadyMarkdown = onShareNotionReadyMarkdown,
+                        onShareBibTeX = onShareBibTeX,
+                        onShareRis = onShareRis,
                         onShareZip = onShareZip,
                     )
                     TextButton(
@@ -334,9 +352,13 @@ private fun SeminarExportSection(
     exportMessage: String?,
     onSaveMarkdown: () -> Unit,
     onSaveNotionReadyMarkdown: () -> Unit,
+    onSaveBibTeX: () -> Unit,
+    onSaveRis: () -> Unit,
     onSaveZip: () -> Unit,
     onShareMarkdown: () -> Unit,
     onShareNotionReadyMarkdown: () -> Unit,
+    onShareBibTeX: () -> Unit,
+    onShareRis: () -> Unit,
     onShareZip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -378,6 +400,24 @@ private fun SeminarExportSection(
                 Icon(Icons.Outlined.SaveAlt, contentDescription = null)
                 Text("Save Notion-ready Markdown")
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.space3)) {
+                TextButton(
+                    onClick = onSaveBibTeX,
+                    enabled = !isExporting,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Outlined.SaveAlt, contentDescription = null)
+                    Text("BibTeX")
+                }
+                TextButton(
+                    onClick = onSaveRis,
+                    enabled = !isExporting,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Outlined.SaveAlt, contentDescription = null)
+                    Text("RIS")
+                }
+            }
             Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
                 TextButton(
                     onClick = onShareMarkdown,
@@ -394,6 +434,22 @@ private fun SeminarExportSection(
                 ) {
                     Icon(Icons.Outlined.Share, contentDescription = null)
                     Text("Share Notion-ready Markdown")
+                }
+                TextButton(
+                    onClick = onShareBibTeX,
+                    enabled = !isExporting,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Share, contentDescription = null)
+                    Text("Share BibTeX")
+                }
+                TextButton(
+                    onClick = onShareRis,
+                    enabled = !isExporting,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Share, contentDescription = null)
+                    Text("Share RIS")
                 }
                 TextButton(
                     onClick = onShareZip,

@@ -64,9 +64,13 @@ class SeminarDetailScreenTest {
                     onOpenReconstruction = { _ -> },
                     onSaveMarkdown = {},
                     onSaveNotionReadyMarkdown = {},
+                    onSaveBibTeX = {},
+                    onSaveRis = {},
                     onSaveZip = {},
                     onShareMarkdown = {},
                     onShareNotionReadyMarkdown = {},
+                    onShareBibTeX = {},
+                    onShareRis = {},
                     onShareZip = {},
                     onPlaybackPlayPause = {},
                     onPlaybackSeek = { _ -> },
@@ -76,7 +80,11 @@ class SeminarDetailScreenTest {
 
         composeRule.onNodeWithText("No abstract PDF attached. This seminar remains valid and can be completed without it.").assertIsDisplayed()
         composeRule.onNodeWithText("Save Notion-ready Markdown").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("BibTeX").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("RIS").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Share Notion-ready Markdown").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Share BibTeX").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Share RIS").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Share ZIP").performScrollTo().assertIsDisplayed()
     }
 }

@@ -111,6 +111,18 @@ class SeminarExportRepositoryImpl @Inject constructor(
         writeUri(uriString) { output -> output.write(markdown.toByteArray(Charsets.UTF_8)) }
     }
 
+    override suspend fun writeBibTeX(seminarId: Long, uriString: String): ExportWriteResult = withContext(Dispatchers.IO) {
+        val export = buildExportPackage(seminarId) ?: return@withContext ExportWriteResult.Failed("Seminar was not found.")
+        val bibTeX = export.bibTeX ?: return@withContext ExportWriteResult.Failed("No confirmed references to export.")
+        writeUri(uriString) { output -> output.write(bibTeX.toByteArray(Charsets.UTF_8)) }
+    }
+
+    override suspend fun writeRis(seminarId: Long, uriString: String): ExportWriteResult = withContext(Dispatchers.IO) {
+        val export = buildExportPackage(seminarId) ?: return@withContext ExportWriteResult.Failed("Seminar was not found.")
+        val ris = export.ris ?: return@withContext ExportWriteResult.Failed("No confirmed references to export.")
+        writeUri(uriString) { output -> output.write(ris.toByteArray(Charsets.UTF_8)) }
+    }
+
     override suspend fun writeZip(seminarId: Long, uriString: String): ExportWriteResult = withContext(Dispatchers.IO) {
         val export = buildExportPackage(seminarId) ?: return@withContext ExportWriteResult.Failed("Seminar was not found.")
         val bytes = zipBytes(export)
@@ -133,6 +145,28 @@ class SeminarExportRepositoryImpl @Inject constructor(
             mimeType = "text/markdown",
             title = "${export.document.slug}-notion-ready.md",
         )
+    }
+
+    override suspend fun prepareBibTeXShare(seminarId: Long): ExportShareResult {
+        val export = buildExportPackage(seminarId) ?: return ExportShareResult.Failed("Seminar was not found.")
+        return export.bibTeX?.let { bibTeX ->
+            ExportShareResult.TextReady(
+                text = bibTeX,
+                mimeType = BIBTEX_MIME_TYPE,
+                title = "${export.document.slug}.bib",
+            )
+        } ?: ExportShareResult.Failed("No confirmed references to export.")
+    }
+
+    override suspend fun prepareRisShare(seminarId: Long): ExportShareResult {
+        val export = buildExportPackage(seminarId) ?: return ExportShareResult.Failed("Seminar was not found.")
+        return export.ris?.let { ris ->
+            ExportShareResult.TextReady(
+                text = ris,
+                mimeType = RIS_MIME_TYPE,
+                title = "${export.document.slug}.ris",
+            )
+        } ?: ExportShareResult.Failed("No confirmed references to export.")
     }
 
     override suspend fun prepareZipShare(seminarId: Long): ExportShareResult = withContext(Dispatchers.IO) {
@@ -165,6 +199,11 @@ class SeminarExportRepositoryImpl @Inject constructor(
         } catch (throwable: Throwable) {
             ExportWriteResult.Failed(throwable.message ?: "Export failed.")
         }
+    }
+
+    private companion object {
+        const val BIBTEX_MIME_TYPE = "application/x-bibtex"
+        const val RIS_MIME_TYPE = "application/x-research-info-systems"
     }
 
 }
