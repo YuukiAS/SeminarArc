@@ -376,7 +376,8 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 
 - 已建立 Room v5 transcript/schema foundation：`transcripts`、`transcript_segments`、`summary_drafts`、`MIGRATION_4_5` 和 schema `5.json`。
 - 已预留 `TRANSCRIPTION`、`SUMMARY_DRAFT`、`NOTION_EXPORT_PREP` processing job 类型。
-- 已新增本地安全的 `TranscriptionProvider` / `SummaryProvider` domain contract 和 fake-provider JVM contract tests；真实 provider、repository processing 和 UI 尚未完成。
+- 已新增本地安全的 `TranscriptionProvider` / `SummaryProvider` domain contract 和 fake-provider JVM contract tests；真实 provider、后台队列和 UI 尚未完成。
+- 已新增 transcript repository / processing foundation：`TranscriptDao`、`TranscriptRepositoryImpl` 和 `RunTranscriptionForRecordingUseCase` 可用 fake/local provider 从已完成录音保存 timestamped segments。
 
 范围：
 

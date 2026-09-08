@@ -109,6 +109,18 @@ Local OCR now uses `MlKitTextOcrProvider` behind `TextOcrProvider`. The first im
 
 Compose screens continue to call ViewModels for app actions. ViewModels call repository/use-case boundaries. Workers/use cases call providers and persist results. No composable reads Room, ML Kit, or bitmap processing providers directly.
 
+## Transcription and Summary Foundation
+
+`0.4.x` starts with provider-independent local persistence and contracts:
+
+- Room version `5` adds `transcripts`, `transcript_segments`, and `summary_drafts`.
+- `TranscriptDao` and `TranscriptRepositoryImpl` own transcript rows, timestamped segments, and summary draft persistence.
+- `TranscriptionProvider` and `SummaryProvider` are domain contracts; first tests use fake providers only.
+- `RunTranscriptionForRecordingUseCase` reads completed recordings through `RecordingRepository`, resolves app-private recording files through `MediaStorageManager`, finds the recording asset through `ReconstructionRepository`, and writes transcript lifecycle/segments through `TranscriptRepository`.
+- `TRANSCRIPTION`, `SUMMARY_DRAFT`, and `NOTION_EXPORT_PREP` are now durable processing job types, but the existing image/OCR WorkManager scheduler does not yet execute those future job types.
+
+This foundation does not ship a real ASR engine, cloud transcription, live Notion OAuth/upload, or AI summary runtime yet.
+
 ## Reference Candidate and Seminar Brief
 
 `0.3.x` adds the opt-in research metadata layer on top of local reconstruction while keeping user media local by default:

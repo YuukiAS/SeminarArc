@@ -35,6 +35,10 @@ class RecordingRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getRecording(recordingId: Long): RecordingSession? {
+        return recordingDao.getRecording(recordingId)?.toDomain()
+    }
+
     override suspend fun beginRecordingForActiveSeminar(
         seminarId: Long,
         filePath: String,

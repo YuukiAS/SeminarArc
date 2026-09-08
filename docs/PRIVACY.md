@@ -47,6 +47,13 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - 未来任何 cloud provider 都必须由用户主动触发，并在上传前显示 provider、资产范围、费用/配额和删除语义。
 - 应用自有 commercial API secret 不得嵌入 APK。
 
+## 0.4.x 转写/总结基础边界
+
+- `0.4.x` 当前只新增 transcript/summary 的本地 Room schema、repository、provider contract 和 fake-provider tests。
+- `RunTranscriptionForRecordingUseCase` 只处理 app-owned completed recording，并通过 `MediaStorageManager` 解析本地文件；不会自动上传录音。
+- 当前没有接入真实 ASR provider、AI summary runtime、Notion live OAuth/upload、backend、private API credential 或 recurring-cost service。
+- 后续任何 cloud transcription、AI summary 或 Notion upload 都必须保持 opt-in，并在上传前显示 provider、素材范围、费用/配额、删除语义和 credential/backend 边界。
+
 ## 0.3.x Reference Lookup 边界
 
 - `0.3.x` 已加入 opt-in reference metadata lookup：必须由用户在 Reference Candidate Review 中显式触发，不能在打开 seminar、运行 OCR 或导出时自动联网。

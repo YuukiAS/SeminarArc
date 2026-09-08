@@ -17,6 +17,8 @@ interface RecordingRepository {
         }
     }
 
+    suspend fun getRecording(recordingId: Long): RecordingSession? = null
+
     suspend fun beginRecordingForActiveSeminar(
         seminarId: Long,
         filePath: String,

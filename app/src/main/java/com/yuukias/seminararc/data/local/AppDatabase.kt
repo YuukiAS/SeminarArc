@@ -10,6 +10,7 @@ import com.yuukias.seminararc.data.local.dao.ReconstructionDao
 import com.yuukias.seminararc.data.local.dao.RecordingDao
 import com.yuukias.seminararc.data.local.dao.SeminarDao
 import com.yuukias.seminararc.data.local.dao.TimelineDao
+import com.yuukias.seminararc.data.local.dao.TranscriptDao
 import com.yuukias.seminararc.data.local.entity.AssetTagEntity
 import com.yuukias.seminararc.data.local.entity.BriefKeySlideEntity
 import com.yuukias.seminararc.data.local.entity.BriefReferenceEntity
@@ -63,4 +64,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun clipDao(): ClipDao
     abstract fun reconstructionDao(): ReconstructionDao
     abstract fun referenceDao(): ReferenceDao
+    abstract fun transcriptDao(): TranscriptDao
 }

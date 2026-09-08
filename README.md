@@ -42,11 +42,12 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.3.1-internal` 分发基础：internal build identity 使用 `com.yuukias.seminararc.internal`，默认 `versionName = 0.3.1-internal.1`、`versionCode = 30101`，签名凭据只从 repo 外 Windows local secret store 或环境变量读取。用户 APK 下载入口见 `docs/INTERNAL_DISTRIBUTION.md`。
 - `0.4.x` schema foundation：Room version 5 新增 transcript、timestamped transcript segment 和 summary draft 本地表，为后续 provider-independent 转写/总结/Notion export pipeline 提供持久化边界。
 - `0.4.x` provider contract foundation：新增本地安全的 `TranscriptionProvider` 与 `SummaryProvider` domain contract，并用 fake-provider JVM tests 固定 timestamp、selected input、provenance 和 retryability 语义。
+- `0.4.x` transcript repository foundation：新增 `TranscriptDao` / `TranscriptRepository` / `RunTranscriptionForRecordingUseCase`，可通过 fake/local provider 从已完成本地录音保存 timestamped transcript segments。
 
 尚未声明完成：
 
 - 非破坏性真机完整 E2E 验收：创建 seminar、录音、拍照、timeline、clip、重启后持久化、离线导出和删除清理仍需在用户授权的设备会话中执行。
-- 真实转写 provider 接入、AI 总结生成运行时、Notion live OAuth/upload、cloud sync、公式 OCR、广告或支付。
+- 真实 ASR provider 接入、后台转写队列 UI、AI 总结生成运行时、Notion live OAuth/upload、cloud sync、公式 OCR、广告或支付。
 
 ## 文档入口
 

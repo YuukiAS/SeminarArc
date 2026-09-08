@@ -16,12 +16,14 @@ import com.yuukias.seminararc.data.local.dao.ReconstructionDao
 import com.yuukias.seminararc.data.local.dao.RecordingDao
 import com.yuukias.seminararc.data.local.dao.SeminarDao
 import com.yuukias.seminararc.data.local.dao.TimelineDao
+import com.yuukias.seminararc.data.local.dao.TranscriptDao
 import com.yuukias.seminararc.data.repository.ReconstructionRepositoryImpl
 import com.yuukias.seminararc.data.repository.ReferenceRepositoryImpl
 import com.yuukias.seminararc.data.repository.RecordingRepositoryImpl
 import com.yuukias.seminararc.data.repository.SeminarRepositoryImpl
 import com.yuukias.seminararc.data.repository.ClipRepositoryImpl
 import com.yuukias.seminararc.data.repository.TimelineRepositoryImpl
+import com.yuukias.seminararc.data.repository.TranscriptRepositoryImpl
 import com.yuukias.seminararc.data.storage.AppMediaStorageManager
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.image.ImageEnhancementProvider
@@ -34,6 +36,7 @@ import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.SeminarExportRepository
 import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
+import com.yuukias.seminararc.domain.repository.TranscriptRepository
 import com.yuukias.seminararc.media.clip.AndroidM4aClipGenerator
 import com.yuukias.seminararc.media.clip.ClipGenerator
 import com.yuukias.seminararc.media.clip.ClipWorkScheduler
@@ -100,6 +103,9 @@ object DatabaseModule {
     fun provideReferenceDao(database: AppDatabase): ReferenceDao = database.referenceDao()
 
     @Provides
+    fun provideTranscriptDao(database: AppDatabase): TranscriptDao = database.transcriptDao()
+
+    @Provides
     @Singleton
     fun provideClockProvider(): ClockProvider = ClockProvider(java.time.Instant::now)
 }
@@ -162,6 +168,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindReferenceRepository(impl: ReferenceRepositoryImpl): ReferenceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindTranscriptRepository(impl: TranscriptRepositoryImpl): TranscriptRepository
 
     @Binds
     @Singleton
