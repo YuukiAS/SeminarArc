@@ -6,7 +6,7 @@ created: 2026-09-08
 allow_code_change: true
 allow_shell_command: true
 allow_network: true
-allow_external_upload: false
+allow_external_upload: true
 requires_human_approval: false
 ---
 
@@ -14,220 +14,162 @@ requires_human_approval: false
 
 ## Objective
 
-在用户无法频繁参与接力时，按仓库 roadmap 尽可能自动推进 SeminarArc，从已完成的 `0.3.x` 开始，优先完成 internal dogfood 分发，然后依次推进 `0.4.x` 与 `0.5.x` 的 readiness -> implementation -> Emulator closeout。
+在用户无法频繁参与接力时，按仓库 roadmap 尽可能自动推进 SeminarArc：先完成 `0.3.1-internal` 可下载安装分发，再依次推进 `0.4.x`、`0.5.x` 的 readiness -> implementation -> Emulator closeout -> GitHub Release APK。
 
-不要自动进入 Google Play/public release。`0.9.x` 只允许准备 readiness/audit，不允许执行生产签名、Play Console、公开发布或 ads/payment。
+不要自动进入 Google Play/public release。`0.9.x` 只允许 readiness/audit，不允许生产签名、Play Console、公开发布或 ads/payment。
 
 ## Source of truth
 
 - GitHub `origin/main` 是唯一源码事实来源。
-- 开始时必须同步最新 `main`。
-- 读取并遵守：
-  - `AGENTS.md`
-  - `prompts/AGENT_RULES.md`
-  - `prompts/CHATGPT_RULES.md`
-  - `docs/plans/post-0.3-autonomous-roadmap.md`
-  - `README.md`
-  - `TODO.md`
-  - `CHANGELOG.md`
-  - `docs/ARCHITECTURE.md`
-  - `docs/PRIVACY.md`
-  - `docs/DEVICE_TESTING.md`
-  - 当前 design/plans/task/results
+- 开始时同步最新 `main`。
+- 必须读取：`AGENTS.md`、`prompts/AGENT_RULES.md`、`prompts/CHATGPT_RULES.md`、`docs/plans/post-0.3-autonomous-roadmap.md`、README/TODO/CHANGELOG/ARCHITECTURE/PRIVACY/DEVICE_TESTING 与当前 design/plans/tasks/results。
 
 ## Execution environment
 
-需要 connected/instrumentation/packaging 时优先使用 Windows native checkout：
+Windows native checkout：`D:\Code\SeminarArc-emulator`
 
-`D:\Code\SeminarArc-emulator`
+Windows SDK：`D:\Android\Sdk`
 
-Windows SDK：
+JDK 17：`D:\Code\_jdks\jdk-17.0.20.1+1`
 
-`D:\Android\Sdk`
+Windows Emulator 是默认 connected/instrumentation target。GM1910 不参与日常开发/CI。
 
-已验证 JDK 17：
+如果当前是 WSL 且 Windows-only gate 暂时不可用：继续 research/docs/headless/code-safe 工作，把 connected/release gate 留给后续 Windows native 阶段；不得通过 usbipd/WSL transport/physical device 绕过。
 
-`D:\Code\_jdks\jdk-17.0.20.1+1`
+## Release distribution policy
 
-Windows Emulator 是默认 connected target。GM1910 不参与日常自动开发/CI。
+**GitHub Releases 是用户 APK 下载入口；GitHub Actions 不是 APK 分发依赖。**
 
-如果当前运行环境是 WSL 且某个 Windows-only gate 暂时无法执行：
+Accepted milestone 的 APK 流程：
 
-- 继续所有 headless/research/docs/code-safe 工作；
-- 把 Windows connected/packaging gate留到下一次 Windows native阶段；
-- 不得通过修改 usbipd、重启 WSL 或触碰 protected physical device 来绕过。
+1. Windows 本地 build/test/lint；
+2. Windows Emulator connected closeout；
+3. package/version/signature/secret scan；
+4. 使用稳定 repo 外 internal signer 签名；
+5. 计算 SHA-256；
+6. commit + push main；
+7. 创建 version tag；
+8. 本地通过 `gh release create/upload` 或等价 GitHub API 创建 prerelease；
+9. 上传已签名 APK + `.sha256` + release notes。
+
+用户已明确授权：可以把 SeminarArc internal/pre-release APK、checksum 和 release notes 上传到本仓库 GitHub Releases。禁止上传用户数据、测试媒体、keystore/private key/password/token。
+
+GitHub Actions 仅保留 ordinary CI。不要为了 APK 发布新增每次 push 都运行的 packaging workflow。
 
 ## Phase A — 0.3.1 Internal Dogfood
 
-先执行现有 task：
+执行：
 
 `prompts/tasks/0.3.1_internal_dogfood_distribution_task.md`
 
-目标是让用户可以从 GitHub 下载并侧载 SeminarArc Internal APK。
+目标：用户从 GitHub `Releases` 直接下载 APK 并侧载。
 
-如果稳定 internal signing secrets 尚未提供：
+需要：
 
-- 完成所有可自动完成的 build variant/workflow/docs/artifact工作；
-- 明确一项一次性 human signing-secret action；
-- 不把 secret 缺失变成后续 `0.4.x`/`0.5.x` 开发 blocker。
+- versioning；
+- `.internal` identity；
+- Windows local build/sign；
+- Emulator regression；
+- release asset；
+- install/update docs。
+
+如果稳定 internal signer 尚不存在：完成所有其余工作，并把 signer 初始化列为一次性 human action；不要让它阻塞后续 roadmap。
 
 ## Phase B — 0.4.x Readiness
 
-在 `0.3.1` 可自动部分完成后，创建并执行一个明确的 `0.4.x` readiness task/result/plan。
-
-必须先研究，不能直接照 TODO 粗略描述写 production code。
-
-至少覆盖：
-
-1. transcription options：
-   - on-device/local/open-source/self-hosted/cloud；
-   - Android可行性、语言、timestamp、资源需求；
-   - license/commercial use；
-   - cost/privacy；
-   - cancel/retry/idempotency/offline；
-2. Room migration from current v4：transcript segment / provider job / provenance；
-3. transcript segment 与 recording offset/photo/timeline window 的关系；
-4. SummaryProvider boundary：输入选择、draft/provenance/edit semantics、禁止覆盖用户 Brief；
-5. Notion：Markdown-first、official API/OAuth、file upload、credential/backend边界；
-6. app-owned secret/backend requirements；
-7. privacy/network contract；
-8. UI/design flow；
-9. test/Emulator strategy；
-10. explicit scope and out-of-scope。
-
-使用会变化的 provider/API/license事实时必须联网查官方文档。
-
-Readiness result 必须是 `READINESS_PASS` 或 `READINESS_BLOCKED`。
-
-如果只有单个 provider/account 子路径 blocked，但 provider-independent/local-safe core 可以继续，则不要把整个 0.4.x 标记 blocked；应收缩实现 scope 并继续。
-
-## Phase C — 0.4.x Production
-
-如果 readiness gate PASS 且没有真正需要用户产品决策的冲突，自动创建 production master 并连续执行到 `0.4.x COMPLETE`。
-
-原则：
-
-- provider-independent domain first；
-- fake/provider contract tests before live integration；
-- local/self-hosted path优先于把 secret 塞 APK；
-- external cloud processing必须 opt-in；
-- Summary只产生 editable draft；
-- Notion若需要公共 OAuth/backend而当前不存在安全架构，可保留 Markdown-friendly export/provider boundary，并将真实 public integration延后；
-- 不为完成 roadmap 而嵌入私人 token/key；
-- 不上传用户 seminar 内容做 live smoke；
-- Windows Emulator closeout + 0.1/0.2/0.3 regression；
-- accepted milestone 后生成 internal APK artifact（若分发链可用）。
-
-## Phase D — 0.5.x Readiness
-
-完成 0.4.x 后自动进入 `0.5.x` readiness。
+在 0.3.1 可自动部分完成后创建并执行 `0.4.x` readiness task/result/plan。
 
 至少研究：
 
+1. transcription options：on-device/local/open-source/self-hosted/cloud、Android 可行性、语言/timestamp/资源/license/cost/privacy/cancel/retry/idempotency/offline；
+2. Room migration from v4；
+3. transcript segment 与 recording offset/photo/timeline window；
+4. SummaryProvider：selected input、draft/provenance/edit、不覆盖 manual Brief；
+5. Notion：Markdown-first、official API/OAuth/file upload/credential/backend；
+6. secrets/backend requirements；
+7. privacy/network；
+8. UI/design；
+9. test/Emulator；
+10. scope/out-of-scope。
+
+变化中的 provider/API/license 必须查官方文档。
+
+结果必须 `READINESS_PASS` / `READINESS_BLOCKED`。单个 provider/account 被阻塞时只冻结该子路径，不要拖死整个 0.4.x。
+
+## Phase C — 0.4.x Production
+
+Readiness PASS 后自动创建 production master 并连续执行到 `0.4.x COMPLETE`。
+
+原则：provider-independent domain first；fake/contract tests before live；local/self-hosted 优先；cloud processing opt-in；Summary 仅 editable draft；Notion 没有安全 OAuth/backend 时允许只做 Markdown-friendly/export boundary；不嵌入私人 key；不使用真实 seminar 内容做 live smoke。
+
+Closeout：Windows Emulator + 0.1/0.2/0.3 regression。通过后按 Release policy 发布 `0.4.x-internal.*` APK。
+
+## Phase D — 0.5.x Readiness
+
+完成 0.4.x 后自动进入 readiness，研究：
+
 - formula region selection UX；
 - Mathpix terms/cost/commercial/privacy；
-- licensable local/open/self-hosted formula OCR alternatives；
+- local/open/self-hosted formula OCR alternatives；
 - formula provider boundary；
 - LaTeX correction/provenance/confidence；
 - confirmed references -> BibTeX/RIS deterministic export；
-- Room/data model changes；
+- Room/data model；
 - privacy/secrets/backend；
-- Emulator testing；
-- explicit out-of-scope（Zotero account sync、paywalled scraping等）。
+- Emulator tests；
+- explicit out-of-scope。
 
-Paid API credential/account remains human-approval boundary. A blocked Mathpix account must not block local region-selection, provider contracts, BibTeX/RIS, or other safe work.
+Paid credential/account 是 human boundary；Mathpix blocked 不得阻止 region-selection/contracts/BibTeX/RIS 等 safe work。
 
 ## Phase E — 0.5.x Production
 
-If readiness passes, create and execute production master to `0.5.x COMPLETE` within the approved safe scope.
+Readiness PASS 后连续执行到 `0.5.x COMPLETE`。
 
-Closeout must include:
+Closeout 至少：JVM/build/lint、Windows Emulator connected、old Room migrations reopen current、0.1/0.2/0.3/0.4 regression、export golden tests、secret scan、docs/design/privacy/roadmap sync。
 
-- JVM/build/lint；
-- Windows Emulator connected regression；
-- old Room migrations reopen current；
-- 0.1/0.2/0.3/0.4 regression；
-- export golden tests；
-- secret scan；
-- docs/design/privacy/roadmap sync；
-- internal/pre-release APK artifact if signing/distribution channel is available。
+通过后按 Release policy 发布 `0.5.x-alpha.*` APK。
 
 ## Phase F — Stop before external release
 
-After 0.5.x completion, create a `0.9.x_release_readiness_report` only.
+0.5.x 完成后只创建 `0.9.x_release_readiness_report`。
 
-Do not automatically:
+禁止自动：
 
 - create/change production signing key；
-- manipulate Google Play Console；
+- Google Play Console；
 - publish privacy policy externally；
-- submit Data safety；
-- upload AAB to a public/testing track；
-- integrate ads/payment；
-- make public release。
-
-End master by reporting what one-time user approvals/accounts/secrets are needed for 0.9.x.
-
-## APK artifact policy
-
-Starting at 0.3.1:
-
-- each accepted internal milestone should produce a downloadable APK artifact when the signing/distribution setup permits；
-- artifact generation must be gated by build/tests/lint/secret scan appropriate to that stage；
-- transient live provider API failures must not prevent local APK production if code/tests are otherwise valid；
-- stable signer/application id is required for update-in-place；
-- never commit keystore/private key/password。
+- Data safety submission；
+- AAB track upload；
+- ads/payment；
+- public release。
 
 ## Autonomous behavior
 
-Within this master, Codex is explicitly authorized to create the needed subtask/result files for each roadmap phase and continue to the next phase without waiting for the user, provided no hard-stop condition occurs.
+Within this master，Codex 可创建所需 subtask/result 并在无 hard blocker 时连续进入下一阶段，不必等待用户。
 
-For each macro stage:
+每个宏阶段：
 
-research/readiness -> plan -> implementation -> tests -> Emulator closeout -> docs -> result -> commit -> push main -> continue.
+research/readiness -> plan -> implementation -> tests -> Emulator closeout -> docs/result -> commit/push -> local APK build/sign -> GitHub prerelease -> continue。
 
-Do not stop for ordinary:
-
-- compile failure；
-- unit/instrumentation failure；
-- lint failure；
-- parser/provider mock bug；
-- Emulator UI bug；
-- documentation drift；
-- temporary external provider failure when fixtures/fakes can verify contracts。
-
-Fix, retest, document and continue.
+普通 compile/unit/instrumentation/lint/parser/mock/Emulator/docs drift/temporary provider failure 均不是人工 blocker，应修复后继续。
 
 ## Hard stops / human approval
 
-Stop only the affected path, or the entire master if unavoidable, when one of these occurs:
+只在以下情况停止受影响路径或整个 master：
 
-- new paid provider/account/subscription is required for the only viable implementation；
-- app-owned backend or recurring cloud cost must be deployed；
-- new private API secret/credential must be provisioned；
-- destructive migration or credible user-data loss risk cannot be safely resolved；
-- production signing/Google Play/public release action；
-- physical-device write/install/instrumentation is the only remaining validation and has not been authorized；
-- major product scope/UX choice cannot be inferred from roadmap/design；
-- provider terms materially conflict with intended commercial/privacy model。
+- 唯一可行路径需要新 paid account/subscription；
+- 必须部署 recurring-cost backend；
+- 必须 provision 新 private API credential；
+- destructive migration / credible data-loss risk 无法安全解决；
+- production signing / Google Play / public release；
+- physical-device write/install/instrumentation 是唯一验证且未授权；
+- major product scope/UX conflict；
+- provider terms 与 commercial/privacy model 实质冲突。
 
-When a subpath is blocked but the rest is safe, continue the rest and report the blocked subpath rather than stalling the whole roadmap.
+稳定 internal signing key 的一次性初始化可以请求用户批准，但若只是影响 update-in-place/release signing，不应阻塞 0.4/0.5 代码开发。
 
 ## Final output
 
-Create:
+创建：`prompts/tasks/post_0.3_autonomous_roadmap_master_result.md`
 
-`prompts/tasks/post_0.3_autonomous_roadmap_master_result.md`
-
-Summarize:
-
-- completed version lines；
-- current Room version；
-- APK distribution status and download path；
-- stable signing status；
-- 0.4.x decisions/implementation；
-- 0.5.x decisions/implementation；
-- regression/test status；
-- known deferred hardware/provider work；
-- exact human approvals needed before 0.9.x；
-- final commit SHA。
+总结：completed versions、Room version、GitHub Release tags/assets、signing status、0.4/0.5 decisions/implementation、regression、deferred hardware/provider work、0.9.x 前所需 human approvals、final commit SHA。
