@@ -54,6 +54,7 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - `DraftSummaryForSeminarUseCase` 只把用户选择的 transcript segments、已确认 reference titles、key-slide captions 和 notes 交给抽象 `SummaryProvider`；当前没有真实 provider，也不会自动上传完整 transcript、照片、录音或完整 OCR corpus。
 - `BuildTranscriptTimelineWindowsUseCase` 只在本地把 ready transcript segments 与 timeline/photo offsets 做窗口关联，不引入网络、provider 或新权限。
 - `TranscriptReviewScreen` 只读取和展示本地 transcript、timeline windows 与 summary draft 状态；未接入真实 provider 时只显示未接线提示，不触发上传。
+- 手动 transcript import、segment edit 和 summary draft edit 都只写入本地 Room；不会调用 ASR、LLM、Notion、云上传或任何后台服务。
 - Markdown/ZIP 导出只读取本地 transcript、segments、timeline windows 和 summary drafts，并把 generated summary 明确标记为 editable draft；不会自动上传到 Notion 或任何 provider。
 - `TRANSCRIPTION` durable queue 可把完成录音排入本地 WorkManager；默认 `UnavailableTranscriptionProvider` 不读取网络、不上传音频、不产生假 transcript，只把 provider 未配置作为本地失败状态记录。
 - Transcript Review 的转写按钮只创建本地 durable job 和 snackbar 反馈；在配置真实 provider 前不会上传音频或产生自动 transcript。

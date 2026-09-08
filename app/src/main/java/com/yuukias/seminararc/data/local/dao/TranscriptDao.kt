@@ -60,6 +60,9 @@ interface TranscriptDao {
     @Update
     suspend fun updateSegment(entity: TranscriptSegmentEntity)
 
+    @Update
+    suspend fun updateSummaryDraft(entity: SummaryDraftEntity)
+
     @Query("DELETE FROM transcript_segments WHERE transcriptId = :transcriptId")
     suspend fun deleteSegments(transcriptId: Long): Int
 

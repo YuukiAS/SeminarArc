@@ -10,6 +10,7 @@ import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
 import com.yuukias.seminararc.domain.model.TranscriptSourceType
 import com.yuukias.seminararc.domain.model.TranscriptState
 import com.yuukias.seminararc.domain.repository.CreateTranscriptInput
+import com.yuukias.seminararc.domain.repository.EditSummaryDraftInput
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
@@ -51,6 +52,7 @@ class TranscriptReviewViewModel @Inject constructor(
 
     private val selectedTranscriptId = MutableStateFlow<Long?>(null)
     private val editedSegments = MutableStateFlow<Map<Long, String>>(emptyMap())
+    private val editedSummaryDrafts = MutableStateFlow<Map<Long, SummaryDraftEditDraft>>(emptyMap())
     private val manualTranscriptDraft = MutableStateFlow("")
 
     private val _events = MutableSharedFlow<TranscriptReviewEvent>(replay = 0)
@@ -74,8 +76,9 @@ class TranscriptReviewViewModel @Inject constructor(
         dataSnapshot,
         selectedTranscriptId,
         editedSegments,
+        editedSummaryDrafts,
         manualTranscriptDraft,
-    ) { data, selectedId, segmentDrafts, manualDraft ->
+    ) { data, selectedId, segmentDrafts, summaryDraftEdits, manualDraft ->
         TranscriptReviewSnapshot(
             detail = data.detail,
             transcripts = data.transcripts,
@@ -83,6 +86,7 @@ class TranscriptReviewViewModel @Inject constructor(
             processingJobs = data.processingJobs,
             selectedTranscriptId = selectedId,
             segmentDrafts = segmentDrafts,
+            summaryDraftEdits = summaryDraftEdits,
             manualTranscriptDraft = manualDraft,
         )
     }
@@ -99,6 +103,35 @@ class TranscriptReviewViewModel @Inject constructor(
 
     fun onManualTranscriptDraftChanged(text: String) {
         manualTranscriptDraft.value = text
+    }
+
+    fun onSummaryDraftFieldChanged(
+        draftId: Long,
+        field: SummaryDraftField,
+        text: String,
+    ) {
+        val readyState = uiState.value as? TranscriptReviewUiState.Ready
+        val current = editedSummaryDrafts.value[draftId]
+            ?: readyState?.summaryDrafts?.firstOrNull { draft -> draft.id == draftId }?.toEditDraft()
+            ?: return
+        editedSummaryDrafts.value = editedSummaryDrafts.value + (draftId to current.withField(field, text))
+    }
+
+    fun onSaveSummaryDraftClicked(draftId: Long) {
+        viewModelScope.launch {
+            val draft = editedSummaryDrafts.value[draftId]
+            if (draft == null) {
+                _events.emit(TranscriptReviewEvent.ShowMessage("Summary draft has no local changes."))
+                return@launch
+            }
+            val edited = transcriptRepository.editSummaryDraft(draft.toEditInput(draftId))
+            if (edited == null) {
+                _events.emit(TranscriptReviewEvent.ShowMessage("Summary draft could not be updated."))
+            } else {
+                editedSummaryDrafts.value = editedSummaryDrafts.value - draftId
+                _events.emit(TranscriptReviewEvent.ShowMessage("Summary draft updated."))
+            }
+        }
     }
 
     fun onImportManualTranscriptClicked() {
@@ -250,6 +283,9 @@ class TranscriptReviewViewModel @Inject constructor(
                 segment.id to (segmentDrafts[segment.id] ?: segment.text)
             },
             manualTranscriptDraft = manualTranscriptDraft,
+            summaryDraftEdits = summaryDrafts.associate { draft ->
+                draft.id to (summaryDraftEdits[draft.id] ?: draft.toEditDraft())
+            },
             timelineWindows = windows,
             summaryDrafts = summaryDrafts.sortedWith(compareByDescending { draft -> draft.updatedAt }),
             processingJobs = processingJobs
@@ -279,6 +315,7 @@ private data class TranscriptReviewSnapshot(
     val processingJobs: List<com.yuukias.seminararc.domain.model.ProcessingJob>,
     val selectedTranscriptId: Long?,
     val segmentDrafts: Map<Long, String>,
+    val summaryDraftEdits: Map<Long, SummaryDraftEditDraft>,
     val manualTranscriptDraft: String,
 )
 
@@ -306,3 +343,46 @@ private fun String.toManualSegments(): List<TranscriptionSegmentDraft> {
 }
 
 private const val MANUAL_SEGMENT_DURATION_MS = 60_000L
+
+private fun com.yuukias.seminararc.domain.model.SummaryDraft.toEditDraft(): SummaryDraftEditDraft {
+    return SummaryDraftEditDraft(
+        backgroundContext = backgroundContext,
+        coreQuestion = coreQuestion,
+        methods = methods,
+        mainResults = mainResults,
+        keyTakeaways = keyTakeaways,
+        unresolvedQuestions = unresolvedQuestions,
+        followUpActions = followUpActions,
+        userNotes = userNotes,
+    )
+}
+
+private fun SummaryDraftEditDraft.withField(
+    field: SummaryDraftField,
+    text: String,
+): SummaryDraftEditDraft {
+    return when (field) {
+        SummaryDraftField.BACKGROUND_CONTEXT -> copy(backgroundContext = text)
+        SummaryDraftField.CORE_QUESTION -> copy(coreQuestion = text)
+        SummaryDraftField.METHODS -> copy(methods = text)
+        SummaryDraftField.MAIN_RESULTS -> copy(mainResults = text)
+        SummaryDraftField.KEY_TAKEAWAYS -> copy(keyTakeaways = text)
+        SummaryDraftField.UNRESOLVED_QUESTIONS -> copy(unresolvedQuestions = text)
+        SummaryDraftField.FOLLOW_UP_ACTIONS -> copy(followUpActions = text)
+        SummaryDraftField.USER_NOTES -> copy(userNotes = text)
+    }
+}
+
+private fun SummaryDraftEditDraft.toEditInput(draftId: Long): EditSummaryDraftInput {
+    return EditSummaryDraftInput(
+        draftId = draftId,
+        backgroundContext = backgroundContext,
+        coreQuestion = coreQuestion,
+        methods = methods,
+        mainResults = mainResults,
+        keyTakeaways = keyTakeaways,
+        unresolvedQuestions = unresolvedQuestions,
+        followUpActions = followUpActions,
+        userNotes = userNotes,
+    )
+}

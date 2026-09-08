@@ -17,6 +17,7 @@ sealed interface TranscriptReviewUiState {
         val segments: List<TranscriptSegment>,
         val segmentDrafts: Map<Long, String>,
         val manualTranscriptDraft: String,
+        val summaryDraftEdits: Map<Long, SummaryDraftEditDraft>,
         val timelineWindows: List<TranscriptTimelineWindow>,
         val summaryDrafts: List<SummaryDraft>,
         val processingJobs: List<ProcessingJob>,
@@ -25,4 +26,26 @@ sealed interface TranscriptReviewUiState {
 
 sealed interface TranscriptReviewEvent {
     data class ShowMessage(val message: String) : TranscriptReviewEvent
+}
+
+data class SummaryDraftEditDraft(
+    val backgroundContext: String,
+    val coreQuestion: String,
+    val methods: String,
+    val mainResults: String,
+    val keyTakeaways: String,
+    val unresolvedQuestions: String,
+    val followUpActions: String,
+    val userNotes: String,
+)
+
+enum class SummaryDraftField {
+    BACKGROUND_CONTEXT,
+    CORE_QUESTION,
+    METHODS,
+    MAIN_RESULTS,
+    KEY_TAKEAWAYS,
+    UNRESOLVED_QUESTIONS,
+    FOLLOW_UP_ACTIONS,
+    USER_NOTES,
 }

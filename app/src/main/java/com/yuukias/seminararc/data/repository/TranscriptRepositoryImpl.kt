@@ -10,6 +10,7 @@ import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
 import com.yuukias.seminararc.domain.model.TranscriptSegment
 import com.yuukias.seminararc.domain.model.TranscriptState
 import com.yuukias.seminararc.domain.repository.CreateTranscriptInput
+import com.yuukias.seminararc.domain.repository.EditSummaryDraftInput
 import com.yuukias.seminararc.domain.repository.SaveSummaryDraftInput
 import com.yuukias.seminararc.domain.repository.TranscriptRepository
 import com.yuukias.seminararc.domain.transcription.TranscriptionSegmentDraft
@@ -69,6 +70,25 @@ class TranscriptRepositoryImpl @Inject constructor(
             transcript = transcript.copy(updatedAt = now),
         )
         return updatedSegment.toDomain()
+    }
+
+    override suspend fun editSummaryDraft(input: EditSummaryDraftInput): SummaryDraft? {
+        val existing = dao.getSummaryDraft(input.draftId) ?: return null
+        val updated = existing.copy(
+            state = com.yuukias.seminararc.domain.model.SummaryDraftState.DRAFT,
+            backgroundContext = input.backgroundContext.trim(),
+            coreQuestion = input.coreQuestion.trim(),
+            methods = input.methods.trim(),
+            mainResults = input.mainResults.trim(),
+            keyTakeaways = input.keyTakeaways.trim(),
+            unresolvedQuestions = input.unresolvedQuestions.trim(),
+            followUpActions = input.followUpActions.trim(),
+            userNotes = input.userNotes.trim(),
+            errorMessage = null,
+            updatedAt = clockProvider.now(),
+        )
+        dao.updateSummaryDraft(updated)
+        return updated.toDomain()
     }
 
     override suspend fun createTranscript(input: CreateTranscriptInput): Transcript {

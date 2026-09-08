@@ -10,6 +10,7 @@ import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
 import com.yuukias.seminararc.domain.model.TranscriptSourceType
 import com.yuukias.seminararc.domain.model.TranscriptState
 import com.yuukias.seminararc.domain.repository.CreateTranscriptInput
+import com.yuukias.seminararc.domain.repository.EditSummaryDraftInput
 import com.yuukias.seminararc.domain.repository.SaveSummaryDraftInput
 import com.yuukias.seminararc.domain.transcription.TranscriptionSegmentDraft
 import java.time.Instant
@@ -136,6 +137,38 @@ class TranscriptRepositoryImplTest {
         assertNull(second.errorMessage)
     }
 
+    @Test
+    fun editSummaryDraftStoresHumanDraftAndClearsError() = runTest {
+        val dao = FakeTranscriptDao()
+        val repository = TranscriptRepositoryImpl(dao, FixedClock)
+        val original = repository.upsertSummaryDraft(
+            summaryInput(mainResults = "old").copy(
+                state = SummaryDraftState.FAILED,
+                errorMessage = "provider unavailable",
+            ),
+        )
+
+        val edited = repository.editSummaryDraft(
+            EditSummaryDraftInput(
+                draftId = original.id,
+                backgroundContext = " background ",
+                coreQuestion = " question ",
+                methods = " methods ",
+                mainResults = " revised results ",
+                keyTakeaways = " takeaways ",
+                unresolvedQuestions = " open questions ",
+                followUpActions = " actions ",
+                userNotes = " notes ",
+            ),
+        )
+
+        assertEquals(SummaryDraftState.DRAFT, edited?.state)
+        assertEquals("revised results", edited?.mainResults)
+        assertEquals("background", edited?.backgroundContext)
+        assertEquals(FixedClock.now(), edited?.updatedAt)
+        assertNull(edited?.errorMessage)
+    }
+
     private fun summaryInput(mainResults: String): SaveSummaryDraftInput {
         return SaveSummaryDraftInput(
             seminarId = 1L,
@@ -221,6 +254,10 @@ private class FakeTranscriptDao : TranscriptDao {
 
     override suspend fun updateSegment(entity: TranscriptSegmentEntity) {
         segments[entity.id] = entity
+    }
+
+    override suspend fun updateSummaryDraft(entity: SummaryDraftEntity) {
+        drafts[entity.id] = entity
     }
 
     override suspend fun deleteSegments(transcriptId: Long): Int {

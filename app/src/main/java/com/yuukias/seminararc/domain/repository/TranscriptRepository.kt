@@ -32,6 +32,10 @@ interface TranscriptRepository {
         text: String,
     ): TranscriptSegment?
 
+    suspend fun editSummaryDraft(input: EditSummaryDraftInput): SummaryDraft? {
+        error("Summary draft editing is not implemented by this repository.")
+    }
+
     suspend fun createTranscript(input: CreateTranscriptInput): Transcript
 
     suspend fun markTranscriptRunning(transcriptId: Long): Transcript?
@@ -79,4 +83,16 @@ data class SaveSummaryDraftInput(
     val userNotes: String,
     val provenanceJson: String,
     val errorMessage: String?,
+)
+
+data class EditSummaryDraftInput(
+    val draftId: Long,
+    val backgroundContext: String,
+    val coreQuestion: String,
+    val methods: String,
+    val mainResults: String,
+    val keyTakeaways: String,
+    val unresolvedQuestions: String,
+    val followUpActions: String,
+    val userNotes: String,
 )

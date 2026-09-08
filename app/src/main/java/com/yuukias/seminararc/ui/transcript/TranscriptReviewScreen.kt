@@ -78,6 +78,8 @@ fun TranscriptReviewScreen(
         onCancelJob = viewModel::onCancelJob,
         onSegmentDraftChanged = viewModel::onSegmentDraftChanged,
         onSaveSegment = viewModel::onSaveSegmentClicked,
+        onSummaryDraftFieldChanged = viewModel::onSummaryDraftFieldChanged,
+        onSaveSummaryDraft = viewModel::onSaveSummaryDraftClicked,
         onManualTranscriptDraftChanged = viewModel::onManualTranscriptDraftChanged,
         onImportManualTranscript = viewModel::onImportManualTranscriptClicked,
         modifier = modifier,
@@ -97,6 +99,8 @@ fun TranscriptReviewScreenContent(
     onCancelJob: (Long) -> Unit,
     onSegmentDraftChanged: (Long, String) -> Unit,
     onSaveSegment: (Long) -> Unit,
+    onSummaryDraftFieldChanged: (Long, SummaryDraftField, String) -> Unit,
+    onSaveSummaryDraft: (Long) -> Unit,
     onManualTranscriptDraftChanged: (String) -> Unit,
     onImportManualTranscript: () -> Unit,
     modifier: Modifier = Modifier,
@@ -142,6 +146,8 @@ fun TranscriptReviewScreenContent(
                 onCancelJob = onCancelJob,
                 onSegmentDraftChanged = onSegmentDraftChanged,
                 onSaveSegment = onSaveSegment,
+                onSummaryDraftFieldChanged = onSummaryDraftFieldChanged,
+                onSaveSummaryDraft = onSaveSummaryDraft,
                 onManualTranscriptDraftChanged = onManualTranscriptDraftChanged,
                 onImportManualTranscript = onImportManualTranscript,
                 modifier = Modifier.padding(innerPadding),
@@ -160,6 +166,8 @@ private fun TranscriptReviewReadyContent(
     onCancelJob: (Long) -> Unit,
     onSegmentDraftChanged: (Long, String) -> Unit,
     onSaveSegment: (Long) -> Unit,
+    onSummaryDraftFieldChanged: (Long, SummaryDraftField, String) -> Unit,
+    onSaveSummaryDraft: (Long) -> Unit,
     onManualTranscriptDraftChanged: (String) -> Unit,
     onImportManualTranscript: () -> Unit,
     modifier: Modifier = Modifier,
@@ -222,8 +230,11 @@ private fun TranscriptReviewReadyContent(
         item {
             SummaryDraftsCard(
                 drafts = state.summaryDrafts,
+                editDrafts = state.summaryDraftEdits,
                 canDraft = state.segments.isNotEmpty(),
                 onDraftSummary = onDraftSummary,
+                onDraftFieldChanged = onSummaryDraftFieldChanged,
+                onSaveDraft = onSaveSummaryDraft,
             )
         }
     }
@@ -477,8 +488,11 @@ private fun SegmentsCard(
 @Composable
 private fun SummaryDraftsCard(
     drafts: List<SummaryDraft>,
+    editDrafts: Map<Long, SummaryDraftEditDraft>,
     canDraft: Boolean,
     onDraftSummary: () -> Unit,
+    onDraftFieldChanged: (Long, SummaryDraftField, String) -> Unit,
+    onSaveDraft: (Long) -> Unit,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -501,18 +515,110 @@ private fun SummaryDraftsCard(
                 Text("No summary drafts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 drafts.forEach { draft ->
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing.space1)) {
+                    val editDraft = editDrafts[draft.id] ?: draft.toEditDraft()
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
                         Text("${draft.providerId} ${draft.state.name}", fontWeight = FontWeight.SemiBold)
                         Text(
-                            draft.mainResults.ifBlank { draft.errorMessage ?: "Draft has no generated prose yet." },
-                            maxLines = 3,
+                            draft.errorMessage ?: "Editable local draft. Saving marks it as DRAFT and keeps provider provenance.",
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        SummaryDraftTextField(
+                            label = "Background context",
+                            value = editDraft.backgroundContext,
+                            onValueChange = { text ->
+                                onDraftFieldChanged(draft.id, SummaryDraftField.BACKGROUND_CONTEXT, text)
+                            },
+                        )
+                        SummaryDraftTextField(
+                            label = "Core question",
+                            value = editDraft.coreQuestion,
+                            onValueChange = { text ->
+                                onDraftFieldChanged(draft.id, SummaryDraftField.CORE_QUESTION, text)
+                            },
+                        )
+                        SummaryDraftTextField(
+                            label = "Methods",
+                            value = editDraft.methods,
+                            onValueChange = { text ->
+                                onDraftFieldChanged(draft.id, SummaryDraftField.METHODS, text)
+                            },
+                        )
+                        SummaryDraftTextField(
+                            label = "Main results",
+                            value = editDraft.mainResults,
+                            onValueChange = { text ->
+                                onDraftFieldChanged(draft.id, SummaryDraftField.MAIN_RESULTS, text)
+                            },
+                        )
+                        SummaryDraftTextField(
+                            label = "Key takeaways",
+                            value = editDraft.keyTakeaways,
+                            onValueChange = { text ->
+                                onDraftFieldChanged(draft.id, SummaryDraftField.KEY_TAKEAWAYS, text)
+                            },
+                        )
+                        SummaryDraftTextField(
+                            label = "Unresolved questions",
+                            value = editDraft.unresolvedQuestions,
+                            onValueChange = { text ->
+                                onDraftFieldChanged(draft.id, SummaryDraftField.UNRESOLVED_QUESTIONS, text)
+                            },
+                        )
+                        SummaryDraftTextField(
+                            label = "Follow-up actions",
+                            value = editDraft.followUpActions,
+                            onValueChange = { text ->
+                                onDraftFieldChanged(draft.id, SummaryDraftField.FOLLOW_UP_ACTIONS, text)
+                            },
+                        )
+                        SummaryDraftTextField(
+                            label = "User notes",
+                            value = editDraft.userNotes,
+                            onValueChange = { text ->
+                                onDraftFieldChanged(draft.id, SummaryDraftField.USER_NOTES, text)
+                            },
+                        )
+                        TextButton(
+                            onClick = { onSaveDraft(draft.id) },
+                            enabled = editDraft != draft.toEditDraft(),
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) {
+                            Text("Save summary draft")
+                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun SummaryDraftTextField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
+        minLines = 2,
+    )
+}
+
+private fun SummaryDraft.toEditDraft(): SummaryDraftEditDraft {
+    return SummaryDraftEditDraft(
+        backgroundContext = backgroundContext,
+        coreQuestion = coreQuestion,
+        methods = methods,
+        mainResults = mainResults,
+        keyTakeaways = keyTakeaways,
+        unresolvedQuestions = unresolvedQuestions,
+        followUpActions = followUpActions,
+        userNotes = userNotes,
+    )
 }
 
 private fun TimelineEventType.label(): String {
