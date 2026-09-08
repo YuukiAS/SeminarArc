@@ -39,6 +39,7 @@
 - 新增 `0.5.x` formula region drag selection foundation：Reconstruction photo preview 可通过拖拽生成 normalized crop 草稿，并将草稿同步到显式保存表单；拖拽不直接写 Room、不触发 formula OCR provider 或上传。
 - 新增 `0.5.x` formula region edit selection foundation：saved formula region 可通过 `Edit crop` 载入草稿并显式更新 label/crop，更新保留原 seminar/source asset 归属且不自动触发 provider。
 - 新增 `0.5.x` formula provider settings boundary：`FormulaOcrProvider` 暴露 availability/capability/status，Reconstruction workspace 显示 live formula OCR 未配置和 Manual LaTeX 本地可用状态。
+- 完成 `0.5.x` formula closeout readiness：第一阶段本地安全 foundation 达到 headless alpha 候选状态，版本发布仍等待 Windows Emulator connected gate。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。

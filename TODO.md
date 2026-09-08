@@ -421,6 +421,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已完成 `0.5.x_formula_region_drag_selection`：Reconstruction photo preview 支持 drag-to-draft selection，拖拽只更新本地 normalized crop 草稿，仍需用户显式点击 `Save formula region` 才写入 Room。
 - 已完成 `0.5.x_formula_region_edit_selection`：saved formula region 可载入为草稿并显式更新 label/crop，更新不改变 seminar/source asset 归属，也不自动触发 provider。
 - 已完成 `0.5.x_formula_provider_settings_boundary`：`FormulaOcrProvider` 暴露 availability/capability/status，Reconstruction workspace 显示当前 live formula OCR 不可用和 Manual LaTeX 本地可用，不引入 credential 或上传。
+- 已完成 `0.5.x_formula_closeout_readiness`：0.5.x 第一阶段本地安全 foundation 已达到 headless alpha 候选状态，但 `v0.5.0-alpha.1` 发布仍等待安全的 Windows Emulator connected gate。
 - Mathpix 是高准确度付费云候选，但需要 authenticated API、billing 和 credential/backend/user-key 决策；live provider 暂不进入 APK。
 - PaddleOCR formula recognition 和 pix2tex/LaTeX-OCR 可作为自建/本地候选继续评估，但需要模型大小、Android packaging、性能、耗电、依赖和模型权重 license 审计。
 - 第一阶段优先实现 formula region selection data model、可编辑 LaTeX result、`FormulaOcrProvider` fake/manual contract、BibTeX/RIS deterministic export 和 export polish。
@@ -435,7 +436,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 
 下一步：
 
-- 执行 `0.5.x_formula_closeout_readiness_task`：审计 0.5.x 第一阶段剩余缺口，决定是否已可形成 `v0.5.0-alpha.1` local milestone，或继续拆 local-safe polish。
+- 执行 `0.5.x_emulator_closeout_task`：仅当 Windows ADB 只看到明确 `emulator-*` 时，运行 connected Emulator regression 并决定是否创建 `v0.5.0-alpha.1` tag/release；如果仍看到 protected physical serial，则只记录 gate deferred，不运行 connected tests。
 
 ### `0.9.x` Google Play 内测与发布准备
 
