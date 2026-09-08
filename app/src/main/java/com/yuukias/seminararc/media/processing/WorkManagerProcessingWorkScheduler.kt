@@ -9,11 +9,15 @@ import androidx.work.workDataOf
 import com.yuukias.seminararc.domain.image.ImageEnhancementOptions
 import com.yuukias.seminararc.domain.model.ProcessingJob
 import com.yuukias.seminararc.domain.model.ProcessingJobType
+import com.yuukias.seminararc.domain.model.RecordingState
+import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
 import com.yuukias.seminararc.domain.ocr.TextOcrLanguageMode
 import com.yuukias.seminararc.domain.repository.EnqueueProcessingJobInput
+import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.image.ImageEnhancementProvider
 import com.yuukias.seminararc.domain.ocr.TextOcrProvider
+import com.yuukias.seminararc.domain.transcription.TranscriptionProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -23,9 +27,11 @@ import kotlinx.coroutines.launch
 
 class WorkManagerProcessingWorkScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val recordingRepository: RecordingRepository,
     private val reconstructionRepository: ReconstructionRepository,
     private val imageEnhancementProvider: ImageEnhancementProvider,
     private val textOcrProvider: TextOcrProvider,
+    private val transcriptionProvider: TranscriptionProvider,
 ) : ProcessingWorkScheduler {
     private val workManager: WorkManager
         get() = WorkManager.getInstance(context)
@@ -67,6 +73,26 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
         return job
     }
 
+    override suspend fun enqueueTranscription(
+        recordingId: Long,
+        languageHint: TranscriptLanguageHint,
+    ): ProcessingJob? {
+        val recording = recordingRepository.getRecording(recordingId) ?: return null
+        if (recording.state != RecordingState.COMPLETED) return null
+        val sourceAsset = reconstructionRepository.getAssetByRelativePath(recording.filePath) ?: return null
+        val job = reconstructionRepository.enqueueJob(
+            EnqueueProcessingJobInput(
+                seminarId = recording.seminarId,
+                type = ProcessingJobType.TRANSCRIPTION,
+                inputAssetId = sourceAsset.id,
+                providerId = transcriptionProvider.providerId,
+                providerVersion = transcriptionProvider.providerVersion,
+            ),
+        )
+        enqueue(job, transcriptionRequest(job.id, recording.id, languageHint), ExistingWorkPolicy.KEEP)
+        return job
+    }
+
     override suspend fun retry(jobId: Long): ProcessingJob? {
         val job = reconstructionRepository.requeueJob(jobId) ?: return null
         val request = requestFor(job) ?: return null
@@ -97,11 +123,11 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
         workManager.enqueueUniqueWork(workName(job.id), policy, request)
     }
 
-    private fun requestFor(job: ProcessingJob): OneTimeWorkRequest? {
+    private suspend fun requestFor(job: ProcessingJob): OneTimeWorkRequest? {
         return when (job.type) {
             ProcessingJobType.IMAGE_ENHANCEMENT -> imageEnhancementRequest(job.id, ImageEnhancementOptions())
             ProcessingJobType.TEXT_OCR -> textOcrRequest(job.id, TextOcrLanguageMode.LATIN_AND_CHINESE)
-            ProcessingJobType.TRANSCRIPTION,
+            ProcessingJobType.TRANSCRIPTION -> transcriptionRequestFor(job)
             ProcessingJobType.SUMMARY_DRAFT,
             ProcessingJobType.NOTION_EXPORT_PREP -> null
         }
@@ -149,6 +175,30 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
                     ProcessingWorker.KEY_JOB_ID to jobId,
                     ProcessingWorker.KEY_OPERATION to ProcessingJobType.TEXT_OCR.name,
                     ProcessingWorker.KEY_LANGUAGE_MODE to languageMode.name,
+                ),
+            )
+            .addTag(ProcessingWorker.WORK_TAG)
+            .build()
+    }
+
+    private suspend fun transcriptionRequestFor(job: ProcessingJob): OneTimeWorkRequest? {
+        val sourceAsset = reconstructionRepository.getAsset(job.inputAssetId) ?: return null
+        val recordingId = sourceAsset.sourceRecordingId ?: return null
+        return transcriptionRequest(job.id, recordingId, TranscriptLanguageHint.AUTO)
+    }
+
+    private fun transcriptionRequest(
+        jobId: Long,
+        recordingId: Long,
+        languageHint: TranscriptLanguageHint,
+    ): OneTimeWorkRequest {
+        return OneTimeWorkRequestBuilder<ProcessingWorker>()
+            .setInputData(
+                workDataOf(
+                    ProcessingWorker.KEY_JOB_ID to jobId,
+                    ProcessingWorker.KEY_OPERATION to ProcessingJobType.TRANSCRIPTION.name,
+                    ProcessingWorker.KEY_RECORDING_ID to recordingId,
+                    ProcessingWorker.KEY_LANGUAGE_HINT to languageHint.name,
                 ),
             )
             .addTag(ProcessingWorker.WORK_TAG)

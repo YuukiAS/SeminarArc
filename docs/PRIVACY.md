@@ -55,6 +55,7 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - `BuildTranscriptTimelineWindowsUseCase` 只在本地把 ready transcript segments 与 timeline/photo offsets 做窗口关联，不引入网络、provider 或新权限。
 - `TranscriptReviewScreen` 只读取和展示本地 transcript、timeline windows 与 summary draft 状态；未接入真实 provider 时只显示未接线提示，不触发上传。
 - Markdown/ZIP 导出只读取本地 transcript、segments、timeline windows 和 summary drafts，并把 generated summary 明确标记为 editable draft；不会自动上传到 Notion 或任何 provider。
+- `TRANSCRIPTION` durable queue 可把完成录音排入本地 WorkManager；默认 `UnavailableTranscriptionProvider` 不读取网络、不上传音频、不产生假 transcript，只把 provider 未配置作为本地失败状态记录。
 - provider 输出保存为独立 `summary_drafts`，不会覆盖人工维护的 `SeminarBrief`。
 - 当前没有接入真实 ASR provider、AI summary runtime、Notion live OAuth/upload、backend、private API credential 或 recurring-cost service。
 - 后续任何 cloud transcription、AI summary 或 Notion upload 都必须保持 opt-in，并在上传前显示 provider、素材范围、费用/配额、删除语义和 credential/backend 边界。

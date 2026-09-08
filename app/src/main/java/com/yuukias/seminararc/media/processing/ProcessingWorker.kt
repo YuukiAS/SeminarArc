@@ -15,12 +15,15 @@ import com.yuukias.seminararc.domain.image.ReadabilityEnhancement
 import com.yuukias.seminararc.domain.model.ProcessingJobState
 import com.yuukias.seminararc.domain.model.ProcessingJobType
 import com.yuukias.seminararc.domain.model.SeminarAssetType
+import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
 import com.yuukias.seminararc.domain.ocr.TextOcrLanguageMode
 import com.yuukias.seminararc.domain.ocr.TextOcrProvider
 import com.yuukias.seminararc.domain.ocr.TextOcrResult
 import com.yuukias.seminararc.domain.repository.CreateDerivedAssetInput
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SaveOcrResultInput
+import com.yuukias.seminararc.domain.usecase.RunTranscriptionForRecordingUseCase
+import com.yuukias.seminararc.domain.usecase.RunTranscriptionResult
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -57,7 +60,11 @@ class ProcessingWorker(
                     storage = dependencies.mediaStorageManager(),
                     provider = dependencies.textOcrProvider(),
                 )
-                ProcessingJobType.TRANSCRIPTION,
+                ProcessingJobType.TRANSCRIPTION -> runTranscription(
+                    jobId = job.id,
+                    repository = repository,
+                    runTranscriptionForRecording = dependencies.runTranscriptionForRecordingUseCase(),
+                )
                 ProcessingJobType.SUMMARY_DRAFT,
                 ProcessingJobType.NOTION_EXPORT_PREP -> fail(
                     repository = repository,
@@ -72,6 +79,33 @@ class ProcessingWorker(
         } catch (throwable: Throwable) {
             repository.markJobFailed(jobId, throwable.message ?: "Processing failed.", isRetryable = true)
             Result.failure()
+        }
+    }
+
+    private suspend fun runTranscription(
+        jobId: Long,
+        repository: ReconstructionRepository,
+        runTranscriptionForRecording: RunTranscriptionForRecordingUseCase,
+    ): Result {
+        val recordingId = inputData.getLong(KEY_RECORDING_ID, -1L)
+        if (recordingId <= 0L) {
+            return fail(repository, jobId, "Recording id is missing from transcription work.", isRetryable = false)
+        }
+        return when (val result = runTranscriptionForRecording(recordingId, languageHintFromInput())) {
+            is RunTranscriptionResult.Transcribed -> {
+                val current = repository.getJob(jobId)
+                if (current?.state != ProcessingJobState.SUCCEEDED) {
+                    repository.markJobSucceeded(jobId, outputAssetId = null)
+                }
+                Result.success()
+            }
+            is RunTranscriptionResult.Failed -> {
+                val current = repository.getJob(jobId)
+                if (current?.state !in listOf(ProcessingJobState.FAILED, ProcessingJobState.CANCELLED)) {
+                    repository.markJobFailed(jobId, result.message, isRetryable = true)
+                }
+                Result.failure()
+            }
         }
     }
 
@@ -220,6 +254,13 @@ class ProcessingWorker(
         )
     }
 
+    private fun languageHintFromInput(): TranscriptLanguageHint {
+        return enumValueOrDefault(
+            inputData.getString(KEY_LANGUAGE_HINT),
+            TranscriptLanguageHint.AUTO,
+        )
+    }
+
     private inline fun <reified T : Enum<T>> enumValueOrDefault(
         value: String?,
         default: T,
@@ -229,6 +270,8 @@ class ProcessingWorker(
         const val WORK_TAG = "seminararc-processing"
         const val KEY_JOB_ID = "job_id"
         const val KEY_OPERATION = "operation"
+        const val KEY_RECORDING_ID = "recording_id"
+        const val KEY_LANGUAGE_HINT = "language_hint"
         const val KEY_LANGUAGE_MODE = "language_mode"
         const val KEY_ROTATION_DEGREES = "rotation_degrees"
         const val KEY_READABILITY = "readability"
@@ -258,5 +301,6 @@ interface ProcessingWorkerEntryPoint {
     fun mediaStorageManager(): MediaStorageManager
     fun imageEnhancementProvider(): ImageEnhancementProvider
     fun textOcrProvider(): TextOcrProvider
+    fun runTranscriptionForRecordingUseCase(): RunTranscriptionForRecordingUseCase
     fun processingWorkScheduler(): ProcessingWorkScheduler
 }

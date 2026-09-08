@@ -382,10 +382,11 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已新增 transcript timeline windows foundation：`BuildTranscriptTimelineWindowsUseCase` 可从 timeline/photo offsets 生成 configurable transcript segment windows，为 Reconstruction UI、summary input selection、Markdown-friendly export 和 Notion-prep 提供本地关联基础。
 - 已新增 transcript review UI foundation：`TranscriptReviewScreen` 从 Reconstruction workspace 进入，展示 transcript 列表、timestamped segments、timeline/photo windows 和 summary draft 状态；真实 provider 执行入口保持未接线提示。
 - 已新增 Markdown/ZIP transcript summary export foundation：本地导出包包含 transcript review metadata、timestamped segments、timeline windows 和 editable generated summary drafts；生成总结不会覆盖人工 Seminar Brief。
+- 已新增 transcription durable queue foundation：完成录音可进入 `TRANSCRIPTION` durable job / WorkManager 链路；默认 provider 为 unavailable boundary，不上传音频、不伪造成功结果。
 
 范围：
 
-- `TranscriptionProvider`：至少实现一种开源/自建路径；通义听悟可作为可选 provider。
+- `TranscriptionProvider`：durable queue 已接线；后续至少实现一种开源/自建真实 provider，通义听悟可作为可选 provider。
 - 时间戳 transcript segment 与照片窗口关联：domain foundation 和第一版 review UI 消费已完成。
 - `SummaryProvider` 基于用户选定材料生成草稿，不覆盖人工内容。
 - Notion：Markdown 友好 transcript/summary export foundation 已完成；后续再实现官方 API 页面、block 和文件上传。

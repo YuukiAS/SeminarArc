@@ -37,6 +37,7 @@ import com.yuukias.seminararc.domain.repository.SeminarExportRepository
 import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
 import com.yuukias.seminararc.domain.repository.TranscriptRepository
+import com.yuukias.seminararc.domain.transcription.TranscriptionProvider
 import com.yuukias.seminararc.media.clip.AndroidM4aClipGenerator
 import com.yuukias.seminararc.media.clip.ClipGenerator
 import com.yuukias.seminararc.media.clip.ClipWorkScheduler
@@ -47,6 +48,7 @@ import com.yuukias.seminararc.media.playback.Media3RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
 import com.yuukias.seminararc.media.processing.ProcessingWorkScheduler
 import com.yuukias.seminararc.media.processing.WorkManagerProcessingWorkScheduler
+import com.yuukias.seminararc.media.transcription.UnavailableTranscriptionProvider
 import com.yuukias.seminararc.data.reference.CrossrefReferenceLookupProvider
 import com.yuukias.seminararc.data.reference.DataCiteReferenceLookupProvider
 import com.yuukias.seminararc.data.reference.OpenAlexReferenceLookupProvider
@@ -180,6 +182,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindTextOcrProvider(impl: MlKitTextOcrProvider): TextOcrProvider
+
+    @Binds
+    @Singleton
+    abstract fun bindTranscriptionProvider(impl: UnavailableTranscriptionProvider): TranscriptionProvider
 
     @Binds
     @Singleton
