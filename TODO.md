@@ -416,6 +416,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已完成 `0.5.x_formula_processing_queue`：本地 manual LaTeX 可通过 durable `FORMULA_OCR` WorkManager job 写回 formula result，支持 payload-based retry/recovery。
 - 已完成 `0.5.x_research_bibtex_ris_export`：confirmed references 可生成 deterministic `references.bib` / `references.ris`，并进入本地 ZIP export artifact。
 - 已完成 `0.5.x_export_polish`：Seminar Detail 增加 BibTeX/RIS 单独保存和 Android share sheet 入口；无 confirmed references 时返回清晰失败消息。
+- 已完成 `0.5.x_formula_result_export`：READY formula LaTeX results 会进入 Markdown/Notion-ready export，并保留 crop、source photo、provider、confidence、edited 和 provenance。
 - Mathpix 是高准确度付费云候选，但需要 authenticated API、billing 和 credential/backend/user-key 决策；live provider 暂不进入 APK。
 - PaddleOCR formula recognition 和 pix2tex/LaTeX-OCR 可作为自建/本地候选继续评估，但需要模型大小、Android packaging、性能、耗电、依赖和模型权重 license 审计。
 - 第一阶段优先实现 formula region selection data model、可编辑 LaTeX result、`FormulaOcrProvider` fake/manual contract、BibTeX/RIS deterministic export 和 export polish。
@@ -430,7 +431,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 
 下一步：
 
-- 执行 `0.5.x_formula_result_export_task`：把 READY formula LaTeX results 纳入 Markdown/Notion-ready export 的本地段落，保留 provider provenance 与人工编辑状态。
+- 执行 `0.5.x_formula_ui_overlay_task`：把当前 numeric crop 表单升级为照片上的可视化公式区域 overlay/selection，继续保持本地手动 LaTeX 与 provider boundary。
 
 ### `0.9.x` Google Play 内测与发布准备
 

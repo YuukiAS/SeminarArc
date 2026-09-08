@@ -4,6 +4,7 @@ import com.yuukias.seminararc.domain.export.NotionReadyBlockType
 import com.yuukias.seminararc.domain.export.SeminarNotionReadyRenderer
 import com.yuukias.seminararc.domain.model.ExportMediaAsset
 import com.yuukias.seminararc.domain.model.ExportMediaKind
+import com.yuukias.seminararc.domain.model.ExportFormulaItem
 import com.yuukias.seminararc.domain.model.ExportSummaryDraft
 import com.yuukias.seminararc.domain.model.ExportTimelineItem
 import com.yuukias.seminararc.domain.model.ExportTranscript
@@ -31,6 +32,8 @@ class SeminarNotionReadyRendererTest {
         assertTrue(rendered.blocks.any { it.text.contains("00:45-01:10 Important proof context.") })
         assertTrue(rendered.blocks.any { it.type == NotionReadyBlockType.HEADING_2 && it.text == "Generated Summary Drafts" })
         assertTrue(rendered.blocks.any { it.type == NotionReadyBlockType.CALLOUT && it.text.contains("editable generated drafts") })
+        assertTrue(rendered.blocks.any { it.type == NotionReadyBlockType.HEADING_2 && it.text == "Formula Results" })
+        assertTrue(rendered.blocks.any { it.type == NotionReadyBlockType.CODE && it.text == "E = mc^2" })
         assertTrue(rendered.blocks.any { it.type == NotionReadyBlockType.IMAGE && it.localRelativePath == "notion-seminar-42/media/photos/photo.jpg" })
         assertTrue(rendered.blocks.none { it.text.contains("token", ignoreCase = true) })
     }
@@ -42,6 +45,8 @@ class SeminarNotionReadyRendererTest {
         assertTrue(preview.contains("Notion-ready local preview. This file is not uploaded"))
         assertTrue(preview.contains("## Transcript Review"))
         assertTrue(preview.contains("## Generated Summary Drafts"))
+        assertTrue(preview.contains("## Formula Results"))
+        assertTrue(preview.contains("```latex\nE = mc^2\n```"))
         assertTrue(preview.contains("![Timeline photo](notion-seminar-42/media/photos/photo.jpg)"))
     }
 }
@@ -108,6 +113,25 @@ private fun exportDocument(): SeminarExportDocument {
                 userNotes = "Notes",
                 provenanceJson = "{}",
                 errorMessage = null,
+            ),
+        ),
+        formulas = listOf(
+            ExportFormulaItem(
+                id = 15L,
+                regionId = 3L,
+                label = "Mass energy",
+                sourcePhotoPath = "notion-seminar-42/media/formulas/formula.jpg",
+                normalizedX = 0.1f,
+                normalizedY = 0.2f,
+                normalizedWidth = 0.3f,
+                normalizedHeight = 0.4f,
+                rotationDegrees = 0,
+                providerId = "manual-latex",
+                providerVersion = "0.5-local",
+                latex = "E = mc^2",
+                confidence = 1.0f,
+                isEdited = true,
+                provenanceJson = "{}",
             ),
         ),
         timelineItems = listOf(

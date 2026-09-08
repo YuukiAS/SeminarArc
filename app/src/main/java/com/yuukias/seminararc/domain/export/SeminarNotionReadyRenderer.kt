@@ -23,6 +23,7 @@ class SeminarNotionReadyRenderer @Inject constructor() {
             add(NotionReadyBlock(NotionReadyBlockType.PARAGRAPH, document.recordingSummary))
             addTranscriptBlocks(document)
             addSummaryDraftBlocks(document)
+            addFormulaBlocks(document)
             document.brief?.let { brief ->
                 add(NotionReadyBlock(NotionReadyBlockType.HEADING_2, "Seminar Brief"))
                 addBriefSection("Background", brief.backgroundContext)
@@ -75,6 +76,32 @@ class SeminarNotionReadyRenderer @Inject constructor() {
             appendLine()
             notionDocument.blocks.drop(1).forEach { block ->
                 appendBlockPreview(block)
+            }
+        }
+    }
+
+    private fun MutableList<NotionReadyBlock>.addFormulaBlocks(document: SeminarExportDocument) {
+        add(NotionReadyBlock(NotionReadyBlockType.HEADING_2, "Formula Results"))
+        if (document.formulas.isEmpty()) {
+            add(NotionReadyBlock(NotionReadyBlockType.PARAGRAPH, "No ready formula results."))
+            return
+        }
+        document.formulas.forEach { formula ->
+            add(NotionReadyBlock(NotionReadyBlockType.HEADING_3, formula.label?.takeIf { it.isNotBlank() } ?: "Formula ${formula.regionId}"))
+            add(NotionReadyBlock(NotionReadyBlockType.CODE, formula.latex))
+            add(NotionReadyBlock(NotionReadyBlockType.BULLETED_LIST_ITEM, "Provider: ${formula.providerId} ${formula.providerVersion}"))
+            formula.confidence?.let { confidence ->
+                add(NotionReadyBlock(NotionReadyBlockType.BULLETED_LIST_ITEM, "Confidence: $confidence"))
+            }
+            add(NotionReadyBlock(NotionReadyBlockType.BULLETED_LIST_ITEM, "Edited: ${formula.isEdited}"))
+            add(
+                NotionReadyBlock(
+                    NotionReadyBlockType.BULLETED_LIST_ITEM,
+                    "Crop: x=${formula.normalizedX}, y=${formula.normalizedY}, w=${formula.normalizedWidth}, h=${formula.normalizedHeight}, rotation=${formula.rotationDegrees}",
+                ),
+            )
+            formula.sourcePhotoPath?.let { path ->
+                add(NotionReadyBlock(NotionReadyBlockType.IMAGE, "Formula source", path))
             }
         }
     }
@@ -197,6 +224,11 @@ class SeminarNotionReadyRenderer @Inject constructor() {
             NotionReadyBlockType.PARAGRAPH -> appendLine(block.text)
             NotionReadyBlockType.BULLETED_LIST_ITEM -> appendLine("- ${block.text}")
             NotionReadyBlockType.CALLOUT -> appendLine("> ${block.text}")
+            NotionReadyBlockType.CODE -> {
+                appendLine("```latex")
+                appendLine(block.text)
+                appendLine("```")
+            }
             NotionReadyBlockType.IMAGE -> appendLine("![${block.text}](${block.localRelativePath.orEmpty()})")
             NotionReadyBlockType.AUDIO -> appendLine("[${block.text}](${block.localRelativePath.orEmpty()})")
             NotionReadyBlockType.FILE -> appendLine("[${block.text}](${block.localRelativePath.orEmpty()})")
@@ -228,6 +260,7 @@ enum class NotionReadyBlockType {
     PARAGRAPH,
     BULLETED_LIST_ITEM,
     CALLOUT,
+    CODE,
     IMAGE,
     AUDIO,
     FILE,

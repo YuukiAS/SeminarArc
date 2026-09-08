@@ -54,6 +54,7 @@ data class SeminarExportDocument(
     val brief: ExportSeminarBrief? = null,
     val transcripts: List<ExportTranscript> = emptyList(),
     val summaryDrafts: List<ExportSummaryDraft> = emptyList(),
+    val formulas: List<ExportFormulaItem> = emptyList(),
     val timelineItems: List<ExportTimelineItem>,
     val mediaAssets: List<ExportMediaAsset>,
     val skippedMedia: List<String>,
@@ -111,6 +112,24 @@ data class ExportSummaryDraft(
     val errorMessage: String?,
 )
 
+data class ExportFormulaItem(
+    val id: Long,
+    val regionId: Long,
+    val label: String?,
+    val sourcePhotoPath: String?,
+    val normalizedX: Float,
+    val normalizedY: Float,
+    val normalizedWidth: Float,
+    val normalizedHeight: Float,
+    val rotationDegrees: Int,
+    val providerId: String,
+    val providerVersion: String,
+    val latex: String,
+    val confidence: Float?,
+    val isEdited: Boolean,
+    val provenanceJson: String,
+)
+
 data class ExportTimelineItem(
     val type: TimelineEventType,
     val offsetMs: Long,
@@ -132,6 +151,7 @@ enum class ExportMediaKind {
     PHOTO,
     CLIP,
     KEY_SLIDE,
+    FORMULA_SOURCE,
 }
 
 data class SeminarExportPackage(

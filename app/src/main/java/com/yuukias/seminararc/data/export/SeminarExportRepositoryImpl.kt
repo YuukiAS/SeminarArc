@@ -14,6 +14,7 @@ import com.yuukias.seminararc.domain.model.TranscriptState
 import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.ExportShareResult
 import com.yuukias.seminararc.domain.repository.ExportWriteResult
+import com.yuukias.seminararc.domain.repository.FormulaRepository
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.ReferenceRepository
 import com.yuukias.seminararc.domain.repository.SeminarExportRepository
@@ -39,6 +40,7 @@ class SeminarExportRepositoryImpl @Inject constructor(
     private val timelineRepository: TimelineRepository,
     private val clipRepository: ClipRepository,
     private val referenceRepository: ReferenceRepository,
+    private val formulaRepository: FormulaRepository,
     private val transcriptRepository: TranscriptRepository,
     private val buildTranscriptTimelineWindows: BuildTranscriptTimelineWindowsUseCase,
     private val mediaStorageManager: MediaStorageManager,
@@ -55,6 +57,8 @@ class SeminarExportRepositoryImpl @Inject constructor(
         val recordings = recordingRepository.observeRecordingsForSeminar(seminarId).first()
         val clips = clipRepository.observeClipsForSeminar(seminarId).first()
         val briefBundle = referenceRepository.getBriefBundle(seminarId)
+        val formulaRegions = formulaRepository.observeRegionsForSeminar(seminarId).first()
+        val formulaResults = formulaRepository.observeResultsForSeminar(seminarId).first()
         val transcripts = transcriptRepository.observeTranscripts(seminarId).first()
         val transcriptBundles = transcripts.map { transcript ->
             val windows = if (transcript.state == TranscriptState.READY) {
@@ -87,6 +91,8 @@ class SeminarExportRepositoryImpl @Inject constructor(
             briefBundle = briefBundle,
             transcriptBundles = transcriptBundles,
             summaryDrafts = summaryDrafts,
+            formulaRegions = formulaRegions,
+            formulaResults = formulaResults,
         ) { sourcePath ->
             mediaStorageManager.resolveReadableRelativeFile(sourcePath) != null
         }

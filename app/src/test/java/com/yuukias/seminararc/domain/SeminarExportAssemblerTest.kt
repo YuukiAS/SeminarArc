@@ -7,6 +7,9 @@ import com.yuukias.seminararc.domain.model.AudioClip
 import com.yuukias.seminararc.domain.model.ClipState
 import com.yuukias.seminararc.domain.model.ExportMediaAsset
 import com.yuukias.seminararc.domain.model.ExportMediaKind
+import com.yuukias.seminararc.domain.model.FormulaRegion
+import com.yuukias.seminararc.domain.model.FormulaResult
+import com.yuukias.seminararc.domain.model.FormulaResultState
 import com.yuukias.seminararc.domain.model.RecordingSession
 import com.yuukias.seminararc.domain.model.RecordingState
 import com.yuukias.seminararc.domain.model.SeminarDetail
@@ -151,6 +154,38 @@ class SeminarExportAssemblerTest {
         assertEquals(listOf(12L), document.summaryDrafts.map { it.id })
         assertEquals("A generated draft result.", document.summaryDrafts.single().mainResults)
     }
+
+    @Test
+    fun assemble_mapsOnlyReadyFormulaResultsIntoExportDocument() = runTest {
+        val document = SeminarExportAssembler().assemble(
+            detail = seminarDetail(id = 42L, title = "Formula Export"),
+            events = emptyList(),
+            recordings = emptyList(),
+            clips = emptyList(),
+            formulaRegions = listOf(
+                formulaRegion(id = 1L, sourceAssetId = 10L, label = "Posterior"),
+                formulaRegion(id = 2L, sourceAssetId = 11L, label = "Failed"),
+            ),
+            formulaResults = listOf(
+                formulaResult(id = 20L, regionId = 1L, state = FormulaResultState.READY, latex = "E = mc^2", updatedAt = Instant.parse("2026-08-29T08:05:00Z")),
+                formulaResult(id = 21L, regionId = 1L, state = FormulaResultState.READY, latex = "E = mc^2 + c", updatedAt = Instant.parse("2026-08-29T08:10:00Z")),
+                formulaResult(id = 22L, regionId = 2L, state = FormulaResultState.FAILED, latex = "", updatedAt = Instant.parse("2026-08-29T08:11:00Z")),
+            ),
+        ) { true }
+
+        assertEquals(1, document.formulas.size)
+        assertEquals("Posterior", document.formulas.single().label)
+        assertEquals("E = mc^2 + c", document.formulas.single().latex)
+        assertEquals("formula-export-42/media/formulas/formula.jpg", document.formulas.single().sourcePhotoPath)
+        assertEquals(
+            ExportMediaAsset(
+                sourceRelativePath = "seminars/42/photos/formula.jpg",
+                exportRelativePath = "formula-export-42/media/formulas/formula.jpg",
+                kind = ExportMediaKind.FORMULA_SOURCE,
+            ),
+            document.mediaAssets.single(),
+        )
+    }
 }
 
 private fun seminarDetail(id: Long, title: String): SeminarDetail {
@@ -247,5 +282,50 @@ private fun summaryDraft(id: Long): SummaryDraft {
         errorMessage = null,
         createdAt = Instant.parse("2026-08-29T08:00:00Z"),
         updatedAt = Instant.parse("2026-08-29T08:10:00Z"),
+    )
+}
+
+private fun formulaRegion(
+    id: Long,
+    sourceAssetId: Long,
+    label: String,
+): FormulaRegion {
+    return FormulaRegion(
+        id = id,
+        seminarId = 42L,
+        sourceAssetId = sourceAssetId,
+        sourcePhotoPath = "seminars/42/photos/formula.jpg",
+        normalizedX = 0.1f,
+        normalizedY = 0.2f,
+        normalizedWidth = 0.3f,
+        normalizedHeight = 0.4f,
+        rotationDegrees = 0,
+        label = label,
+        createdAt = Instant.parse("2026-08-29T08:00:00Z"),
+        updatedAt = Instant.parse("2026-08-29T08:00:00Z"),
+    )
+}
+
+private fun formulaResult(
+    id: Long,
+    regionId: Long,
+    state: FormulaResultState,
+    latex: String,
+    updatedAt: Instant,
+): FormulaResult {
+    return FormulaResult(
+        id = id,
+        seminarId = 42L,
+        regionId = regionId,
+        providerId = "manual-latex",
+        providerVersion = "0.5-local",
+        state = state,
+        latex = latex,
+        confidence = 1.0f,
+        isEdited = true,
+        errorMessage = null,
+        provenanceJson = """{"source":"manual"}""",
+        createdAt = Instant.parse("2026-08-29T08:00:00Z"),
+        updatedAt = updatedAt,
     )
 }

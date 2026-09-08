@@ -156,6 +156,8 @@ Room version `7` adds `formula_regions` and `formula_results`. `FormulaDao` expo
 
 Seminar Detail exposes local save/share entry points for BibTeX and RIS through `SeminarExportRepository.writeBibTeX`, `writeRis`, `prepareBibTeXShare`, and `prepareRisShare`. These paths write or share text only when confirmed references exist; otherwise the repository returns a local failure message instead of creating an empty artifact.
 
+Export assembly also loads formula regions and formula results through `FormulaRepository`. Only READY formula results with non-empty LaTeX enter `SeminarExportDocument.formulas`; Markdown and Notion-ready renderers include the LaTeX, normalized crop, source photo, provider/version, confidence, edited flag and provenance. Failed, queued, cancelled or blank formula results remain local state and are not exported as ready formula knowledge.
+
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 
 ## Reference Candidate and Seminar Brief

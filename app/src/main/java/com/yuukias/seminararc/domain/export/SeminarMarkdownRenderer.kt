@@ -31,6 +31,7 @@ class SeminarMarkdownRenderer @Inject constructor() {
         appendLine(document.recordingSummary)
         appendTranscripts(document)
         appendSummaryDrafts(document)
+        appendFormulas(document)
         document.brief?.let { brief ->
             appendLine()
             appendLine("## Seminar Brief")
@@ -100,6 +101,31 @@ class SeminarMarkdownRenderer @Inject constructor() {
             appendLine("## Skipped media")
             appendLine()
             document.skippedMedia.forEach { appendLine("- `${it.escapeInline()}`") }
+        }
+    }
+
+    private fun StringBuilder.appendFormulas(document: SeminarExportDocument) {
+        appendLine()
+        appendLine("## Formula Results")
+        appendLine()
+        if (document.formulas.isEmpty()) {
+            appendLine("No ready formula results.")
+            return
+        }
+        document.formulas.forEach { formula ->
+            appendLine("### ${formula.label?.takeIf { it.isNotBlank() }?.escapeInline() ?: "Formula ${formula.regionId}"}")
+            appendLine()
+            appendLine("```latex")
+            appendLine(formula.latex)
+            appendLine("```")
+            appendLine()
+            appendLine("- Provider: `${formula.providerId.escapeInline()}` `${formula.providerVersion.escapeInline()}`")
+            formula.confidence?.let { appendLine("- Confidence: ${"%.2f".format(Locale.US, it)}") }
+            appendLine("- Edited: `${formula.isEdited}`")
+            appendLine("- Crop: x=${formula.normalizedX}, y=${formula.normalizedY}, w=${formula.normalizedWidth}, h=${formula.normalizedHeight}, rotation=${formula.rotationDegrees}")
+            formula.sourcePhotoPath?.let { appendLine("- Source photo: ![](${it.escapeLinkTarget()})") }
+            formula.provenanceJson.takeIf { it.isNotBlank() }?.let { appendLine("- Provenance: `${it.escapeInline()}`") }
+            appendLine()
         }
     }
 

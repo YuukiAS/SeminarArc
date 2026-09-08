@@ -4,6 +4,7 @@ import com.yuukias.seminararc.domain.model.AudioClip
 import com.yuukias.seminararc.domain.model.ClipState
 import com.yuukias.seminararc.domain.model.ExportMediaAsset
 import com.yuukias.seminararc.domain.model.ExportMediaKind
+import com.yuukias.seminararc.domain.model.ExportFormulaItem
 import com.yuukias.seminararc.domain.model.ExportReferenceItem
 import com.yuukias.seminararc.domain.model.ExportKeySlideItem
 import com.yuukias.seminararc.domain.model.ExportSummaryDraft
@@ -21,6 +22,9 @@ import com.yuukias.seminararc.domain.model.SummaryDraft
 import com.yuukias.seminararc.domain.model.TimelineEvent
 import com.yuukias.seminararc.domain.model.Transcript
 import com.yuukias.seminararc.domain.model.TranscriptSegment
+import com.yuukias.seminararc.domain.model.FormulaRegion
+import com.yuukias.seminararc.domain.model.FormulaResult
+import com.yuukias.seminararc.domain.model.FormulaResultState
 import java.util.Locale
 import javax.inject.Inject
 import kotlinx.serialization.json.Json
@@ -34,6 +38,8 @@ class SeminarExportAssembler @Inject constructor() {
         briefBundle: SeminarBriefBundle? = null,
         transcriptBundles: List<TranscriptExportBundle> = emptyList(),
         summaryDrafts: List<SummaryDraft> = emptyList(),
+        formulaRegions: List<FormulaRegion> = emptyList(),
+        formulaResults: List<FormulaResult> = emptyList(),
         isMediaReadable: suspend (String) -> Boolean,
     ): SeminarExportDocument {
         val slug = detail.title.toExportSlug(detail.id)
@@ -51,6 +57,13 @@ class SeminarExportAssembler @Inject constructor() {
         }
         val clipsByEvent = clips.associateBy { it.sourceEventId }
         val exportBrief = briefBundle?.toExportBrief(slug, assets, skipped, isMediaReadable)
+        val formulas = formulaRegions.toExportFormulas(
+            slug = slug,
+            results = formulaResults,
+            assets = assets,
+            skipped = skipped,
+            isMediaReadable = isMediaReadable,
+        )
         val timelineItems = events
             .sortedWith(compareBy<TimelineEvent> { it.offsetMs }.thenBy { it.createdAt }.thenBy { it.id })
             .map { event ->
@@ -87,6 +100,7 @@ class SeminarExportAssembler @Inject constructor() {
             brief = exportBrief,
             transcripts = transcriptBundles.toExportTranscripts(),
             summaryDrafts = summaryDrafts.toExportSummaryDrafts(),
+            formulas = formulas,
             timelineItems = timelineItems,
             mediaAssets = assets.distinctBy { it.exportRelativePath },
             skippedMedia = skipped.distinct(),
@@ -167,6 +181,59 @@ class SeminarExportAssembler @Inject constructor() {
             },
             keySlides = slideItems,
         )
+    }
+}
+
+private suspend fun List<FormulaRegion>.toExportFormulas(
+    slug: String,
+    results: List<FormulaResult>,
+    assets: MutableList<ExportMediaAsset>,
+    skipped: MutableList<String>,
+    isMediaReadable: suspend (String) -> Boolean,
+): List<ExportFormulaItem> {
+    val latestReadyByRegion = results
+        .asSequence()
+        .filter { result -> result.state == FormulaResultState.READY && result.latex.isNotBlank() }
+        .groupBy { it.regionId }
+        .mapValues { (_, regionResults) ->
+            regionResults.maxWith(compareBy<FormulaResult> { it.updatedAt }.thenBy { it.id })
+        }
+    return sortedWith(compareBy<FormulaRegion> { it.sourceAssetId }.thenBy { it.id })
+        .mapNotNull { region ->
+            val result = latestReadyByRegion[region.id] ?: return@mapNotNull null
+            val exportPath = "$slug/media/formulas/${region.sourcePhotoPath.fileName()}"
+            addFormulaAssetIfReadable(region.sourcePhotoPath, exportPath, isMediaReadable, assets, skipped)
+            ExportFormulaItem(
+                id = result.id,
+                regionId = region.id,
+                label = region.label,
+                sourcePhotoPath = exportPath,
+                normalizedX = region.normalizedX,
+                normalizedY = region.normalizedY,
+                normalizedWidth = region.normalizedWidth,
+                normalizedHeight = region.normalizedHeight,
+                rotationDegrees = region.rotationDegrees,
+                providerId = result.providerId,
+                providerVersion = result.providerVersion,
+                latex = result.latex,
+                confidence = result.confidence,
+                isEdited = result.isEdited,
+                provenanceJson = result.provenanceJson,
+            )
+        }
+}
+
+private suspend fun addFormulaAssetIfReadable(
+    sourcePath: String,
+    exportPath: String,
+    isMediaReadable: suspend (String) -> Boolean,
+    assets: MutableList<ExportMediaAsset>,
+    skipped: MutableList<String>,
+) {
+    if (isMediaReadable(sourcePath)) {
+        assets += ExportMediaAsset(sourcePath, exportPath, ExportMediaKind.FORMULA_SOURCE)
+    } else {
+        skipped += sourcePath
     }
 }
 

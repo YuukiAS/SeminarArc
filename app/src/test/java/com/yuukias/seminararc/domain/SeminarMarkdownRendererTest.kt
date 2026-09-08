@@ -4,6 +4,7 @@ import com.yuukias.seminararc.domain.export.SeminarMarkdownRenderer
 import com.yuukias.seminararc.domain.model.ClipState
 import com.yuukias.seminararc.domain.model.ExportMediaAsset
 import com.yuukias.seminararc.domain.model.ExportMediaKind
+import com.yuukias.seminararc.domain.model.ExportFormulaItem
 import com.yuukias.seminararc.domain.model.ExportKeySlideItem
 import com.yuukias.seminararc.domain.model.ExportReferenceItem
 import com.yuukias.seminararc.domain.model.ExportSeminarBrief
@@ -90,6 +91,10 @@ class SeminarMarkdownRendererTest {
             These are editable generated drafts and do not replace the user-authored Seminar Brief.
 
             No generated summary drafts.
+
+            ## Formula Results
+
+            No ready formula results.
 
             ## Timeline
 
@@ -242,5 +247,53 @@ class SeminarMarkdownRendererTest {
         org.junit.Assert.assertTrue(markdown.contains("These are editable generated drafts"))
         org.junit.Assert.assertTrue(markdown.contains("A stable draft result."))
         org.junit.Assert.assertTrue(markdown.contains("""Provenance: `{"segmentIds":[21]}`"""))
+    }
+
+    @Test
+    fun render_includesReadyFormulaResults() {
+        val markdown = SeminarMarkdownRenderer().render(
+            SeminarExportDocument(
+                slug = "seminar-10",
+                title = "Formula Seminar",
+                speaker = null,
+                affiliation = null,
+                scheduledAt = null,
+                location = null,
+                abstractText = null,
+                recordingSummary = "No recording.",
+                formulas = listOf(
+                    ExportFormulaItem(
+                        id = 4L,
+                        regionId = 3L,
+                        label = "Bayes update",
+                        sourcePhotoPath = "seminar-10/media/formulas/slide.jpg",
+                        normalizedX = 0.1f,
+                        normalizedY = 0.2f,
+                        normalizedWidth = 0.3f,
+                        normalizedHeight = 0.4f,
+                        rotationDegrees = 90,
+                        providerId = "manual-latex",
+                        providerVersion = "0.5-local",
+                        latex = "p(\\theta|x) \\propto p(x|\\theta)p(\\theta)",
+                        confidence = 1.0f,
+                        isEdited = true,
+                        provenanceJson = """{"source":"manual"}""",
+                    ),
+                ),
+                timelineItems = emptyList(),
+                mediaAssets = emptyList(),
+                skippedMedia = emptyList(),
+            ),
+        )
+
+        org.junit.Assert.assertTrue(markdown.contains("## Formula Results"))
+        org.junit.Assert.assertTrue(markdown.contains("### Bayes update"))
+        org.junit.Assert.assertTrue(markdown.contains("```latex"))
+        org.junit.Assert.assertTrue(markdown.contains("p(\\theta|x) \\propto p(x|\\theta)p(\\theta)"))
+        org.junit.Assert.assertTrue(markdown.contains("Provider: `manual-latex` `0.5-local`"))
+        org.junit.Assert.assertTrue(markdown.contains("Confidence: 1.00"))
+        org.junit.Assert.assertTrue(markdown.contains("Edited: `true`"))
+        org.junit.Assert.assertTrue(markdown.contains("seminar-10/media/formulas/slide.jpg"))
+        org.junit.Assert.assertTrue(markdown.contains("""Provenance: `{"source":"manual"}`"""))
     }
 }
