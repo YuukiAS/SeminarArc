@@ -42,6 +42,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yuukias.seminararc.domain.model.SummaryDraft
+import com.yuukias.seminararc.domain.model.ProcessingJob
+import com.yuukias.seminararc.domain.model.ProcessingJobState
+import com.yuukias.seminararc.domain.model.ProcessingJobType
 import com.yuukias.seminararc.domain.model.TimelineEventType
 import com.yuukias.seminararc.domain.model.Transcript
 import com.yuukias.seminararc.domain.model.TranscriptSegment
@@ -70,6 +73,8 @@ fun TranscriptReviewScreen(
         onTranscriptSelected = viewModel::onTranscriptSelected,
         onRunTranscription = viewModel::onRunTranscriptionClicked,
         onDraftSummary = viewModel::onDraftSummaryClicked,
+        onRetryJob = viewModel::onRetryJob,
+        onCancelJob = viewModel::onCancelJob,
         modifier = modifier,
     )
 }
@@ -83,6 +88,8 @@ fun TranscriptReviewScreenContent(
     onTranscriptSelected: (Long) -> Unit,
     onRunTranscription: () -> Unit,
     onDraftSummary: () -> Unit,
+    onRetryJob: (Long) -> Unit,
+    onCancelJob: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -122,6 +129,8 @@ fun TranscriptReviewScreenContent(
                 onTranscriptSelected = onTranscriptSelected,
                 onRunTranscription = onRunTranscription,
                 onDraftSummary = onDraftSummary,
+                onRetryJob = onRetryJob,
+                onCancelJob = onCancelJob,
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -134,6 +143,8 @@ private fun TranscriptReviewReadyContent(
     onTranscriptSelected: (Long) -> Unit,
     onRunTranscription: () -> Unit,
     onDraftSummary: () -> Unit,
+    onRetryJob: (Long) -> Unit,
+    onCancelJob: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
@@ -167,6 +178,13 @@ private fun TranscriptReviewReadyContent(
             )
         }
         item {
+            ProcessingQueueCard(
+                jobs = state.processingJobs,
+                onRetryJob = onRetryJob,
+                onCancelJob = onCancelJob,
+            )
+        }
+        item {
             TimelineWindowsCard(windows = state.timelineWindows)
         }
         item {
@@ -178,6 +196,61 @@ private fun TranscriptReviewReadyContent(
                 canDraft = state.segments.isNotEmpty(),
                 onDraftSummary = onDraftSummary,
             )
+        }
+    }
+}
+
+@Composable
+private fun ProcessingQueueCard(
+    jobs: List<ProcessingJob>,
+    onRetryJob: (Long) -> Unit,
+    onCancelJob: (Long) -> Unit,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(spacing.space4),
+            verticalArrangement = Arrangement.spacedBy(spacing.space3),
+        ) {
+            Text("Processing queue", style = MaterialTheme.typography.titleMedium)
+            if (jobs.isEmpty()) {
+                Text(
+                    "No transcription or summary jobs yet.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                jobs.forEach { job ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(job.statusText(), fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Provider ${job.providerId} ${job.providerVersion}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            job.errorMessage?.takeIf { it.isNotBlank() }?.let { message ->
+                                Text(message, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                        if (job.state in listOf(ProcessingJobState.QUEUED, ProcessingJobState.RUNNING)) {
+                            TextButton(
+                                onClick = { onCancelJob(job.id) },
+                                modifier = Modifier.heightIn(min = 48.dp),
+                            ) {
+                                Text("Cancel")
+                            }
+                        }
+                        if (job.state in listOf(ProcessingJobState.FAILED, ProcessingJobState.CANCELLED) && job.isRetryable) {
+                            TextButton(
+                                onClick = { onRetryJob(job.id) },
+                                modifier = Modifier.heightIn(min = 48.dp),
+                            ) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -362,6 +435,24 @@ private fun TimelineEventType.label(): String {
         TimelineEventType.NOTE -> "Note"
         TimelineEventType.QUESTION -> "Question"
     }
+}
+
+private fun ProcessingJob.statusText(): String {
+    val typeLabel = when (type) {
+        ProcessingJobType.IMAGE_ENHANCEMENT -> "Enhancement"
+        ProcessingJobType.TEXT_OCR -> "OCR"
+        ProcessingJobType.TRANSCRIPTION -> "Transcription"
+        ProcessingJobType.SUMMARY_DRAFT -> "Summary"
+        ProcessingJobType.NOTION_EXPORT_PREP -> "Notion export"
+    }
+    val stateLabel = when (state) {
+        ProcessingJobState.QUEUED -> "queued"
+        ProcessingJobState.RUNNING -> "running"
+        ProcessingJobState.SUCCEEDED -> "succeeded"
+        ProcessingJobState.FAILED -> "failed"
+        ProcessingJobState.CANCELLED -> "cancelled"
+    }
+    return "$typeLabel $stateLabel"
 }
 
 private fun formatDuration(offsetMs: Long): String {

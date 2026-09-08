@@ -126,6 +126,7 @@ Compose screens continue to call ViewModels for app actions. ViewModels call rep
 - Room version `6` adds `processing_jobs.inputPayloadJson` so durable work can persist bounded provider-independent inputs beyond a single `inputAssetId`.
 - `ProcessingWorkScheduler` can enqueue the selected transcript segments as durable `SUMMARY_DRAFT` WorkManager jobs. `ProcessingWorker` decodes the persisted payload and delegates to `DraftSummaryForSeminarUseCase`; retry/recovery rebuilds work from the payload stored in Room. The default `UnavailableSummaryProvider` is a safe boundary that records provider-unavailable failure without uploading transcript text, references, notes, or faking success.
 - `SeminarNotionReadyRenderer` maps the local `SeminarExportDocument` into a provider-neutral, block-like `NotionReadyExportDocument` plus Markdown preview. It carries text and local relative media paths only; it has no Notion OAuth, API client, token storage, upload, or retry behavior.
+- Transcript Review observes local processing jobs for `TRANSCRIPTION` and `SUMMARY_DRAFT`, renders their persisted queue state, and routes retry/cancel actions through `ProcessingWorkScheduler`.
 - `NOTION_EXPORT_PREP` remains a durable processing job type, but the existing generic WorkManager worker does not execute that future job type yet.
 
 This foundation does not ship a real ASR engine, cloud transcription, live Notion OAuth/upload, or AI summary runtime yet.

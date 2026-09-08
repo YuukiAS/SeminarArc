@@ -20,6 +20,7 @@
 - 新增 `0.4.x` transcript review queue entry foundation：Transcript Review 的转写动作会为最新完成录音排入 durable job，并通过 snackbar 标明仍需配置真实 provider。
 - 新增 `0.4.x` summary durable queue foundation：Room v6 为 `processing_jobs` 增加 `inputPayloadJson`，Transcript Review 可把当前 transcript segments 排入 durable `SUMMARY_DRAFT` WorkManager job；默认 `UnavailableSummaryProvider` 明确失败，避免上传 transcript、references、notes 或伪造总结。
 - 新增 `0.4.x` Notion-ready export contract foundation：`SeminarNotionReadyRenderer` 可从本地 export document 生成 block-like Notion-ready document 和 Markdown 预览；不接入 Notion OAuth、API client、token 或上传。
+- 新增 `0.4.x` transcript processing queue UI foundation：Transcript Review 展示本地 `TRANSCRIPTION` / `SUMMARY_DRAFT` job 状态，并提供 retry/cancel 控制。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。

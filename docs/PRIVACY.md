@@ -59,6 +59,7 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - Transcript Review 的转写按钮只创建本地 durable job 和 snackbar 反馈；在配置真实 provider 前不会上传音频或产生自动 transcript。
 - provider 输出保存为独立 `summary_drafts`，不会覆盖人工维护的 `SeminarBrief`。
 - `SeminarNotionReadyRenderer` 只从本地 export document 生成 block-like Notion-ready document 和 Markdown 预览，包含文本字段与相对媒体路径；不包含 OAuth、API client、token、后台服务或上传逻辑。
+- Transcript Review 的 processing queue UI 只展示本地 Room processing job metadata，并把 retry/cancel 交回本地 `ProcessingWorkScheduler`；不会新增网络、上传或 provider credential。
 - 当前没有接入真实 ASR provider、AI summary runtime、Notion live OAuth/upload、backend、private API credential 或 recurring-cost service。
 - 后续任何 cloud transcription、AI summary 或 Notion upload 都必须保持 opt-in，并在上传前显示 provider、素材范围、费用/配额、删除语义和 credential/backend 边界。
 

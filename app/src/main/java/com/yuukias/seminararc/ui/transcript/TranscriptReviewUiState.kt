@@ -1,6 +1,7 @@
 package com.yuukias.seminararc.ui.transcript
 
 import com.yuukias.seminararc.domain.model.SeminarDetail
+import com.yuukias.seminararc.domain.model.ProcessingJob
 import com.yuukias.seminararc.domain.model.SummaryDraft
 import com.yuukias.seminararc.domain.model.Transcript
 import com.yuukias.seminararc.domain.model.TranscriptSegment
@@ -16,6 +17,7 @@ sealed interface TranscriptReviewUiState {
         val segments: List<TranscriptSegment>,
         val timelineWindows: List<TranscriptTimelineWindow>,
         val summaryDrafts: List<SummaryDraft>,
+        val processingJobs: List<ProcessingJob>,
     ) : TranscriptReviewUiState
 }
 

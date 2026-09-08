@@ -4,10 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.yuukias.seminararc.domain.model.ProcessingJobType
 import com.yuukias.seminararc.domain.model.RecordingState
 import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
 import com.yuukias.seminararc.domain.model.TranscriptState
 import com.yuukias.seminararc.domain.repository.RecordingRepository
+import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.TranscriptRepository
 import com.yuukias.seminararc.domain.usecase.BuildTranscriptTimelineWindowsUseCase
@@ -36,6 +38,7 @@ class TranscriptReviewViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val seminarRepository: SeminarRepository,
     private val recordingRepository: RecordingRepository,
+    private val reconstructionRepository: ReconstructionRepository,
     private val transcriptRepository: TranscriptRepository,
     private val buildTranscriptTimelineWindows: BuildTranscriptTimelineWindowsUseCase,
     private val processingWorkScheduler: ProcessingWorkScheduler,
@@ -52,9 +55,10 @@ class TranscriptReviewViewModel @Inject constructor(
         seminarRepository.observeSeminarDetail(seminarId),
         transcriptRepository.observeTranscripts(seminarId),
         transcriptRepository.observeSummaryDrafts(seminarId),
+        reconstructionRepository.observeJobsForSeminar(seminarId),
         selectedTranscriptId,
-    ) { detail, transcripts, drafts, selectedId ->
-        TranscriptReviewSnapshot(detail, transcripts, drafts, selectedId)
+    ) { detail, transcripts, drafts, jobs, selectedId ->
+        TranscriptReviewSnapshot(detail, transcripts, drafts, jobs, selectedId)
     }
         .mapLatest { snapshot -> snapshot.toUiState() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TranscriptReviewUiState.Loading)
@@ -106,6 +110,25 @@ class TranscriptReviewViewModel @Inject constructor(
         }
     }
 
+    fun onRetryJob(jobId: Long) {
+        viewModelScope.launch {
+            val job = processingWorkScheduler.retry(jobId)
+            val message = if (job == null) {
+                "Processing job could not be retried."
+            } else {
+                "Processing retry queued."
+            }
+            _events.emit(TranscriptReviewEvent.ShowMessage(message))
+        }
+    }
+
+    fun onCancelJob(jobId: Long) {
+        viewModelScope.launch {
+            processingWorkScheduler.cancel(jobId)
+            _events.emit(TranscriptReviewEvent.ShowMessage("Processing job cancelled."))
+        }
+    }
+
     private suspend fun TranscriptReviewSnapshot.toUiState(): TranscriptReviewUiState {
         val currentDetail = detail ?: return TranscriptReviewUiState.Missing(seminarId)
         val orderedTranscripts = transcripts.sortedWith(
@@ -141,6 +164,20 @@ class TranscriptReviewViewModel @Inject constructor(
             segments = segments,
             timelineWindows = windows,
             summaryDrafts = summaryDrafts.sortedWith(compareByDescending { draft -> draft.updatedAt }),
+            processingJobs = processingJobs
+                .filter { job -> job.type in transcriptProcessingTypes }
+                .sortedWith(
+                    compareByDescending<com.yuukias.seminararc.domain.model.ProcessingJob> { job ->
+                        job.startedAt ?: job.completedAt ?: job.createdAt
+                    }.thenByDescending { job -> job.id },
+                ),
+        )
+    }
+
+    private companion object {
+        val transcriptProcessingTypes = setOf(
+            ProcessingJobType.TRANSCRIPTION,
+            ProcessingJobType.SUMMARY_DRAFT,
         )
     }
 }
@@ -149,5 +186,6 @@ private data class TranscriptReviewSnapshot(
     val detail: com.yuukias.seminararc.domain.model.SeminarDetail?,
     val transcripts: List<com.yuukias.seminararc.domain.model.Transcript>,
     val summaryDrafts: List<com.yuukias.seminararc.domain.model.SummaryDraft>,
+    val processingJobs: List<com.yuukias.seminararc.domain.model.ProcessingJob>,
     val selectedTranscriptId: Long?,
 )
