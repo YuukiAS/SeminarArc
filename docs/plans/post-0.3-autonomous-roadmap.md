@@ -18,141 +18,163 @@ Updated: 2026-09-08
 - Current Room schema: v4.
 - Default connected/instrumentation target: Windows `Pixel_8` API 36 Emulator.
 - Protected GM1910 is not a daily test target.
+- Repository visibility is currently public.
+
+## Distribution principle
+
+从 `0.3.1-internal` 起，用户下载 APK 的默认入口是 **GitHub Releases**，不是 GitHub Actions artifacts。
+
+- build/test/sign 在受控 Windows 本地环境完成；
+- accepted milestone 通过 test + Emulator + package/secret scan 后，本地生成签名 APK；
+- 由本地 `gh release create/upload` 或 GitHub API 上传 APK + SHA-256 + release notes；
+- GitHub Actions 只作为普通 CI，不是 APK 构建/发布硬依赖；
+- release APK signing key 永远留在本地/repo 外，不上传 GitHub；
+- 相同 internal application id + 相同 signer 才支持覆盖升级并保留数据。
+
+当前仓库为 public，因此 Release asset 也公开可下载；如果未来仓库转 private，再重新评估下载权限和 Actions 配额。
 
 ## Milestone A — 0.3.1-internal Dogfood Distribution
 
-Do this before starting large `0.4.x` production work.
+在大型 `0.4.x` production work 前完成。
 
-Goal: produce an installable internal APK that the user can download from GitHub and sideload on a personal Android phone without rebuilding locally.
+Goal: 产出用户可以从仓库 `Releases` 直接下载并侧载的 internal APK，无需用户自行 build。
 
 Required work:
 
-- Correct stale app version metadata and define a repeatable versioning convention.
-- Add an `internal` distribution variant/build type that does not collide with the eventual production package when practical.
-- Add GitHub Actions packaging and artifact upload.
-- Run unit/build/lint and Emulator regression before publishing an internal artifact.
-- Add APK secret scan/basic package inspection.
-- Add `docs/INTERNAL_DISTRIBUTION.md` with download/install/update/uninstall/data-retention behavior.
-- Do not commit keystore/private key/password.
+- 修正 stale app version metadata，建立可重复版本约定；
+- internal application id/build variant，例如 `.internal`；
+- Windows 本地 assemble/sign；
+- unit/build/lint + Windows Emulator regression；
+- APK package/version/signature/secret scan；
+- SHA-256；
+- Git tag + GitHub prerelease + APK release asset；
+- `docs/INTERNAL_DISTRIBUTION.md`；
+- 不提交 keystore/private key/password。
 
 ### Signing
 
-For disposable one-off smoke, an ordinary debug APK can be sideloaded, but ephemeral CI debug signing is not a durable update channel.
+稳定 internal signer 保存在 Windows 本地、repo 外；Gradle 从环境变量或本地非版本化配置读取。GitHub 只收到已经签名的 APK，不需要 GitHub Actions Secrets。
 
-For repeatable dogfood updates, use a stable internal signing key stored outside the repository and injected through GitHub Actions secrets. Prefer a distinct internal application id (for example an `.internal` suffix) so later Play production signing does not force a destructive transition.
-
-Preparing the workflow/configuration is automatic. Provisioning a new private signing key or changing GitHub secrets is a human-approval boundary unless the user explicitly authorizes a trusted local Codex session to do it without exposing the secret.
+若当前还没有稳定 signer，可先完成 disposable dogfood build/release foundation；真正 update-in-place 的稳定 signer 初始化可作为一次性 human approval，但不得阻塞其他 roadmap 开发。
 
 ### Distribution stages
 
-- `0.3.1-internal`: first downloadable dogfood APK.
-- `0.4.x-internal`: continued APK artifacts for dogfood after each accepted milestone.
-- `0.5.x-alpha`: optionally start GitHub prerelease APKs once formula/research export line is stable.
-- `0.9.x`: switch primary tester distribution to signed AAB / Google Play internal testing; APK may remain a diagnostic side artifact.
+- `0.3.1-internal.*`: first downloadable dogfood APK/releases.
+- `0.4.x-internal.*`: accepted 0.4.x milestones publish new GitHub prerelease APKs.
+- `0.5.x-alpha.*`: formula/research export line稳定后继续 GitHub prerelease APKs.
+- `0.9.x`: primary tester distribution 迁到 signed AAB / Google Play internal testing；APK 可保留诊断副产物。
 
 ## Milestone B — 0.4.x Advanced Processing
 
-Do not treat the existing broad TODO text as an implementation contract. Start with a readiness gate.
+不要直接执行 TODO 粗略范围；先做 readiness gate。
 
 ### Readiness topics
 
-- Transcription provider architecture: local/open-source/self-hosted/cloud options, Android feasibility, timestamp quality, language support, cost, license, cancellation/retry and privacy.
-- Transcript storage model and Room migration from v4.
-- Mapping transcript segments to recording offsets and nearby slide/timeline events.
-- SummaryProvider boundary: user-selected inputs only, draft semantics, provenance and editing; no overwrite of manual Brief.
-- Notion integration: Markdown-first export path, official API/OAuth feasibility, attachment/file limits, credential storage and whether public OAuth/backend is required.
-- Secrets/backend decision: identify anything that cannot safely ship in the APK.
+- transcription provider architecture：local/open-source/self-hosted/cloud、Android 可行性、语言、timestamp、资源、license/cost/privacy、cancel/retry/idempotency/offline；
+- Room migration from v4；
+- transcript segment 与 recording offset / slide / timeline window；
+- SummaryProvider：用户选定输入、draft/provenance/edit，不覆盖 manual Brief；
+- Notion：Markdown-first、official API/OAuth、file upload、credential/backend 边界；
+- secrets/backend decision；
+- privacy/network contract；
+- UI/design/test/Emulator strategy。
 
 ### Production target after readiness
 
-If readiness passes without unresolved product/security conflict:
+如果 readiness PASS 且无真正产品/安全冲突：
 
-1. transcript schema/provider boundary;
-2. at least one approved transcription path;
-3. timestamped transcript review linked to timeline/photo windows;
-4. cancellable/retryable processing;
-5. SummaryProvider as editable draft only;
-6. Notion export/integration only to the extent credentials/privacy architecture is safe;
-7. Markdown/ZIP compatibility;
-8. Windows Emulator closeout and internal APK artifact.
+1. transcript schema/provider boundary；
+2. 至少一个批准的 transcription path；
+3. timestamped transcript review 与 timeline/photo window 联动；
+4. cancellable/retryable processing；
+5. SummaryProvider 只产生 editable draft；
+6. Notion 只实现安全 credential/privacy 架构允许的部分；
+7. Markdown/ZIP compatibility；
+8. Windows Emulator closeout；
+9. accepted milestone 后本地 build/sign 并发布 GitHub Release APK。
 
-If a provider requires app-owned secret/backend and no approved secure path exists, implement provider-independent contracts/fakes and continue other local-safe work; stop only the blocked provider subpath.
+如果某 provider 需要 app-owned secret/backend 且没有安全路径，只冻结该子路径，继续其他 local-safe work。
 
 ## Milestone C — 0.5.x Formula + Research Export
 
-Start with another readiness/license gate.
+先做 readiness/license gate。
 
 Targets:
 
-- formula region selection;
-- formula OCR provider boundary;
-- evaluate Mathpix and licensable open/self-hosted alternatives;
-- LaTeX correction/review with confidence/provenance;
-- BibTeX/RIS export from confirmed references;
-- research-oriented export polish;
-- no automatic paywalled PDF retrieval;
-- Windows Emulator regression and internal/pre-release APK.
+- formula region selection；
+- formula OCR provider boundary；
+- Mathpix 与 licensable local/open/self-hosted alternatives；
+- LaTeX correction/review + confidence/provenance；
+- BibTeX/RIS export；
+- research export polish；
+- no automatic paywalled PDF retrieval；
+- Windows Emulator regression；
+- accepted milestone 本地构建并发布 GitHub prerelease APK。
 
-Paid API keys and commercial provider credentials are human-approval boundaries and must never be committed to the repository.
+Paid API keys/commercial credentials 是 human-approval boundary，绝不提交 repo。
 
 ## Milestone D — 0.9.x Release Preparation
 
-Do not auto-enter external/public release merely because `0.5.x` completes.
+`0.5.x` 完成后不要自动公开发布，只做 0.9.x readiness/audit。
 
-The autonomous development loop may prepare an audit/readiness report, but the following require explicit user approval:
+以下必须用户明确批准：
 
-- production signing key creation/change;
-- Google Play Console account/actions;
-- privacy-policy publication;
-- Data safety submission;
-- release-track rollout;
-- ads/payment SDK integration;
-- public release.
+- production signing key creation/change；
+- Google Play Console；
+- privacy-policy publication；
+- Data safety submission；
+- release-track rollout；
+- ads/payment；
+- public release。
 
-Before `0.9.x` release work, require:
+Before release work require：
 
-- versioning/signing audit;
-- release APK/AAB secret scan;
-- backup/upgrade/migration tests from installed internal versions;
-- no-network/weak-network/low-storage/long-session tests;
-- hardware checkpoint plan;
-- permission/FGS/background-policy review;
-- privacy and third-party SDK inventory.
+- versioning/signing audit；
+- release APK/AAB secret scan；
+- backup/upgrade/migration tests from installed internal versions；
+- no-network/weak-network/low-storage/long-session tests；
+- hardware checkpoint plan；
+- permission/FGS/background-policy review；
+- privacy + third-party SDK inventory。
 
 ## Autonomous execution policy
 
 At each version line:
 
-1. research/readiness task;
-2. ChatGPT/Codex-readable plan/result;
-3. production master if gate passes;
-4. JVM/build/lint continuously;
-5. Windows Emulator connected closeout;
-6. docs/README/TODO/CHANGELOG/architecture/privacy/design update;
-7. internal APK artifact after accepted milestones;
-8. proceed to the next planned version if no hard blocker.
+1. research/readiness；
+2. plan/result；
+3. production master if gate passes；
+4. JVM/build/lint continuously；
+5. Windows Emulator connected closeout；
+6. docs/README/TODO/CHANGELOG/architecture/privacy/design update；
+7. accepted milestone 本地生成 signed internal APK；
+8. 创建 tag + GitHub prerelease，上传 APK + SHA-256 + notes；
+9. 无 hard blocker 则继续下一版本。
 
-Codex may create internal task/result files under an already-authorized master task and continue between phases without waiting for the user.
+GitHub Actions 不承担 release APK 分发；普通 push/PR CI 可以继续保留。
 
-Hard stop / human approval conditions:
+Codex 可以在已授权 master 下创建内部 task/result 并连续推进，无需每阶段等用户。
 
-- new paid API/provider account or secret;
-- backend/service deployment that creates recurring cost;
-- external cloud upload of seminar content;
-- destructive migration/data-loss risk;
-- production signing/Play Console/public release;
-- physical-device write/install/instrumentation unless separately authorized;
-- major product-scope choice not resolved by the roadmap.
+Hard stop / human approval：
+
+- new paid API/provider account or secret；
+- recurring-cost backend/service deployment；
+- external cloud upload of seminar content；
+- destructive migration/data-loss risk；
+- production signing/Play Console/public release；
+- physical-device write/install/instrumentation unless separately authorized；
+- major product-scope choice not resolved by roadmap。
 
 ## User installation target
 
-Once `0.3.1-internal` distribution is complete, the expected user flow is:
+从 `0.3.1-internal` 起：
 
-1. Open the SeminarArc GitHub Actions run (or later prerelease page).
-2. Download the named SeminarArc internal APK artifact.
-3. Extract the artifact ZIP if GitHub supplies a ZIP wrapper.
-4. On Android, open the APK and allow the browser/files app to install unknown apps when prompted.
-5. Install SeminarArc Internal.
-6. Future internal builds signed with the same internal key and application id should update in place and retain app data.
+1. 打开 SeminarArc 仓库的 `Releases` 页面；
+2. 打开最新 internal/prerelease；
+3. 直接下载 `.apk` asset（不是 Actions artifact，不应需要解 ZIP）；
+4. Android 打开 APK；
+5. 只给当前浏览器/文件管理器“安装未知应用”权限；
+6. 安装 `SeminarArc Internal`；
+7. 后续同 applicationId + 同 signing key 的 Release APK 可以直接覆盖升级并保留数据。
 
-The production Play build should use a separate release identity/signing plan; internal dogfood must not silently become the production signing contract.
+production Play build 使用独立 release identity/signing 计划；internal dogfood 不自动成为 production signing contract。
