@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.yuukias.seminararc.data.local.converter.InstantConverters
 import com.yuukias.seminararc.data.local.dao.ClipDao
+import com.yuukias.seminararc.data.local.dao.FormulaDao
 import com.yuukias.seminararc.data.local.dao.ReferenceDao
 import com.yuukias.seminararc.data.local.dao.ReconstructionDao
 import com.yuukias.seminararc.data.local.dao.RecordingDao
@@ -15,6 +16,8 @@ import com.yuukias.seminararc.data.local.entity.AssetTagEntity
 import com.yuukias.seminararc.data.local.entity.BriefKeySlideEntity
 import com.yuukias.seminararc.data.local.entity.BriefReferenceEntity
 import com.yuukias.seminararc.data.local.entity.AudioClipEntity
+import com.yuukias.seminararc.data.local.entity.FormulaRegionEntity
+import com.yuukias.seminararc.data.local.entity.FormulaResultEntity
 import com.yuukias.seminararc.data.local.entity.OcrResultEntity
 import com.yuukias.seminararc.data.local.entity.ProcessingJobEntity
 import com.yuukias.seminararc.data.local.entity.ReferenceCandidateEntity
@@ -52,8 +55,10 @@ import com.yuukias.seminararc.data.local.entity.SummaryDraftEntity
         TranscriptEntity::class,
         TranscriptSegmentEntity::class,
         SummaryDraftEntity::class,
+        FormulaRegionEntity::class,
+        FormulaResultEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 @TypeConverters(InstantConverters::class)
@@ -65,4 +70,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun reconstructionDao(): ReconstructionDao
     abstract fun referenceDao(): ReferenceDao
     abstract fun transcriptDao(): TranscriptDao
+    abstract fun formulaDao(): FormulaDao
 }

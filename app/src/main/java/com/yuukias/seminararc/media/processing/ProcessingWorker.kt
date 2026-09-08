@@ -74,7 +74,9 @@ class ProcessingWorker(
                     repository = repository,
                     draftSummaryForSeminar = dependencies.draftSummaryForSeminarUseCase(),
                 )
-                ProcessingJobType.NOTION_EXPORT_PREP -> fail(
+                ProcessingJobType.NOTION_EXPORT_PREP,
+                ProcessingJobType.FORMULA_OCR,
+                -> fail(
                     repository = repository,
                     jobId = job.id,
                     message = "${job.type} is not wired to ProcessingWorker yet.",

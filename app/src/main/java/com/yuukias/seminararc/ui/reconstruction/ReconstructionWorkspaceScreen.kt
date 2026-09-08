@@ -430,6 +430,7 @@ private fun ProcessingJob.statusText(): String {
         ProcessingJobType.TRANSCRIPTION -> "Transcription"
         ProcessingJobType.SUMMARY_DRAFT -> "Summary"
         ProcessingJobType.NOTION_EXPORT_PREP -> "Notion export"
+        ProcessingJobType.FORMULA_OCR -> "Formula OCR"
     }
     val stateLabel = when (state) {
         ProcessingJobState.QUEUED -> "queued"

@@ -166,7 +166,9 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
             ProcessingJobType.TEXT_OCR -> textOcrRequest(job.id, TextOcrLanguageMode.LATIN_AND_CHINESE)
             ProcessingJobType.TRANSCRIPTION -> transcriptionRequestFor(job)
             ProcessingJobType.SUMMARY_DRAFT -> job.inputPayloadJson?.let { summaryDraftRequest(job.id, it) }
-            ProcessingJobType.NOTION_EXPORT_PREP -> null
+            ProcessingJobType.NOTION_EXPORT_PREP,
+            ProcessingJobType.FORMULA_OCR,
+            -> null
         }
     }
 

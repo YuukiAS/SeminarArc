@@ -9,9 +9,11 @@ import com.yuukias.seminararc.data.local.MIGRATION_2_3
 import com.yuukias.seminararc.data.local.MIGRATION_3_4
 import com.yuukias.seminararc.data.local.MIGRATION_4_5
 import com.yuukias.seminararc.data.local.MIGRATION_5_6
+import com.yuukias.seminararc.data.local.MIGRATION_6_7
 import com.yuukias.seminararc.data.local.RoomDatabaseTransactionRunner
 import com.yuukias.seminararc.data.export.SeminarExportRepositoryImpl
 import com.yuukias.seminararc.data.local.dao.ClipDao
+import com.yuukias.seminararc.data.local.dao.FormulaDao
 import com.yuukias.seminararc.data.local.dao.ReferenceDao
 import com.yuukias.seminararc.data.local.dao.ReconstructionDao
 import com.yuukias.seminararc.data.local.dao.RecordingDao
@@ -85,7 +87,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "seminararc.db",
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
             .build()
     }
 
@@ -109,6 +111,9 @@ object DatabaseModule {
 
     @Provides
     fun provideTranscriptDao(database: AppDatabase): TranscriptDao = database.transcriptDao()
+
+    @Provides
+    fun provideFormulaDao(database: AppDatabase): FormulaDao = database.formulaDao()
 
     @Provides
     @Singleton

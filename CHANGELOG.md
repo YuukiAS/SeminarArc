@@ -28,6 +28,7 @@
 - 新增 `0.4.x` Notion-ready share entry foundation：Seminar Detail 可通过 Android share sheet 分享本地生成的 Notion-ready Markdown 预览文本，不接入 Notion OAuth/API/token 或上传。
 - 新增 `0.4.x` Notion-ready save entry foundation：Seminar Detail 可通过 Android document picker 保存本地生成的 Notion-ready Markdown 预览文本，便于手动导入 Notion 或其他知识库。
 - 完成 `0.5.x` Formula / Research Export readiness gate：明确 Mathpix 为后续 credential/backend 决策后的付费云候选，PaddleOCR/pix2tex 为需单独审计的自建候选，第一阶段优先实现本地公式区域、可编辑 LaTeX、provider contract 和 BibTeX/RIS deterministic export。
+- 新增 `0.5.x` formula schema/domain foundation：Room version `7` 增加 `formula_regions`、`formula_results`、`FormulaDao`、公式 domain models 和安全占位 `FORMULA_OCR` processing job 类型。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。

@@ -72,7 +72,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
             .build()
         database.openHelper.readableDatabase.query("SELECT retryCount FROM audio_clips WHERE id = 1").use { cursor ->
             cursor.moveToFirst()
@@ -133,7 +133,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB_V2_TO_V3,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
             .build()
         database.openHelper.readableDatabase.query(
             "SELECT type, relativePath FROM seminar_assets ORDER BY type ASC",
@@ -215,7 +215,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB_V3_TO_V4,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
             .build()
         database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM seminar_assets").use { cursor ->
             cursor.moveToFirst()
@@ -302,7 +302,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB_V4_TO_V5,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
             .build()
         database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM reference_evidence").use { cursor ->
             cursor.moveToFirst()
@@ -372,7 +372,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB_V5_TO_V6,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
             .build()
         database.openHelper.readableDatabase.query(
             "SELECT type, inputPayloadJson FROM processing_jobs WHERE id = 1",
@@ -383,6 +383,68 @@ class AppDatabaseMigrationTest {
         }
         database.close()
     }
+
+    @Test
+    fun migrate6To7_addsFormulaTablesAndPreservesProcessingRows() {
+        helper.createDatabase(TEST_DB_V6_TO_V7, 6).apply {
+            execSQL(
+                """
+                INSERT INTO seminars (
+                    id, title, speaker, affiliation, scheduledAt, location, abstractText,
+                    abstractPdfPath, status, rating, isFavorite, createdAt, updatedAt,
+                    sessionStartedAt, sessionEndedAt
+                ) VALUES (
+                    1, 'Formula seminar', NULL, NULL, NULL, NULL, NULL,
+                    NULL, 'COMPLETED', NULL, 0, 100, 200, 100, 200
+                )
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO seminar_assets (
+                    id, seminarId, type, originAssetId, sourceTimelineEventId, sourceRecordingId, sourceClipId,
+                    relativePath, mimeType, displayName, createdAt, updatedAt
+                ) VALUES (
+                    1, 1, 'PHOTO_ORIGINAL', NULL, NULL, NULL, NULL,
+                    'seminars/1/photos/formula.jpg', 'image/jpeg', 'formula.jpg', 100, 200
+                )
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO processing_jobs (
+                    id, seminarId, type, state, inputAssetId, inputPayloadJson, outputAssetId, providerId, providerVersion,
+                    createdAt, startedAt, completedAt, retryCount, isRetryable, errorMessage
+                ) VALUES (
+                    1, 1, 'TEXT_OCR', 'SUCCEEDED', 1, NULL, NULL, 'mlkit-text', '1', 100, 100, 101, 0, 0, NULL
+                )
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB_V6_TO_V7, 7, true, MIGRATION_6_7)
+
+        val database = Room.databaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            AppDatabase::class.java,
+            TEST_DB_V6_TO_V7,
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+            .build()
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM processing_jobs WHERE id = 1").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(1, cursor.getInt(0))
+        }
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM formula_regions").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(0, cursor.getInt(0))
+        }
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM formula_results").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(0, cursor.getInt(0))
+        }
+        database.close()
+    }
 }
 
 private const val TEST_DB = "migration-test"
@@ -390,3 +452,4 @@ private const val TEST_DB_V2_TO_V3 = "migration-test-v2-to-v3"
 private const val TEST_DB_V3_TO_V4 = "migration-test-v3-to-v4"
 private const val TEST_DB_V4_TO_V5 = "migration-test-v4-to-v5"
 private const val TEST_DB_V5_TO_V6 = "migration-test-v5-to-v6"
+private const val TEST_DB_V6_TO_V7 = "migration-test-v6-to-v7"

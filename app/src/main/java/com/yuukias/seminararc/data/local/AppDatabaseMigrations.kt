@@ -482,3 +482,57 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
         db.execSQL("ALTER TABLE `processing_jobs` ADD COLUMN `inputPayloadJson` TEXT")
     }
 }
+
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `formula_regions` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `seminarId` INTEGER NOT NULL,
+                `sourceAssetId` INTEGER NOT NULL,
+                `sourcePhotoPath` TEXT NOT NULL,
+                `normalizedX` REAL NOT NULL,
+                `normalizedY` REAL NOT NULL,
+                `normalizedWidth` REAL NOT NULL,
+                `normalizedHeight` REAL NOT NULL,
+                `rotationDegrees` INTEGER NOT NULL,
+                `label` TEXT,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`sourceAssetId`) REFERENCES `seminar_assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_formula_regions_seminarId` ON `formula_regions` (`seminarId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_formula_regions_sourceAssetId` ON `formula_regions` (`sourceAssetId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_formula_regions_seminarId_sourceAssetId` ON `formula_regions` (`seminarId`, `sourceAssetId`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `formula_results` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `seminarId` INTEGER NOT NULL,
+                `regionId` INTEGER NOT NULL,
+                `providerId` TEXT NOT NULL,
+                `providerVersion` TEXT NOT NULL,
+                `state` TEXT NOT NULL,
+                `latex` TEXT NOT NULL,
+                `confidence` REAL,
+                `isEdited` INTEGER NOT NULL,
+                `errorMessage` TEXT,
+                `provenanceJson` TEXT NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`regionId`) REFERENCES `formula_regions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_formula_results_seminarId` ON `formula_results` (`seminarId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_formula_results_regionId` ON `formula_results` (`regionId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_formula_results_seminarId_regionId` ON `formula_results` (`seminarId`, `regionId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_formula_results_seminarId_state` ON `formula_results` (`seminarId`, `state`)")
+    }
+}

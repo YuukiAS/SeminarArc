@@ -32,6 +32,7 @@ enum class ProcessingJobType {
     TRANSCRIPTION,
     SUMMARY_DRAFT,
     NOTION_EXPORT_PREP,
+    FORMULA_OCR,
 }
 
 enum class ProcessingJobState {

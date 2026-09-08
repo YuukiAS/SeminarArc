@@ -144,6 +144,8 @@ This foundation does not ship a real ASR engine, cloud transcription, live Notio
 - `FormulaOcrProvider` is the future boundary for Mathpix, PaddleOCR, pix2tex/self-hosted, fake, and manual providers. Live Mathpix or other cloud providers require later credential/backend/user-key approval.
 - Research export should be deterministic and based only on confirmed references. BibTeX/RIS renderers must exclude pending/rejected candidates and avoid fabricating missing metadata.
 
+Room version `7` adds `formula_regions` and `formula_results`. `FormulaDao` exposes local region/result persistence for later UI/provider tasks. `ProcessingJobType.FORMULA_OCR` is present as a reserved durable job type, but the current Worker marks it as not wired and WorkManager recovery does not enqueue it automatically until the dedicated formula queue task enables the provider path.
+
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 
 ## Reference Candidate and Seminar Brief

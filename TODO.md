@@ -410,6 +410,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 当前进展：
 
 - 已完成 `0.5.x` readiness gate：第一阶段可在无 Mathpix credential、无 backend、无外部上传、无 connected device 的情况下推进本地安全 foundation。
+- 已完成 `0.5.x_formula_schema_domain`：Room version `7` 新增 formula region/result 表、DAO、domain model 和安全占位 `FORMULA_OCR` job 类型。
 - Mathpix 是高准确度付费云候选，但需要 authenticated API、billing 和 credential/backend/user-key 决策；live provider 暂不进入 APK。
 - PaddleOCR formula recognition 和 pix2tex/LaTeX-OCR 可作为自建/本地候选继续评估，但需要模型大小、Android packaging、性能、耗电、依赖和模型权重 license 审计。
 - 第一阶段优先实现 formula region selection data model、可编辑 LaTeX result、`FormulaOcrProvider` fake/manual contract、BibTeX/RIS deterministic export 和 export polish。
@@ -421,6 +422,10 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 经过商业许可审查的开源/自建公式识别 provider。
 - LaTeX 人工校正和置信度提示。
 - 可选 Zotero/引用格式导出研究；优先支持 BibTeX/RIS 文件，不先绑定复杂账号同步。
+
+下一步：
+
+- 执行 `0.5.x_formula_provider_contract_task`：新增 provider input/output/idempotency/cancel/retry contract、manual/fake provider 和 JVM contract tests。
 
 ### `0.9.x` Google Play 内测与发布准备
 
