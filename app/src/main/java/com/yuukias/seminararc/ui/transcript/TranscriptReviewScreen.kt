@@ -78,6 +78,8 @@ fun TranscriptReviewScreen(
         onCancelJob = viewModel::onCancelJob,
         onSegmentDraftChanged = viewModel::onSegmentDraftChanged,
         onSaveSegment = viewModel::onSaveSegmentClicked,
+        onManualTranscriptDraftChanged = viewModel::onManualTranscriptDraftChanged,
+        onImportManualTranscript = viewModel::onImportManualTranscriptClicked,
         modifier = modifier,
     )
 }
@@ -95,6 +97,8 @@ fun TranscriptReviewScreenContent(
     onCancelJob: (Long) -> Unit,
     onSegmentDraftChanged: (Long, String) -> Unit,
     onSaveSegment: (Long) -> Unit,
+    onManualTranscriptDraftChanged: (String) -> Unit,
+    onImportManualTranscript: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -138,6 +142,8 @@ fun TranscriptReviewScreenContent(
                 onCancelJob = onCancelJob,
                 onSegmentDraftChanged = onSegmentDraftChanged,
                 onSaveSegment = onSaveSegment,
+                onManualTranscriptDraftChanged = onManualTranscriptDraftChanged,
+                onImportManualTranscript = onImportManualTranscript,
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -154,6 +160,8 @@ private fun TranscriptReviewReadyContent(
     onCancelJob: (Long) -> Unit,
     onSegmentDraftChanged: (Long, String) -> Unit,
     onSaveSegment: (Long) -> Unit,
+    onManualTranscriptDraftChanged: (String) -> Unit,
+    onImportManualTranscript: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
@@ -194,6 +202,13 @@ private fun TranscriptReviewReadyContent(
             )
         }
         item {
+            ManualTranscriptCard(
+                draft = state.manualTranscriptDraft,
+                onDraftChanged = onManualTranscriptDraftChanged,
+                onImport = onImportManualTranscript,
+            )
+        }
+        item {
             TimelineWindowsCard(windows = state.timelineWindows)
         }
         item {
@@ -210,6 +225,44 @@ private fun TranscriptReviewReadyContent(
                 canDraft = state.segments.isNotEmpty(),
                 onDraftSummary = onDraftSummary,
             )
+        }
+    }
+}
+
+@Composable
+private fun ManualTranscriptCard(
+    draft: String,
+    onDraftChanged: (String) -> Unit,
+    onImport: () -> Unit,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(spacing.space4),
+            verticalArrangement = Arrangement.spacedBy(spacing.space3),
+        ) {
+            Text("Manual transcript", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Paste local transcript text. Each non-empty line becomes one editable coarse segment.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedTextField(
+                value = draft,
+                onValueChange = onDraftChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Transcript text") },
+                minLines = 4,
+            )
+            OutlinedButton(
+                onClick = onImport,
+                enabled = draft.isNotBlank(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+            ) {
+                Icon(Icons.Outlined.NoteAlt, contentDescription = null)
+                Text("Import manual transcript")
+            }
         }
     }
 }

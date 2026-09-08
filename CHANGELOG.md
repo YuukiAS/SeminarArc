@@ -22,6 +22,7 @@
 - 新增 `0.4.x` Notion-ready export contract foundation：`SeminarNotionReadyRenderer` 可从本地 export document 生成 block-like Notion-ready document 和 Markdown 预览；不接入 Notion OAuth、API client、token 或上传。
 - 新增 `0.4.x` transcript processing queue UI foundation：Transcript Review 展示本地 `TRANSCRIPTION` / `SUMMARY_DRAFT` job 状态，并提供 retry/cancel 控制。
 - 新增 `0.4.x` transcript segment edit foundation：Transcript Review 可本地编辑单条 timestamped segment 文本并持久化 `isEdited` / `updatedAt`，不触发 provider 或上传。
+- 新增 `0.4.x` manual transcript import foundation：Transcript Review 可将粘贴的本地文本导入为 `MANUAL` transcript，并按非空行生成可编辑 coarse segments。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。

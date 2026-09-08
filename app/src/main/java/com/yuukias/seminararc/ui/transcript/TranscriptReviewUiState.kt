@@ -16,6 +16,7 @@ sealed interface TranscriptReviewUiState {
         val selectedTranscript: Transcript?,
         val segments: List<TranscriptSegment>,
         val segmentDrafts: Map<Long, String>,
+        val manualTranscriptDraft: String,
         val timelineWindows: List<TranscriptTimelineWindow>,
         val summaryDrafts: List<SummaryDraft>,
         val processingJobs: List<ProcessingJob>,

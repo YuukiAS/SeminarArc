@@ -128,6 +128,7 @@ Compose screens continue to call ViewModels for app actions. ViewModels call rep
 - `SeminarNotionReadyRenderer` maps the local `SeminarExportDocument` into a provider-neutral, block-like `NotionReadyExportDocument` plus Markdown preview. It carries text and local relative media paths only; it has no Notion OAuth, API client, token storage, upload, or retry behavior.
 - Transcript Review observes local processing jobs for `TRANSCRIPTION` and `SUMMARY_DRAFT`, renders their persisted queue state, and routes retry/cancel actions through `ProcessingWorkScheduler`.
 - Transcript segment editing stays local: `TranscriptReviewViewModel` keeps unsaved segment drafts in UI state, then calls `TranscriptRepository.editSegmentText`. The repository trims nonblank text, marks the segment edited, refreshes `updatedAt`, and updates the parent transcript activity timestamp.
+- Manual transcript import stays local: `TranscriptReviewViewModel` creates `TranscriptSourceType.MANUAL` transcripts with provider id `manual-transcript`, converts each nonblank pasted line into a coarse editable segment, saves the transcript as ready, and reuses the same segment edit/export/summary boundaries as provider-generated transcripts.
 - `NOTION_EXPORT_PREP` remains a durable processing job type, but the existing generic WorkManager worker does not execute that future job type yet.
 
 This foundation does not ship a real ASR engine, cloud transcription, live Notion OAuth/upload, or AI summary runtime yet.

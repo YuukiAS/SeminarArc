@@ -388,6 +388,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已新增 Notion-ready export contract foundation：本地 `SeminarNotionReadyRenderer` 可将 export document 转为 block-like Notion-ready document 和 Markdown 预览；不包含 OAuth、API client、token 或上传行为。
 - 已新增 transcript processing queue UI foundation：Transcript Review 展示本地 transcription/summary durable job 状态，并提供 retry/cancel 控制。
 - 已新增 transcript segment edit foundation：Transcript Review 支持本地编辑/保存单条 timestamped segment 文本，保存后标记 `isEdited` 并刷新 transcript activity 时间。
+- 已新增 manual transcript import foundation：Transcript Review 支持把本地粘贴文本导入为 `MANUAL` transcript，按非空行生成可编辑 coarse segments。
 - `0.4.x` 本地 headless gate 已持续通过；connected Emulator closeout 尚未完成。sandbox 内 Windows `adb.exe devices -l` 会先失败在 `\.android` home 解析；非 sandbox + D-home preflight 可枚举设备，但当前同时看到 protected physical serial `8cc54656` 和 `emulator-5554`，不满足“只看到 emulator-*”安全门。
 
 范围：

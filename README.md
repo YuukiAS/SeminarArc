@@ -53,6 +53,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` Notion-ready export contract foundation：新增本地 `SeminarNotionReadyRenderer`，可从现有 export document 生成 block-like Notion-ready document 和 Markdown 预览；不包含 Notion OAuth、API client、token 或上传行为。
 - `0.4.x` transcript processing queue UI foundation：Transcript Review 现在展示本地 `TRANSCRIPTION` / `SUMMARY_DRAFT` job 状态，并支持对可重试/可取消 job 走 durable scheduler 的 retry/cancel。
 - `0.4.x` transcript segment edit foundation：Transcript Review 可在本地编辑并保存单条 timestamped segment 文本，更新 `isEdited` 与 transcript activity 时间，不触发 provider 或上传。
+- `0.4.x` manual transcript import foundation：Transcript Review 可把粘贴的本地文本导入为 `MANUAL` transcript，每个非空行成为可编辑 coarse segment，供 summary/export 后续使用。
 
 尚未声明完成：
 

@@ -7,11 +7,14 @@ import androidx.navigation.toRoute
 import com.yuukias.seminararc.domain.model.ProcessingJobType
 import com.yuukias.seminararc.domain.model.RecordingState
 import com.yuukias.seminararc.domain.model.TranscriptLanguageHint
+import com.yuukias.seminararc.domain.model.TranscriptSourceType
 import com.yuukias.seminararc.domain.model.TranscriptState
+import com.yuukias.seminararc.domain.repository.CreateTranscriptInput
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.TranscriptRepository
+import com.yuukias.seminararc.domain.transcription.TranscriptionSegmentDraft
 import com.yuukias.seminararc.domain.usecase.BuildTranscriptTimelineWindowsUseCase
 import com.yuukias.seminararc.domain.usecase.TranscriptTimelineWindowInput
 import com.yuukias.seminararc.domain.usecase.TranscriptTimelineWindowResult
@@ -48,6 +51,7 @@ class TranscriptReviewViewModel @Inject constructor(
 
     private val selectedTranscriptId = MutableStateFlow<Long?>(null)
     private val editedSegments = MutableStateFlow<Map<Long, String>>(emptyMap())
+    private val manualTranscriptDraft = MutableStateFlow("")
 
     private val _events = MutableSharedFlow<TranscriptReviewEvent>(replay = 0)
     val events: SharedFlow<TranscriptReviewEvent> = _events.asSharedFlow()
@@ -70,7 +74,8 @@ class TranscriptReviewViewModel @Inject constructor(
         dataSnapshot,
         selectedTranscriptId,
         editedSegments,
-    ) { data, selectedId, segmentDrafts ->
+        manualTranscriptDraft,
+    ) { data, selectedId, segmentDrafts, manualDraft ->
         TranscriptReviewSnapshot(
             detail = data.detail,
             transcripts = data.transcripts,
@@ -78,6 +83,7 @@ class TranscriptReviewViewModel @Inject constructor(
             processingJobs = data.processingJobs,
             selectedTranscriptId = selectedId,
             segmentDrafts = segmentDrafts,
+            manualTranscriptDraft = manualDraft,
         )
     }
         .mapLatest { snapshot -> snapshot.toUiState() }
@@ -89,6 +95,43 @@ class TranscriptReviewViewModel @Inject constructor(
 
     fun onSegmentDraftChanged(segmentId: Long, text: String) {
         editedSegments.value = editedSegments.value + (segmentId to text)
+    }
+
+    fun onManualTranscriptDraftChanged(text: String) {
+        manualTranscriptDraft.value = text
+    }
+
+    fun onImportManualTranscriptClicked() {
+        viewModelScope.launch {
+            val segments = manualTranscriptDraft.value.toManualSegments()
+            if (segments.isEmpty()) {
+                _events.emit(TranscriptReviewEvent.ShowMessage("Paste transcript text before importing."))
+                return@launch
+            }
+            val imported = runCatching {
+                val transcript = transcriptRepository.createTranscript(
+                    CreateTranscriptInput(
+                        seminarId = seminarId,
+                        recordingId = null,
+                        providerId = MANUAL_TRANSCRIPT_PROVIDER_ID,
+                        providerVersion = MANUAL_TRANSCRIPT_PROVIDER_VERSION,
+                        languageHint = TranscriptLanguageHint.AUTO,
+                        sourceType = TranscriptSourceType.MANUAL,
+                        sourceAssetId = null,
+                    ),
+                )
+                transcriptRepository.saveTranscriptSegments(transcript.id, segments)
+                transcriptRepository.markTranscriptReady(transcript.id, TranscriptLanguageHint.AUTO)
+                transcript
+            }.getOrNull()
+            if (imported == null) {
+                _events.emit(TranscriptReviewEvent.ShowMessage("Manual transcript could not be imported."))
+            } else {
+                manualTranscriptDraft.value = ""
+                selectedTranscriptId.value = imported.id
+                _events.emit(TranscriptReviewEvent.ShowMessage("Manual transcript imported."))
+            }
+        }
     }
 
     fun onSaveSegmentClicked(segmentId: Long) {
@@ -206,6 +249,7 @@ class TranscriptReviewViewModel @Inject constructor(
             segmentDrafts = segments.associate { segment ->
                 segment.id to (segmentDrafts[segment.id] ?: segment.text)
             },
+            manualTranscriptDraft = manualTranscriptDraft,
             timelineWindows = windows,
             summaryDrafts = summaryDrafts.sortedWith(compareByDescending { draft -> draft.updatedAt }),
             processingJobs = processingJobs
@@ -223,6 +267,8 @@ class TranscriptReviewViewModel @Inject constructor(
             ProcessingJobType.TRANSCRIPTION,
             ProcessingJobType.SUMMARY_DRAFT,
         )
+        const val MANUAL_TRANSCRIPT_PROVIDER_ID = "manual-transcript"
+        const val MANUAL_TRANSCRIPT_PROVIDER_VERSION = "0.4-local"
     }
 }
 
@@ -233,6 +279,7 @@ private data class TranscriptReviewSnapshot(
     val processingJobs: List<com.yuukias.seminararc.domain.model.ProcessingJob>,
     val selectedTranscriptId: Long?,
     val segmentDrafts: Map<Long, String>,
+    val manualTranscriptDraft: String,
 )
 
 private data class TranscriptReviewData(
@@ -241,3 +288,21 @@ private data class TranscriptReviewData(
     val summaryDrafts: List<com.yuukias.seminararc.domain.model.SummaryDraft>,
     val processingJobs: List<com.yuukias.seminararc.domain.model.ProcessingJob>,
 )
+
+private fun String.toManualSegments(): List<TranscriptionSegmentDraft> {
+    return lines()
+        .map { line -> line.trim() }
+        .filter { line -> line.isNotBlank() }
+        .mapIndexed { index, line ->
+            val start = index * MANUAL_SEGMENT_DURATION_MS
+            TranscriptionSegmentDraft(
+                startOffsetMs = start,
+                endOffsetMs = start + MANUAL_SEGMENT_DURATION_MS,
+                text = line,
+                confidence = null,
+                providerSegmentId = "manual-${index + 1}",
+            )
+        }
+}
+
+private const val MANUAL_SEGMENT_DURATION_MS = 60_000L
