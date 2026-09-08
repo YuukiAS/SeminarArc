@@ -118,6 +118,7 @@ Compose screens continue to call ViewModels for app actions. ViewModels call rep
 - `TranscriptionProvider` and `SummaryProvider` are domain contracts; first tests use fake providers only.
 - `RunTranscriptionForRecordingUseCase` reads completed recordings through `RecordingRepository`, resolves app-private recording files through `MediaStorageManager`, finds the recording asset through `ReconstructionRepository`, and writes transcript lifecycle/segments through `TranscriptRepository`.
 - `DraftSummaryForSeminarUseCase` builds provider-independent summary requests from seminar metadata, user-selected transcript windows, confirmed references, key-slide captions, and notes; provider success/failure is persisted to `summary_drafts` without overwriting user-authored `SeminarBrief` rows.
+- `BuildTranscriptTimelineWindowsUseCase` derives local transcript windows around timeline/photo offsets, matches segments by interval overlap, links photo assets, and returns bounded previews for future Reconstruction UI, summary selection, Markdown-friendly export, and Notion-prep boundaries.
 - `TRANSCRIPTION`, `SUMMARY_DRAFT`, and `NOTION_EXPORT_PREP` are now durable processing job types, but the existing image/OCR WorkManager scheduler does not yet execute those future job types.
 
 This foundation does not ship a real ASR engine, cloud transcription, live Notion OAuth/upload, or AI summary runtime yet.

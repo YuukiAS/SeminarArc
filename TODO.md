@@ -379,11 +379,12 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已新增本地安全的 `TranscriptionProvider` / `SummaryProvider` domain contract 和 fake-provider JVM contract tests；真实 provider、后台队列和 UI 尚未完成。
 - 已新增 transcript repository / processing foundation：`TranscriptDao`、`TranscriptRepositoryImpl` 和 `RunTranscriptionForRecordingUseCase` 可用 fake/local provider 从已完成录音保存 timestamped segments。
 - 已新增 summary draft use case foundation：`DraftSummaryForSeminarUseCase` 从用户选择的 transcript segments、已确认 references、key-slide captions 和 notes 构造 provider-independent summary request，并将成功/失败结果写入 `summary_drafts`；不会覆盖人工 `SeminarBrief`。
+- 已新增 transcript timeline windows foundation：`BuildTranscriptTimelineWindowsUseCase` 可从 timeline/photo offsets 生成 configurable transcript segment windows，为 Reconstruction UI、summary input selection、Markdown-friendly export 和 Notion-prep 提供本地关联基础。
 
 范围：
 
 - `TranscriptionProvider`：至少实现一种开源/自建路径；通义听悟可作为可选 provider。
-- 时间戳 transcript segment 与照片窗口关联。
+- 时间戳 transcript segment 与照片窗口关联：domain foundation 已完成，UI 消费仍待实现。
 - `SummaryProvider` 基于用户选定材料生成草稿，不覆盖人工内容。
 - Notion：先完成 Markdown 友好模板；再实现官方 API 页面、block 和文件上传。
 - 公开 Notion OAuth 和应用自有付费 API 需要后端后再开放给普通用户。

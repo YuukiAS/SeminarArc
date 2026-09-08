@@ -13,6 +13,7 @@
 - 新增 `0.4.x` provider contract foundation：`TranscriptionProvider`、`SummaryProvider`、timestamp granularity、selected transcript window、summary draft provenance、retryability 和 fake-provider JVM contract tests。
 - 新增 `0.4.x` transcript repository/processing foundation：`TranscriptDao`、`TranscriptRepositoryImpl`、`RunTranscriptionForRecordingUseCase`、本地录音文件解析、`TRANSCRIPTION` job 状态写回和 timestamped segment 持久化测试。
 - 新增 `0.4.x` summary draft use case foundation：基于用户选择的 transcript segments、已确认 references、key-slide captions 和 notes 生成 provider-independent summary request，并将成功/失败结果写入 `summary_drafts`，不覆盖人工 `SeminarBrief`。
+- 新增 `0.4.x` transcript timeline windows foundation：基于 timeline/photo offset 生成可配置 transcript window，按 overlap 匹配 segments，关联 photo asset，并输出未来 UI/export 可复用 preview。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。

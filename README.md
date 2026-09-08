@@ -44,6 +44,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` provider contract foundation：新增本地安全的 `TranscriptionProvider` 与 `SummaryProvider` domain contract，并用 fake-provider JVM tests 固定 timestamp、selected input、provenance 和 retryability 语义。
 - `0.4.x` transcript repository foundation：新增 `TranscriptDao` / `TranscriptRepository` / `RunTranscriptionForRecordingUseCase`，可通过 fake/local provider 从已完成本地录音保存 timestamped transcript segments。
 - `0.4.x` summary draft use case foundation：新增 `DraftSummaryForSeminarUseCase`，基于用户选择的 transcript segments、已确认 references、key-slide captions 和 notes 构造 provider-independent summary request，并把 provider 成功/失败结果写入 `summary_drafts`；不会覆盖人工 `SeminarBrief`。
+- `0.4.x` transcript timeline windows foundation：新增 `BuildTranscriptTimelineWindowsUseCase`，可按 timeline/photo offset 生成 transcript segment windows、关联 photo asset，并输出未来 UI/export 可复用 preview。
 
 尚未声明完成：
 
