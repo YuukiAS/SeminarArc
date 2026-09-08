@@ -335,7 +335,7 @@ private fun SummaryDraftsCard(
                     .heightIn(min = 48.dp),
             ) {
                 Icon(Icons.Outlined.NoteAlt, contentDescription = null)
-                Text("Prepare summary draft")
+                Text("Queue summary draft")
             }
             if (drafts.isEmpty()) {
                 Text("No summary drafts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)

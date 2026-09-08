@@ -476,3 +476,9 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_summary_drafts_seminarId_state` ON `summary_drafts` (`seminarId`, `state`)")
     }
 }
+
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `processing_jobs` ADD COLUMN `inputPayloadJson` TEXT")
+    }
+}

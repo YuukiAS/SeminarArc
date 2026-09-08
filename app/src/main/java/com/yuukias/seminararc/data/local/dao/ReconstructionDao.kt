@@ -51,6 +51,10 @@ interface ReconstructionDao {
         SELECT * FROM processing_jobs
         WHERE inputAssetId = :inputAssetId
             AND type = :type
+            AND (
+                (:inputPayloadJson IS NULL AND inputPayloadJson IS NULL)
+                OR inputPayloadJson = :inputPayloadJson
+            )
             AND state IN ('QUEUED', 'RUNNING')
         ORDER BY createdAt DESC, id DESC
         LIMIT 1
@@ -59,6 +63,7 @@ interface ReconstructionDao {
     suspend fun getActiveJobForInput(
         inputAssetId: Long,
         type: ProcessingJobType,
+        inputPayloadJson: String?,
     ): ProcessingJobEntity?
 
     @Query("SELECT * FROM processing_jobs WHERE id = :jobId")

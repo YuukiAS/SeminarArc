@@ -15,8 +15,10 @@ import com.yuukias.seminararc.domain.ocr.TextOcrLanguageMode
 import com.yuukias.seminararc.domain.repository.EnqueueProcessingJobInput
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
+import com.yuukias.seminararc.domain.repository.TranscriptRepository
 import com.yuukias.seminararc.domain.image.ImageEnhancementProvider
 import com.yuukias.seminararc.domain.ocr.TextOcrProvider
+import com.yuukias.seminararc.domain.summary.SummaryProvider
 import com.yuukias.seminararc.domain.transcription.TranscriptionProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -24,14 +26,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class WorkManagerProcessingWorkScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
     private val recordingRepository: RecordingRepository,
     private val reconstructionRepository: ReconstructionRepository,
+    private val transcriptRepository: TranscriptRepository,
     private val imageEnhancementProvider: ImageEnhancementProvider,
     private val textOcrProvider: TextOcrProvider,
     private val transcriptionProvider: TranscriptionProvider,
+    private val summaryProvider: SummaryProvider,
 ) : ProcessingWorkScheduler {
     private val workManager: WorkManager
         get() = WorkManager.getInstance(context)
@@ -93,6 +99,37 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
         return job
     }
 
+    override suspend fun enqueueSummaryDraft(
+        seminarId: Long,
+        transcriptId: Long,
+        selectedSegmentIds: List<Long>,
+        userNotes: String,
+    ): ProcessingJob? {
+        val transcript = transcriptRepository.getTranscript(transcriptId)
+            ?.takeIf { it.seminarId == seminarId }
+            ?: return null
+        val inputAssetId = transcript.sourceAssetId ?: return null
+        val payload = SummaryDraftWorkPayload(
+            seminarId = seminarId,
+            transcriptId = transcriptId,
+            selectedSegmentIds = selectedSegmentIds.distinct(),
+            userNotes = userNotes,
+        )
+        val payloadJson = json.encodeToString(payload)
+        val job = reconstructionRepository.enqueueJob(
+            EnqueueProcessingJobInput(
+                seminarId = seminarId,
+                type = ProcessingJobType.SUMMARY_DRAFT,
+                inputAssetId = inputAssetId,
+                inputPayloadJson = payloadJson,
+                providerId = summaryProvider.providerId,
+                providerVersion = summaryProvider.providerVersion,
+            ),
+        )
+        enqueue(job, summaryDraftRequest(job.id, payloadJson), ExistingWorkPolicy.KEEP)
+        return job
+    }
+
     override suspend fun retry(jobId: Long): ProcessingJob? {
         val job = reconstructionRepository.requeueJob(jobId) ?: return null
         val request = requestFor(job) ?: return null
@@ -128,7 +165,7 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
             ProcessingJobType.IMAGE_ENHANCEMENT -> imageEnhancementRequest(job.id, ImageEnhancementOptions())
             ProcessingJobType.TEXT_OCR -> textOcrRequest(job.id, TextOcrLanguageMode.LATIN_AND_CHINESE)
             ProcessingJobType.TRANSCRIPTION -> transcriptionRequestFor(job)
-            ProcessingJobType.SUMMARY_DRAFT,
+            ProcessingJobType.SUMMARY_DRAFT -> job.inputPayloadJson?.let { summaryDraftRequest(job.id, it) }
             ProcessingJobType.NOTION_EXPORT_PREP -> null
         }
     }
@@ -205,7 +242,28 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
             .build()
     }
 
+    private fun summaryDraftRequest(
+        jobId: Long,
+        payloadJson: String,
+    ): OneTimeWorkRequest {
+        return OneTimeWorkRequestBuilder<ProcessingWorker>()
+            .setInputData(
+                workDataOf(
+                    ProcessingWorker.KEY_JOB_ID to jobId,
+                    ProcessingWorker.KEY_OPERATION to ProcessingJobType.SUMMARY_DRAFT.name,
+                    ProcessingWorker.KEY_SUMMARY_PAYLOAD_JSON to payloadJson,
+                ),
+            )
+            .addTag(ProcessingWorker.WORK_TAG)
+            .build()
+    }
+
     private companion object {
+        val json = Json {
+            encodeDefaults = true
+            ignoreUnknownKeys = true
+        }
+
         fun workName(jobId: Long): String = "seminararc-processing-$jobId"
     }
 }

@@ -22,16 +22,16 @@ class DraftSummaryForSeminarUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(input: DraftSummaryInput): DraftSummaryResult {
         val detail = seminarRepository.observeSeminarDetail(input.seminarId).first()
-            ?: return DraftSummaryResult.Failed("Seminar was not found.")
+            ?: return DraftSummaryResult.Failed("Seminar was not found.", isRetryable = false)
         val selectedSegmentIdSet = input.selectedSegmentIds.toSet()
         if (selectedSegmentIdSet.isEmpty()) {
-            return DraftSummaryResult.Failed("Select transcript segments before drafting a summary.")
+            return DraftSummaryResult.Failed("Select transcript segments before drafting a summary.", isRetryable = false)
         }
         val segments = transcriptRepository.getSegments(input.transcriptId)
             .filter { segment -> segment.id in selectedSegmentIdSet && segment.seminarId == input.seminarId }
             .sortedWith(compareBy({ it.startOffsetMs }, { it.id }))
         if (segments.isEmpty()) {
-            return DraftSummaryResult.Failed("Selected transcript segments were not found.")
+            return DraftSummaryResult.Failed("Selected transcript segments were not found.", isRetryable = false)
         }
         val briefBundle = referenceRepository.getBriefBundle(input.seminarId)
         val referenceTitles = briefBundle?.references.orEmpty().map { (candidate, _) -> candidate.title }
@@ -113,7 +113,7 @@ class DraftSummaryForSeminarUseCase @Inject constructor(
                         errorMessage = result.message,
                     ),
                 )
-                DraftSummaryResult.Failed(result.message)
+                DraftSummaryResult.Failed(result.message, isRetryable = result.isRetryable)
             }
         }
     }
@@ -133,5 +133,5 @@ data class DraftSummaryInput(
 
 sealed interface DraftSummaryResult {
     data class Drafted(val draft: SummaryDraft) : DraftSummaryResult
-    data class Failed(val message: String) : DraftSummaryResult
+    data class Failed(val message: String, val isRetryable: Boolean = true) : DraftSummaryResult
 }

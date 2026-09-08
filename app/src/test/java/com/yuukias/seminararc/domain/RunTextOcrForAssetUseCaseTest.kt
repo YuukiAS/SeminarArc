@@ -192,6 +192,7 @@ private class FakeOcrReconstructionRepository : ReconstructionRepository {
             type = input.type,
             state = ProcessingJobState.QUEUED,
             inputAssetId = input.inputAssetId,
+            inputPayloadJson = input.inputPayloadJson,
             outputAssetId = null,
             providerId = input.providerId,
             providerVersion = input.providerVersion,

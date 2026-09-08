@@ -65,6 +65,7 @@ data class EnqueueProcessingJobInput(
     val seminarId: Long,
     val type: ProcessingJobType,
     val inputAssetId: Long,
+    val inputPayloadJson: String? = null,
     val providerId: String,
     val providerVersion: String,
 )

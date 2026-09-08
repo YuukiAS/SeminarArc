@@ -24,11 +24,15 @@ import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SaveOcrResultInput
 import com.yuukias.seminararc.domain.usecase.RunTranscriptionForRecordingUseCase
 import com.yuukias.seminararc.domain.usecase.RunTranscriptionResult
+import com.yuukias.seminararc.domain.usecase.DraftSummaryForSeminarUseCase
+import com.yuukias.seminararc.domain.usecase.DraftSummaryInput
+import com.yuukias.seminararc.domain.usecase.DraftSummaryResult
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.Json
 
 class ProcessingWorker(
     appContext: Context,
@@ -65,7 +69,11 @@ class ProcessingWorker(
                     repository = repository,
                     runTranscriptionForRecording = dependencies.runTranscriptionForRecordingUseCase(),
                 )
-                ProcessingJobType.SUMMARY_DRAFT,
+                ProcessingJobType.SUMMARY_DRAFT -> runSummaryDraft(
+                    jobId = job.id,
+                    repository = repository,
+                    draftSummaryForSeminar = dependencies.draftSummaryForSeminarUseCase(),
+                )
                 ProcessingJobType.NOTION_EXPORT_PREP -> fail(
                     repository = repository,
                     jobId = job.id,
@@ -82,6 +90,38 @@ class ProcessingWorker(
         }
     }
 
+    private suspend fun runSummaryDraft(
+        jobId: Long,
+        repository: ReconstructionRepository,
+        draftSummaryForSeminar: DraftSummaryForSeminarUseCase,
+    ): Result {
+        val payload = summaryPayloadFromInput()
+            ?: return fail(repository, jobId, "Summary draft payload is missing or invalid.", isRetryable = false)
+        repository.markJobRunning(jobId)
+        return when (
+            val result = draftSummaryForSeminar(
+                DraftSummaryInput(
+                    seminarId = payload.seminarId,
+                    transcriptId = payload.transcriptId,
+                    selectedSegmentIds = payload.selectedSegmentIds,
+                    userNotes = payload.userNotes,
+                ),
+            )
+        ) {
+            is DraftSummaryResult.Drafted -> {
+                repository.markJobSucceeded(jobId, outputAssetId = null)
+                Result.success()
+            }
+            is DraftSummaryResult.Failed -> {
+                val current = repository.getJob(jobId)
+                if (current?.state !in listOf(ProcessingJobState.FAILED, ProcessingJobState.CANCELLED)) {
+                    repository.markJobFailed(jobId, result.message, isRetryable = result.isRetryable)
+                }
+                Result.failure()
+            }
+        }
+    }
+
     private suspend fun runTranscription(
         jobId: Long,
         repository: ReconstructionRepository,
@@ -91,7 +131,7 @@ class ProcessingWorker(
         if (recordingId <= 0L) {
             return fail(repository, jobId, "Recording id is missing from transcription work.", isRetryable = false)
         }
-        return when (val result = runTranscriptionForRecording(recordingId, languageHintFromInput())) {
+        return when (val result = runTranscriptionForRecording(recordingId, languageHintFromInput(), existingJobId = jobId)) {
             is RunTranscriptionResult.Transcribed -> {
                 val current = repository.getJob(jobId)
                 if (current?.state != ProcessingJobState.SUCCEEDED) {
@@ -261,6 +301,11 @@ class ProcessingWorker(
         )
     }
 
+    private fun summaryPayloadFromInput(): SummaryDraftWorkPayload? {
+        val payloadJson = inputData.getString(KEY_SUMMARY_PAYLOAD_JSON) ?: return null
+        return runCatching { json.decodeFromString<SummaryDraftWorkPayload>(payloadJson) }.getOrNull()
+    }
+
     private inline fun <reified T : Enum<T>> enumValueOrDefault(
         value: String?,
         default: T,
@@ -272,6 +317,7 @@ class ProcessingWorker(
         const val KEY_OPERATION = "operation"
         const val KEY_RECORDING_ID = "recording_id"
         const val KEY_LANGUAGE_HINT = "language_hint"
+        const val KEY_SUMMARY_PAYLOAD_JSON = "summary_payload_json"
         const val KEY_LANGUAGE_MODE = "language_mode"
         const val KEY_ROTATION_DEGREES = "rotation_degrees"
         const val KEY_READABILITY = "readability"
@@ -290,6 +336,10 @@ class ProcessingWorker(
         const val KEY_PERSPECTIVE_BOTTOM_RIGHT_Y = "perspective_bottom_right_y"
         const val KEY_PERSPECTIVE_BOTTOM_LEFT_X = "perspective_bottom_left_x"
         const val KEY_PERSPECTIVE_BOTTOM_LEFT_Y = "perspective_bottom_left_y"
+
+        val json = Json {
+            ignoreUnknownKeys = true
+        }
     }
 }
 
@@ -302,5 +352,6 @@ interface ProcessingWorkerEntryPoint {
     fun imageEnhancementProvider(): ImageEnhancementProvider
     fun textOcrProvider(): TextOcrProvider
     fun runTranscriptionForRecordingUseCase(): RunTranscriptionForRecordingUseCase
+    fun draftSummaryForSeminarUseCase(): DraftSummaryForSeminarUseCase
     fun processingWorkScheduler(): ProcessingWorkScheduler
 }

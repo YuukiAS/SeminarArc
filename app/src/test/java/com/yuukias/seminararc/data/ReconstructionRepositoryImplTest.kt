@@ -234,10 +234,12 @@ private class FakeReconstructionDao : ReconstructionDao {
     override suspend fun getActiveJobForInput(
         inputAssetId: Long,
         type: ProcessingJobType,
+        inputPayloadJson: String?,
     ): ProcessingJobEntity? {
         return jobs.firstOrNull {
             it.inputAssetId == inputAssetId &&
                 it.type == type &&
+                it.inputPayloadJson == inputPayloadJson &&
                 it.state in listOf(ProcessingJobState.QUEUED, ProcessingJobState.RUNNING)
         }
     }

@@ -65,7 +65,24 @@ class TranscriptReviewViewModel @Inject constructor(
 
     fun onDraftSummaryClicked() {
         viewModelScope.launch {
-            _events.emit(TranscriptReviewEvent.ShowMessage("Summary drafting is not wired to a live provider yet."))
+            val readyState = uiState.value as? TranscriptReviewUiState.Ready
+            val transcript = readyState?.selectedTranscript
+            val segmentIds = readyState?.segments.orEmpty().map { it.id }
+            if (transcript == null || segmentIds.isEmpty()) {
+                _events.emit(TranscriptReviewEvent.ShowMessage("Select a transcript with segments before drafting a summary."))
+                return@launch
+            }
+            val job = processingWorkScheduler.enqueueSummaryDraft(
+                seminarId = seminarId,
+                transcriptId = transcript.id,
+                selectedSegmentIds = segmentIds,
+            )
+            val message = if (job == null) {
+                "Summary draft could not be queued for this transcript."
+            } else {
+                "Summary draft job queued. Configure a live provider to produce editable draft prose."
+            }
+            _events.emit(TranscriptReviewEvent.ShowMessage(message))
         }
     }
 

@@ -127,6 +127,35 @@ class RunTranscriptionForRecordingUseCaseTest {
         assertEquals(false, reconstructionRepository.jobs.single().isRetryable)
     }
 
+    @Test
+    fun reusesMatchingExistingProcessingJobFromWorker() = runTest {
+        val source = temporaryFolder.newFile("source.m4a")
+        val recording = recording()
+        val asset = recordingAsset(recording.filePath)
+        val reconstructionRepository = TranscriptionUseCaseFakeReconstructionRepository(asset)
+        val existingJob = reconstructionRepository.enqueueJob(
+            EnqueueProcessingJobInput(
+                seminarId = recording.seminarId,
+                type = ProcessingJobType.TRANSCRIPTION,
+                inputAssetId = asset.id,
+                providerId = "fake-transcription",
+                providerVersion = "1",
+            ),
+        )
+        val useCase = useCase(
+            recording = recording,
+            asset = asset,
+            source = source,
+            reconstructionRepository = reconstructionRepository,
+        )
+
+        val result = useCase(recording.id, existingJobId = existingJob.id) as RunTranscriptionResult.Transcribed
+
+        assertEquals(existingJob.id, result.job?.id)
+        assertEquals(1, reconstructionRepository.jobs.size)
+        assertEquals(ProcessingJobState.SUCCEEDED, reconstructionRepository.jobs.single().state)
+    }
+
     private fun useCase(
         recording: RecordingSession,
         asset: SeminarAsset,
@@ -209,6 +238,7 @@ private class TranscriptionUseCaseFakeReconstructionRepository(
             type = input.type,
             state = ProcessingJobState.QUEUED,
             inputAssetId = input.inputAssetId,
+            inputPayloadJson = input.inputPayloadJson,
             outputAssetId = null,
             providerId = input.providerId,
             providerVersion = input.providerVersion,

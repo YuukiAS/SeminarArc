@@ -109,7 +109,13 @@ class DraftSummaryForSeminarUseCaseTest {
 
         val result = useCase(DraftSummaryInput(seminarId = 1L, transcriptId = 2L, selectedSegmentIds = emptyList()))
 
-        assertEquals(DraftSummaryResult.Failed("Select transcript segments before drafting a summary."), result)
+        assertEquals(
+            DraftSummaryResult.Failed(
+                "Select transcript segments before drafting a summary.",
+                isRetryable = false,
+            ),
+            result,
+        )
         assertNull(provider.lastRequest)
     }
 
@@ -125,7 +131,7 @@ class DraftSummaryForSeminarUseCaseTest {
 
         val result = useCase(DraftSummaryInput(seminarId = 1L, transcriptId = 2L, selectedSegmentIds = listOf(7L)))
 
-        assertEquals(DraftSummaryResult.Failed("summary unavailable"), result)
+        assertEquals(DraftSummaryResult.Failed("summary unavailable", isRetryable = false), result)
         assertEquals(SummaryDraftState.FAILED, transcriptRepository.savedDrafts.single().state)
         assertEquals("existing notes", transcriptRepository.savedDrafts.single().userNotes)
         assertEquals("summary unavailable", transcriptRepository.savedDrafts.single().errorMessage)

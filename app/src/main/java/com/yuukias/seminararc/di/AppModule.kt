@@ -8,6 +8,7 @@ import com.yuukias.seminararc.data.local.MIGRATION_1_2
 import com.yuukias.seminararc.data.local.MIGRATION_2_3
 import com.yuukias.seminararc.data.local.MIGRATION_3_4
 import com.yuukias.seminararc.data.local.MIGRATION_4_5
+import com.yuukias.seminararc.data.local.MIGRATION_5_6
 import com.yuukias.seminararc.data.local.RoomDatabaseTransactionRunner
 import com.yuukias.seminararc.data.export.SeminarExportRepositoryImpl
 import com.yuukias.seminararc.data.local.dao.ClipDao
@@ -37,6 +38,7 @@ import com.yuukias.seminararc.domain.repository.SeminarExportRepository
 import com.yuukias.seminararc.domain.repository.ClipRepository
 import com.yuukias.seminararc.domain.repository.TimelineRepository
 import com.yuukias.seminararc.domain.repository.TranscriptRepository
+import com.yuukias.seminararc.domain.summary.SummaryProvider
 import com.yuukias.seminararc.domain.transcription.TranscriptionProvider
 import com.yuukias.seminararc.media.clip.AndroidM4aClipGenerator
 import com.yuukias.seminararc.media.clip.ClipGenerator
@@ -48,6 +50,7 @@ import com.yuukias.seminararc.media.playback.Media3RecordingPlaybackController
 import com.yuukias.seminararc.media.playback.RecordingPlaybackController
 import com.yuukias.seminararc.media.processing.ProcessingWorkScheduler
 import com.yuukias.seminararc.media.processing.WorkManagerProcessingWorkScheduler
+import com.yuukias.seminararc.media.summary.UnavailableSummaryProvider
 import com.yuukias.seminararc.media.transcription.UnavailableTranscriptionProvider
 import com.yuukias.seminararc.data.reference.CrossrefReferenceLookupProvider
 import com.yuukias.seminararc.data.reference.DataCiteReferenceLookupProvider
@@ -82,7 +85,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "seminararc.db",
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
     }
 
@@ -186,6 +189,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindTranscriptionProvider(impl: UnavailableTranscriptionProvider): TranscriptionProvider
+
+    @Binds
+    @Singleton
+    abstract fun bindSummaryProvider(impl: UnavailableSummaryProvider): SummaryProvider
 
     @Binds
     @Singleton

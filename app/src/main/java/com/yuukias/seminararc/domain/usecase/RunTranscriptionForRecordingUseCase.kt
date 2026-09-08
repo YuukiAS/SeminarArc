@@ -29,6 +29,7 @@ class RunTranscriptionForRecordingUseCase @Inject constructor(
     suspend operator fun invoke(
         recordingId: Long,
         languageHint: TranscriptLanguageHint = TranscriptLanguageHint.AUTO,
+        existingJobId: Long? = null,
     ): RunTranscriptionResult {
         val recording = recordingRepository.getRecording(recordingId)
             ?: return RunTranscriptionResult.Failed("Recording was not found.")
@@ -50,15 +51,24 @@ class RunTranscriptionForRecordingUseCase @Inject constructor(
                 job = null,
             )
         }
-        val job = reconstructionRepository.enqueueJob(
-            EnqueueProcessingJobInput(
-                seminarId = recording.seminarId,
-                type = ProcessingJobType.TRANSCRIPTION,
-                inputAssetId = sourceAsset.id,
-                providerId = transcriptionProvider.providerId,
-                providerVersion = transcriptionProvider.providerVersion,
-            ),
-        )
+        val job = existingJobId
+            ?.let { jobId ->
+                reconstructionRepository.getJob(jobId)?.takeIf { existing ->
+                    existing.seminarId == recording.seminarId &&
+                        existing.type == ProcessingJobType.TRANSCRIPTION &&
+                        existing.inputAssetId == sourceAsset.id &&
+                        existing.providerId == transcriptionProvider.providerId
+                }
+            }
+            ?: reconstructionRepository.enqueueJob(
+                EnqueueProcessingJobInput(
+                    seminarId = recording.seminarId,
+                    type = ProcessingJobType.TRANSCRIPTION,
+                    inputAssetId = sourceAsset.id,
+                    providerId = transcriptionProvider.providerId,
+                    providerVersion = transcriptionProvider.providerVersion,
+                ),
+            )
         reconstructionRepository.markJobRunning(job.id)
         val transcript = transcriptRepository.createTranscript(
             CreateTranscriptInput(

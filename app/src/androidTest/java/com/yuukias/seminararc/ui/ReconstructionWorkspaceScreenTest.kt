@@ -181,6 +181,7 @@ class ReconstructionWorkspaceScreenTest {
             type = type,
             state = state,
             inputAssetId = inputAssetId,
+            inputPayloadJson = null,
             outputAssetId = null,
             providerId = "provider",
             providerVersion = "1",

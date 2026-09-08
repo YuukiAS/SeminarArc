@@ -231,6 +231,7 @@ private class FakeReconstructionRepository : ReconstructionRepository {
         jobs.firstOrNull {
             it.inputAssetId == input.inputAssetId &&
                 it.type == input.type &&
+                it.inputPayloadJson == input.inputPayloadJson &&
                 it.state in listOf(ProcessingJobState.QUEUED, ProcessingJobState.RUNNING)
         }?.let { existing -> return existing }
         val job = ProcessingJob(
@@ -239,6 +240,7 @@ private class FakeReconstructionRepository : ReconstructionRepository {
             type = input.type,
             state = ProcessingJobState.QUEUED,
             inputAssetId = input.inputAssetId,
+            inputPayloadJson = input.inputPayloadJson,
             outputAssetId = null,
             providerId = input.providerId,
             providerVersion = input.providerVersion,

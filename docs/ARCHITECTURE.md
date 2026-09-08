@@ -123,7 +123,9 @@ Compose screens continue to call ViewModels for app actions. ViewModels call rep
 - Local Markdown/ZIP export includes transcript review metadata, timestamped segments, ready-transcript timeline windows, and generated summary drafts labeled as editable drafts. ZIP packaging remains compatible by writing the enriched Markdown to `<seminar-slug>/seminar.md` plus readable media assets.
 - `ProcessingWorkScheduler` can enqueue completed recordings as durable `TRANSCRIPTION` WorkManager jobs. `ProcessingWorker` delegates those jobs to `RunTranscriptionForRecordingUseCase`; retry/recovery rebuilds work from the input recording asset. The default `UnavailableTranscriptionProvider` is a safe boundary that records provider-unavailable failure without uploading audio or faking success.
 - The Transcript Review action now creates local durable transcription work for the latest completed recording and reports the queued/unavailable-provider state through snackbar feedback.
-- `SUMMARY_DRAFT` and `NOTION_EXPORT_PREP` are still durable processing job types, but the existing generic WorkManager worker does not execute those future job types yet.
+- Room version `6` adds `processing_jobs.inputPayloadJson` so durable work can persist bounded provider-independent inputs beyond a single `inputAssetId`.
+- `ProcessingWorkScheduler` can enqueue the selected transcript segments as durable `SUMMARY_DRAFT` WorkManager jobs. `ProcessingWorker` decodes the persisted payload and delegates to `DraftSummaryForSeminarUseCase`; retry/recovery rebuilds work from the payload stored in Room. The default `UnavailableSummaryProvider` is a safe boundary that records provider-unavailable failure without uploading transcript text, references, notes, or faking success.
+- `NOTION_EXPORT_PREP` remains a durable processing job type, but the existing generic WorkManager worker does not execute that future job type yet.
 
 This foundation does not ship a real ASR engine, cloud transcription, live Notion OAuth/upload, or AI summary runtime yet.
 

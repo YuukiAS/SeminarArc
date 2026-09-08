@@ -45,6 +45,7 @@ data class ProcessingJobEntity(
     val type: ProcessingJobType,
     val state: ProcessingJobState,
     val inputAssetId: Long,
+    val inputPayloadJson: String?,
     val outputAssetId: Long?,
     val providerId: String,
     val providerVersion: String,

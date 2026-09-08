@@ -21,6 +21,13 @@ interface ProcessingWorkScheduler {
         languageHint: TranscriptLanguageHint = TranscriptLanguageHint.AUTO,
     ): ProcessingJob?
 
+    suspend fun enqueueSummaryDraft(
+        seminarId: Long,
+        transcriptId: Long,
+        selectedSegmentIds: List<Long>,
+        userNotes: String = "",
+    ): ProcessingJob?
+
     suspend fun retry(jobId: Long): ProcessingJob?
 
     suspend fun cancel(jobId: Long)

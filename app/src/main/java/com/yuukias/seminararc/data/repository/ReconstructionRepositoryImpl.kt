@@ -120,7 +120,7 @@ class ReconstructionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun enqueueJob(input: EnqueueProcessingJobInput): ProcessingJob {
-        dao.getActiveJobForInput(input.inputAssetId, input.type)?.let { existing ->
+        dao.getActiveJobForInput(input.inputAssetId, input.type, input.inputPayloadJson)?.let { existing ->
             return existing.toDomain()
         }
         val now = clockProvider.now()
@@ -130,6 +130,7 @@ class ReconstructionRepositoryImpl @Inject constructor(
                 type = input.type,
                 state = ProcessingJobState.QUEUED,
                 inputAssetId = input.inputAssetId,
+                inputPayloadJson = input.inputPayloadJson,
                 outputAssetId = null,
                 providerId = input.providerId,
                 providerVersion = input.providerVersion,
@@ -284,6 +285,7 @@ class ReconstructionRepositoryImpl @Inject constructor(
             type = type,
             state = state,
             inputAssetId = inputAssetId,
+            inputPayloadJson = inputPayloadJson,
             outputAssetId = outputAssetId,
             providerId = providerId,
             providerVersion = providerVersion,
