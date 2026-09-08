@@ -44,6 +44,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -82,6 +84,8 @@ fun ReconstructionWorkspaceScreen(
         onKeySlidesOnlyChanged = viewModel::onKeySlidesOnlyChanged,
         onKeySlideChanged = viewModel::onKeySlideChanged,
         onEditOcrResult = viewModel::onEditOcrResult,
+        onAddFormulaRegion = viewModel::onAddFormulaRegion,
+        onDeleteFormulaRegion = viewModel::onDeleteFormulaRegion,
         onEnhancePhoto = { assetId -> viewModel.onEnhancePhoto(assetId) },
         onRunOcr = { assetId -> viewModel.onRunOcr(assetId) },
         onRetryJob = viewModel::onRetryJob,
@@ -103,6 +107,8 @@ fun ReconstructionWorkspaceScreenContent(
     onKeySlidesOnlyChanged: (Boolean) -> Unit,
     onKeySlideChanged: (Long, Boolean) -> Unit,
     onEditOcrResult: (Long, String) -> Unit,
+    onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
+    onDeleteFormulaRegion: (Long) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
     onRunOcr: (Long) -> Unit,
     onRetryJob: (Long) -> Unit,
@@ -150,6 +156,8 @@ fun ReconstructionWorkspaceScreenContent(
                 onKeySlidesOnlyChanged = onKeySlidesOnlyChanged,
                 onKeySlideChanged = onKeySlideChanged,
                 onEditOcrResult = onEditOcrResult,
+                onAddFormulaRegion = onAddFormulaRegion,
+                onDeleteFormulaRegion = onDeleteFormulaRegion,
                 onEnhancePhoto = onEnhancePhoto,
                 onRunOcr = onRunOcr,
                 onRetryJob = onRetryJob,
@@ -170,6 +178,8 @@ private fun ReconstructionReadyContent(
     onKeySlidesOnlyChanged: (Boolean) -> Unit,
     onKeySlideChanged: (Long, Boolean) -> Unit,
     onEditOcrResult: (Long, String) -> Unit,
+    onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
+    onDeleteFormulaRegion: (Long) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
     onRunOcr: (Long) -> Unit,
     onRetryJob: (Long) -> Unit,
@@ -252,6 +262,8 @@ private fun ReconstructionReadyContent(
                     item = item,
                     onKeySlideChanged = onKeySlideChanged,
                     onEditOcrResult = onEditOcrResult,
+                    onAddFormulaRegion = onAddFormulaRegion,
+                    onDeleteFormulaRegion = onDeleteFormulaRegion,
                     onEnhancePhoto = onEnhancePhoto,
                     onRunOcr = onRunOcr,
                     onRetryJob = onRetryJob,
@@ -267,6 +279,8 @@ private fun ReconstructionAssetCard(
     item: ReconstructionAssetUiItem,
     onKeySlideChanged: (Long, Boolean) -> Unit,
     onEditOcrResult: (Long, String) -> Unit,
+    onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
+    onDeleteFormulaRegion: (Long) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
     onRunOcr: (Long) -> Unit,
     onRetryJob: (Long) -> Unit,
@@ -323,6 +337,11 @@ private fun ReconstructionAssetCard(
                 onRetryJob = onRetryJob,
                 onCancelJob = onCancelJob,
             )
+            FormulaRegionSection(
+                item = item,
+                onAddFormulaRegion = onAddFormulaRegion,
+                onDeleteFormulaRegion = onDeleteFormulaRegion,
+            )
             OutlinedTextField(
                 value = editedText,
                 onValueChange = { editedText = it },
@@ -378,6 +397,98 @@ private fun ProcessingJobControls(
             }
         }
     }
+}
+
+@Composable
+private fun FormulaRegionSection(
+    item: ReconstructionAssetUiItem,
+    onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
+    onDeleteFormulaRegion: (Long) -> Unit,
+) {
+    val spacing = SeminarArcThemeTokens.spacing
+    var label by remember(item.asset.id) { mutableStateOf("Formula") }
+    var x by remember(item.asset.id) { mutableStateOf("0.10") }
+    var y by remember(item.asset.id) { mutableStateOf("0.10") }
+    var width by remember(item.asset.id) { mutableStateOf("0.80") }
+    var height by remember(item.asset.id) { mutableStateOf("0.30") }
+    val parsed = listOf(x, y, width, height).map { value -> value.toFloatOrNull() }
+    val canSave = parsed.all { value -> value != null } &&
+        parsed[0]!! in 0f..1f &&
+        parsed[1]!! in 0f..1f &&
+        parsed[2]!! > 0f &&
+        parsed[3]!! > 0f &&
+        parsed[0]!! + parsed[2]!! <= 1.0001f &&
+        parsed[1]!! + parsed[3]!! <= 1.0001f
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
+        Text("Formula regions", style = MaterialTheme.typography.titleSmall)
+        item.formulaRegions.forEach { region ->
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
+                Text(
+                    text = "${region.label ?: "Formula"}: x=${region.normalizedX}, y=${region.normalizedY}, w=${region.normalizedWidth}, h=${region.normalizedHeight}",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(
+                    onClick = { onDeleteFormulaRegion(region.id) },
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Text("Delete")
+                }
+            }
+        }
+        OutlinedTextField(
+            value = label,
+            onValueChange = { label = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Formula label") },
+            singleLine = true,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
+            FormulaNumberField(value = x, onValueChange = { x = it }, label = "X", modifier = Modifier.weight(1f))
+            FormulaNumberField(value = y, onValueChange = { y = it }, label = "Y", modifier = Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
+            FormulaNumberField(value = width, onValueChange = { width = it }, label = "Width", modifier = Modifier.weight(1f))
+            FormulaNumberField(value = height, onValueChange = { height = it }, label = "Height", modifier = Modifier.weight(1f))
+        }
+        Button(
+            onClick = {
+                onAddFormulaRegion(
+                    item.asset.id,
+                    label,
+                    parsed[0]!!,
+                    parsed[1]!!,
+                    parsed[2]!!,
+                    parsed[3]!!,
+                )
+            },
+            enabled = canSave,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
+        ) {
+            Icon(Icons.Outlined.NoteAlt, contentDescription = null)
+            Text("Save formula region")
+        }
+    }
+}
+
+@Composable
+private fun FormulaNumberField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+    )
 }
 
 @Composable

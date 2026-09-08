@@ -1,6 +1,7 @@
 package com.yuukias.seminararc.ui.reconstruction
 
 import com.yuukias.seminararc.domain.model.OcrResult
+import com.yuukias.seminararc.domain.model.FormulaRegion
 import com.yuukias.seminararc.domain.model.ProcessingJob
 import com.yuukias.seminararc.domain.model.SeminarAsset
 import com.yuukias.seminararc.domain.model.SeminarDetail
@@ -26,6 +27,7 @@ data class ReconstructionAssetUiItem(
     val absolutePhotoPath: String?,
     val photoMissing: Boolean,
     val ocrResult: OcrResult?,
+    val formulaRegions: List<FormulaRegion>,
     val jobs: List<ProcessingJob>,
     val isKeySlide: Boolean,
 ) {

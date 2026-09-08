@@ -148,6 +148,8 @@ Room version `7` adds `formula_regions` and `formula_results`. `FormulaDao` expo
 
 `FormulaOcrProvider` defines the provider boundary for normalized crop input, request fingerprinting, LaTeX output, confidence, provenance, failure, and retryability. The production default is `UnavailableFormulaOcrProvider`; `ManualFormulaProvider` supports explicit user-supplied LaTeX without network or credential access.
 
+`FormulaRepository` validates source photo ownership before persisting regions. Reconstruction workspace observes formula regions through its ViewModel and exposes local create/delete controls; no composable accesses `FormulaDao` directly.
+
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 
 ## Reference Candidate and Seminar Brief

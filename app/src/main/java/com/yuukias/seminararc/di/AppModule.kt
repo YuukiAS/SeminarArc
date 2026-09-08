@@ -21,6 +21,7 @@ import com.yuukias.seminararc.data.local.dao.SeminarDao
 import com.yuukias.seminararc.data.local.dao.TimelineDao
 import com.yuukias.seminararc.data.local.dao.TranscriptDao
 import com.yuukias.seminararc.data.repository.ReconstructionRepositoryImpl
+import com.yuukias.seminararc.data.repository.FormulaRepositoryImpl
 import com.yuukias.seminararc.data.repository.ReferenceRepositoryImpl
 import com.yuukias.seminararc.data.repository.RecordingRepositoryImpl
 import com.yuukias.seminararc.data.repository.SeminarRepositoryImpl
@@ -33,6 +34,7 @@ import com.yuukias.seminararc.domain.image.ImageEnhancementProvider
 import com.yuukias.seminararc.domain.formula.FormulaOcrProvider
 import com.yuukias.seminararc.domain.ocr.TextOcrProvider
 import com.yuukias.seminararc.domain.repository.ReferenceLookupProvider
+import com.yuukias.seminararc.domain.repository.FormulaRepository
 import com.yuukias.seminararc.domain.repository.ReferenceRepository
 import com.yuukias.seminararc.domain.repository.RecordingRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
@@ -184,6 +186,10 @@ abstract class AppBindingsModule {
     @Binds
     @Singleton
     abstract fun bindTranscriptRepository(impl: TranscriptRepositoryImpl): TranscriptRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFormulaRepository(impl: FormulaRepositoryImpl): FormulaRepository
 
     @Binds
     @Singleton

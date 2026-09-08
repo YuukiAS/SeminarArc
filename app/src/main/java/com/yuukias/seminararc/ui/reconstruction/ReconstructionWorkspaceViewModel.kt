@@ -10,6 +10,8 @@ import com.yuukias.seminararc.domain.model.ProcessingJobState
 import com.yuukias.seminararc.domain.model.ProcessingJobType
 import com.yuukias.seminararc.domain.model.SeminarSystemTag
 import com.yuukias.seminararc.domain.ocr.TextOcrLanguageMode
+import com.yuukias.seminararc.domain.repository.CreateFormulaRegionInput
+import com.yuukias.seminararc.domain.repository.FormulaRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.media.processing.ProcessingWorkScheduler
@@ -34,6 +36,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val seminarRepository: SeminarRepository,
     private val reconstructionRepository: ReconstructionRepository,
+    private val formulaRepository: FormulaRepository,
     private val mediaStorageManager: MediaStorageManager,
     private val processingWorkScheduler: ProcessingWorkScheduler,
 ) : ViewModel() {
@@ -47,20 +50,27 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
     private val _events = MutableSharedFlow<ReconstructionWorkspaceEvent>(replay = 0)
     val events: SharedFlow<ReconstructionWorkspaceEvent> = _events.asSharedFlow()
 
-    private val dataSnapshot = combine(
+    private val contentSnapshot = combine(
         seminarRepository.observeSeminarDetail(seminarId),
         reconstructionRepository.observePhotoAssetsForSeminar(seminarId),
         reconstructionRepository.observeOcrResultsForSeminar(seminarId),
+        formulaRepository.observeRegionsForSeminar(seminarId),
         reconstructionRepository.observeJobsForSeminar(seminarId),
-        reconstructionRepository.observeAssetIdsForSystemTag(seminarId, SeminarSystemTag.KEY_SLIDE),
-    ) { detail, photoAssets, ocrResults, jobs, keySlideAssetIds ->
+    ) { detail, photoAssets, ocrResults, formulaRegions, jobs ->
         ReconstructionWorkspaceData(
             detail = detail,
             photoAssets = photoAssets,
             ocrResults = ocrResults,
+            formulaRegions = formulaRegions,
             jobs = jobs,
-            keySlideAssetIds = keySlideAssetIds.toSet(),
+            keySlideAssetIds = emptySet(),
         )
+    }
+    private val dataSnapshot = combine(
+        contentSnapshot,
+        reconstructionRepository.observeAssetIdsForSystemTag(seminarId, SeminarSystemTag.KEY_SLIDE),
+    ) { data, keySlideAssetIds ->
+        data.copy(keySlideAssetIds = keySlideAssetIds.toSet())
     }
 
     val uiState: StateFlow<ReconstructionWorkspaceUiState> = combine(
@@ -73,6 +83,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
             detail = data.detail,
             photoAssets = data.photoAssets,
             ocrResults = data.ocrResults,
+            formulaRegions = data.formulaRegions,
             jobs = data.jobs,
             keySlideAssetIds = data.keySlideAssetIds,
             searchQuery = query,
@@ -130,6 +141,44 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
         }
     }
 
+    fun onAddFormulaRegion(
+        assetId: Long,
+        label: String,
+        normalizedX: Float,
+        normalizedY: Float,
+        normalizedWidth: Float,
+        normalizedHeight: Float,
+    ) {
+        viewModelScope.launch {
+            val created = runCatching {
+                formulaRepository.createRegion(
+                    CreateFormulaRegionInput(
+                        seminarId = seminarId,
+                        sourceAssetId = assetId,
+                        normalizedX = normalizedX,
+                        normalizedY = normalizedY,
+                        normalizedWidth = normalizedWidth,
+                        normalizedHeight = normalizedHeight,
+                        label = label,
+                    ),
+                )
+            }.getOrNull()
+            if (created == null) {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Formula region was not saved."))
+            } else {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Formula region saved."))
+            }
+        }
+    }
+
+    fun onDeleteFormulaRegion(regionId: Long) {
+        viewModelScope.launch {
+            if (!formulaRepository.deleteRegion(regionId)) {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Formula region was not deleted."))
+            }
+        }
+    }
+
     fun onRetryJob(jobId: Long) {
         viewModelScope.launch {
             if (processingWorkScheduler.retry(jobId) == null) {
@@ -150,6 +199,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
     private suspend fun ReconstructionWorkspaceInputs.toUiState(): ReconstructionWorkspaceUiState {
         val currentDetail = detail ?: return ReconstructionWorkspaceUiState.Missing(seminarId)
         val ocrByAsset = ocrResults.associateBy { result -> result.assetId }
+        val formulaRegionsByAsset = formulaRegions.groupBy { region -> region.sourceAssetId }
         val jobsByAsset = jobs.groupBy { job -> job.inputAssetId }
         val items = photoAssets.map { asset ->
             val file = asset.relativePath?.let { path -> mediaStorageManager.resolveReadableRelativeFile(path) }
@@ -158,6 +208,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
                 absolutePhotoPath = file?.absolutePath,
                 photoMissing = asset.relativePath != null && file == null,
                 ocrResult = ocrByAsset[asset.id],
+                formulaRegions = formulaRegionsByAsset[asset.id].orEmpty(),
                 jobs = jobsByAsset[asset.id].orEmpty(),
                 isKeySlide = asset.id in keySlideAssetIds,
             )
@@ -199,6 +250,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
             asset.relativePath,
             ocrResult?.recognizedText,
             ocrResult?.editedText,
+            formulaRegions.joinToString(" ") { region -> region.label.orEmpty() },
         ).any { value -> value.contains(normalized, ignoreCase = true) }
     }
 }
@@ -207,6 +259,7 @@ private data class ReconstructionWorkspaceData(
     val detail: com.yuukias.seminararc.domain.model.SeminarDetail?,
     val photoAssets: List<com.yuukias.seminararc.domain.model.SeminarAsset>,
     val ocrResults: List<com.yuukias.seminararc.domain.model.OcrResult>,
+    val formulaRegions: List<com.yuukias.seminararc.domain.model.FormulaRegion>,
     val jobs: List<com.yuukias.seminararc.domain.model.ProcessingJob>,
     val keySlideAssetIds: Set<Long>,
 )
@@ -215,6 +268,7 @@ private data class ReconstructionWorkspaceInputs(
     val detail: com.yuukias.seminararc.domain.model.SeminarDetail?,
     val photoAssets: List<com.yuukias.seminararc.domain.model.SeminarAsset>,
     val ocrResults: List<com.yuukias.seminararc.domain.model.OcrResult>,
+    val formulaRegions: List<com.yuukias.seminararc.domain.model.FormulaRegion>,
     val jobs: List<com.yuukias.seminararc.domain.model.ProcessingJob>,
     val keySlideAssetIds: Set<Long>,
     val searchQuery: String,

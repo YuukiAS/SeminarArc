@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.yuukias.seminararc.domain.model.FormulaRegion
 import com.yuukias.seminararc.domain.model.OcrResult
 import com.yuukias.seminararc.domain.model.ProcessingJob
 import com.yuukias.seminararc.domain.model.ProcessingJobState
@@ -48,6 +49,8 @@ class ReconstructionWorkspaceScreenTest {
                     onKeySlidesOnlyChanged = {},
                     onKeySlideChanged = { _, _ -> },
                     onEditOcrResult = { _, _ -> actions += "edit" },
+                    onAddFormulaRegion = { _, _, _, _, _, _ -> },
+                    onDeleteFormulaRegion = {},
                     onEnhancePhoto = { actions += "enhance" },
                     onRunOcr = { actions += "ocr" },
                     onRetryJob = { jobId -> actions += "retry:$jobId" },
@@ -67,6 +70,46 @@ class ReconstructionWorkspaceScreenTest {
         composeRule.onAllNodesWithText("Retry")[0].performClick()
 
         assertEquals(listOf("cancel:2", "retry:4"), actions)
+    }
+
+    @Test
+    fun formulaRegionControlsExposeSavedRegionsAndAddAction() {
+        val actions = mutableListOf<String>()
+        composeRule.setContent {
+            val snackbarHostState = remember { SnackbarHostState() }
+            SeminarArcTheme {
+                ReconstructionWorkspaceScreenContent(
+                    uiState = readyState(),
+                    snackbarHostState = snackbarHostState,
+                    onBack = {},
+                    onOpenReferenceReview = {},
+                    onOpenTranscriptReview = {},
+                    onSearchQueryChanged = {},
+                    onOcrStatusFilterChanged = {},
+                    onKeySlidesOnlyChanged = {},
+                    onKeySlideChanged = { _, _ -> },
+                    onEditOcrResult = { _, _ -> },
+                    onAddFormulaRegion = { assetId, label, x, y, width, height ->
+                        actions += "formula:$assetId:$label:$x:$y:$width:$height"
+                    },
+                    onDeleteFormulaRegion = { regionId -> actions += "delete-formula:$regionId" },
+                    onEnhancePhoto = {},
+                    onRunOcr = {},
+                    onRetryJob = {},
+                    onCancelJob = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Formula regions").assertIsDisplayed()
+        composeRule.onNodeWithText("Main equation: x=0.1, y=0.2, w=0.7, h=0.25").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Save formula region")[0].performClick()
+        composeRule.onAllNodesWithText("Delete")[0].performClick()
+
+        assertEquals(
+            listOf("formula:10:Formula:0.1:0.1:0.8:0.3", "delete-formula:20"),
+            actions,
+        )
     }
 
     private fun readyState(): ReconstructionWorkspaceUiState.Ready {
@@ -101,6 +144,7 @@ class ReconstructionWorkspaceScreenTest {
                     absolutePhotoPath = null,
                     photoMissing = false,
                     ocrResult = ocrResult(asset.id),
+                    formulaRegions = listOf(formulaRegion(asset.id)),
                     jobs = listOf(
                         job(2L, ProcessingJobType.TEXT_OCR, ProcessingJobState.RUNNING, inputAssetId = asset.id, error = null),
                         job(3L, ProcessingJobType.IMAGE_ENHANCEMENT, ProcessingJobState.FAILED, inputAssetId = asset.id, error = "transform failed"),
@@ -113,6 +157,7 @@ class ReconstructionWorkspaceScreenTest {
                     absolutePhotoPath = null,
                     photoMissing = false,
                     ocrResult = null,
+                    formulaRegions = emptyList(),
                     jobs = listOf(
                         job(
                             id = 4L,
@@ -127,6 +172,23 @@ class ReconstructionWorkspaceScreenTest {
             ),
             totalPhotoCount = 2,
             visiblePhotoCount = 2,
+        )
+    }
+
+    private fun formulaRegion(assetId: Long): FormulaRegion {
+        return FormulaRegion(
+            id = 20L,
+            seminarId = 1L,
+            sourceAssetId = assetId,
+            sourcePhotoPath = "seminars/1/photos/source.jpg",
+            normalizedX = 0.1f,
+            normalizedY = 0.2f,
+            normalizedWidth = 0.7f,
+            normalizedHeight = 0.25f,
+            rotationDegrees = 0,
+            label = "Main equation",
+            createdAt = NOW,
+            updatedAt = NOW,
         )
     }
 
