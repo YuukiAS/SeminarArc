@@ -160,6 +160,8 @@ Export assembly also loads formula regions and formula results through `FormulaR
 
 Reconstruction photo preview draws saved formula regions as token-colored overlays using normalized crop coordinates. The overlay also supports drag-to-draft selection: pointer input updates local `X/Y/Width/Height` draft fields and draws the draft rectangle, but persistence still requires the explicit `Save formula region` action. The drag path does not call a provider, enqueue OCR, upload media, or write Room until the user saves.
 
+Saved formula regions can be loaded back into the same draft controls with `Edit crop` and persisted through `FormulaRepository.updateRegion`. Updates change label/crop/rotation timestamps only; they keep the existing region id, seminar ownership, source asset id and source photo path. Existing formula results remain attached to the region so a corrected crop does not silently erase manual LaTeX history.
+
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 
 ## Reference Candidate and Seminar Brief

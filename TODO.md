@@ -419,6 +419,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已完成 `0.5.x_formula_result_export`：READY formula LaTeX results 会进入 Markdown/Notion-ready export，并保留 crop、source photo、provider、confidence、edited 和 provenance。
 - 已完成 `0.5.x_formula_ui_overlay`：Reconstruction photo preview 绘制已保存公式区域 overlay，并提供无障碍描述；暂不加入手势写入。
 - 已完成 `0.5.x_formula_region_drag_selection`：Reconstruction photo preview 支持 drag-to-draft selection，拖拽只更新本地 normalized crop 草稿，仍需用户显式点击 `Save formula region` 才写入 Room。
+- 已完成 `0.5.x_formula_region_edit_selection`：saved formula region 可载入为草稿并显式更新 label/crop，更新不改变 seminar/source asset 归属，也不自动触发 provider。
 - Mathpix 是高准确度付费云候选，但需要 authenticated API、billing 和 credential/backend/user-key 决策；live provider 暂不进入 APK。
 - PaddleOCR formula recognition 和 pix2tex/LaTeX-OCR 可作为自建/本地候选继续评估，但需要模型大小、Android packaging、性能、耗电、依赖和模型权重 license 审计。
 - 第一阶段优先实现 formula region selection data model、可编辑 LaTeX result、`FormulaOcrProvider` fake/manual contract、BibTeX/RIS deterministic export 和 export polish。
@@ -433,7 +434,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 
 下一步：
 
-- 执行 `0.5.x_formula_region_resize_selection_task`：在 drag-to-draft 基础上评估 saved region resize/edit UX，继续保持显式保存和无自动 provider 调用。
+- 执行 `0.5.x_formula_provider_settings_boundary_task`：在现有 unavailable/manual provider 基础上补齐 UI-facing provider status/capability boundary，继续不接入 live Mathpix credential 或上传。
 
 ### `0.9.x` Google Play 内测与发布准备
 

@@ -13,6 +13,8 @@ interface FormulaRepository {
 
     suspend fun createRegion(input: CreateFormulaRegionInput): FormulaRegion?
 
+    suspend fun updateRegion(input: UpdateFormulaRegionInput): FormulaRegion?
+
     suspend fun deleteRegion(regionId: Long): Boolean
 
     suspend fun saveFormulaResult(input: SaveFormulaResultInput): FormulaResult?
@@ -31,6 +33,29 @@ data class CreateFormulaRegionInput(
     init {
         require(seminarId > 0L) { "Seminar id must be positive." }
         require(sourceAssetId > 0L) { "Source asset id must be positive." }
+        require(normalizedX in 0f..1f) { "Region x must be between 0 and 1." }
+        require(normalizedY in 0f..1f) { "Region y must be between 0 and 1." }
+        require(normalizedWidth > 0f && normalizedWidth <= 1f) { "Region width must be greater than 0 and at most 1." }
+        require(normalizedHeight > 0f && normalizedHeight <= 1f) {
+            "Region height must be greater than 0 and at most 1."
+        }
+        require(normalizedX + normalizedWidth <= 1.0001f) { "Region must fit within the source image width." }
+        require(normalizedY + normalizedHeight <= 1.0001f) { "Region must fit within the source image height." }
+        require(rotationDegrees in -359..359) { "Rotation degrees must be between -359 and 359." }
+    }
+}
+
+data class UpdateFormulaRegionInput(
+    val regionId: Long,
+    val normalizedX: Float,
+    val normalizedY: Float,
+    val normalizedWidth: Float,
+    val normalizedHeight: Float,
+    val rotationDegrees: Int = 0,
+    val label: String? = null,
+) {
+    init {
+        require(regionId > 0L) { "Region id must be positive." }
         require(normalizedX in 0f..1f) { "Region x must be between 0 and 1." }
         require(normalizedY in 0f..1f) { "Region y must be between 0 and 1." }
         require(normalizedWidth > 0f && normalizedWidth <= 1f) { "Region width must be greater than 0 and at most 1." }

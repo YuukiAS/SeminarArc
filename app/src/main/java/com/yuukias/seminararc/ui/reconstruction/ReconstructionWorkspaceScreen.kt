@@ -98,6 +98,7 @@ fun ReconstructionWorkspaceScreen(
         onKeySlideChanged = viewModel::onKeySlideChanged,
         onEditOcrResult = viewModel::onEditOcrResult,
         onAddFormulaRegion = viewModel::onAddFormulaRegion,
+        onUpdateFormulaRegion = viewModel::onUpdateFormulaRegion,
         onDeleteFormulaRegion = viewModel::onDeleteFormulaRegion,
         onSaveFormulaLatex = viewModel::onSaveFormulaLatex,
         onEnhancePhoto = { assetId -> viewModel.onEnhancePhoto(assetId) },
@@ -122,6 +123,7 @@ fun ReconstructionWorkspaceScreenContent(
     onKeySlideChanged: (Long, Boolean) -> Unit,
     onEditOcrResult: (Long, String) -> Unit,
     onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
+    onUpdateFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
     onDeleteFormulaRegion: (Long) -> Unit,
     onSaveFormulaLatex: (Long, String) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
@@ -172,6 +174,7 @@ fun ReconstructionWorkspaceScreenContent(
                 onKeySlideChanged = onKeySlideChanged,
                 onEditOcrResult = onEditOcrResult,
                 onAddFormulaRegion = onAddFormulaRegion,
+                onUpdateFormulaRegion = onUpdateFormulaRegion,
                 onDeleteFormulaRegion = onDeleteFormulaRegion,
                 onSaveFormulaLatex = onSaveFormulaLatex,
                 onEnhancePhoto = onEnhancePhoto,
@@ -195,6 +198,7 @@ private fun ReconstructionReadyContent(
     onKeySlideChanged: (Long, Boolean) -> Unit,
     onEditOcrResult: (Long, String) -> Unit,
     onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
+    onUpdateFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
     onDeleteFormulaRegion: (Long) -> Unit,
     onSaveFormulaLatex: (Long, String) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
@@ -280,6 +284,7 @@ private fun ReconstructionReadyContent(
                     onKeySlideChanged = onKeySlideChanged,
                     onEditOcrResult = onEditOcrResult,
                     onAddFormulaRegion = onAddFormulaRegion,
+                    onUpdateFormulaRegion = onUpdateFormulaRegion,
                     onDeleteFormulaRegion = onDeleteFormulaRegion,
                     onSaveFormulaLatex = onSaveFormulaLatex,
                     onEnhancePhoto = onEnhancePhoto,
@@ -298,6 +303,7 @@ private fun ReconstructionAssetCard(
     onKeySlideChanged: (Long, Boolean) -> Unit,
     onEditOcrResult: (Long, String) -> Unit,
     onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
+    onUpdateFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
     onDeleteFormulaRegion: (Long) -> Unit,
     onSaveFormulaLatex: (Long, String) -> Unit,
     onEnhancePhoto: (Long) -> Unit,
@@ -316,6 +322,7 @@ private fun ReconstructionAssetCard(
     var formulaY by remember(item.asset.id) { mutableStateOf("0.10") }
     var formulaWidth by remember(item.asset.id) { mutableStateOf("0.80") }
     var formulaHeight by remember(item.asset.id) { mutableStateOf("0.30") }
+    var editingFormulaRegionId by remember(item.asset.id) { mutableStateOf<Long?>(null) }
     val formulaDraft = parseFormulaRegionDraft(formulaX, formulaY, formulaWidth, formulaHeight)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -383,7 +390,25 @@ private fun ReconstructionAssetCard(
                 onYChanged = { formulaY = it },
                 onWidthChanged = { formulaWidth = it },
                 onHeightChanged = { formulaHeight = it },
+                editingRegionId = editingFormulaRegionId,
+                onEditFormulaRegion = { region ->
+                    editingFormulaRegionId = region.id
+                    formulaLabel = region.label ?: "Formula"
+                    formulaX = region.normalizedX.toFormulaCoordinateText()
+                    formulaY = region.normalizedY.toFormulaCoordinateText()
+                    formulaWidth = region.normalizedWidth.toFormulaCoordinateText()
+                    formulaHeight = region.normalizedHeight.toFormulaCoordinateText()
+                },
+                onCancelFormulaRegionEdit = {
+                    editingFormulaRegionId = null
+                    formulaLabel = "Formula"
+                    formulaX = "0.10"
+                    formulaY = "0.10"
+                    formulaWidth = "0.80"
+                    formulaHeight = "0.30"
+                },
                 onAddFormulaRegion = onAddFormulaRegion,
+                onUpdateFormulaRegion = onUpdateFormulaRegion,
                 onDeleteFormulaRegion = onDeleteFormulaRegion,
                 onSaveFormulaLatex = onSaveFormulaLatex,
             )
@@ -457,7 +482,11 @@ private fun FormulaRegionSection(
     onYChanged: (String) -> Unit,
     onWidthChanged: (String) -> Unit,
     onHeightChanged: (String) -> Unit,
+    editingRegionId: Long?,
+    onEditFormulaRegion: (com.yuukias.seminararc.domain.model.FormulaRegion) -> Unit,
+    onCancelFormulaRegionEdit: () -> Unit,
     onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
+    onUpdateFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
     onDeleteFormulaRegion: (Long) -> Unit,
     onSaveFormulaLatex: (Long, String) -> Unit,
 ) {
@@ -470,6 +499,8 @@ private fun FormulaRegionSection(
             FormulaRegionRow(
                 item = item,
                 region = region,
+                isEditing = editingRegionId == region.id,
+                onEditFormulaRegion = onEditFormulaRegion,
                 onDeleteFormulaRegion = onDeleteFormulaRegion,
                 onSaveFormulaLatex = onSaveFormulaLatex,
             )
@@ -491,14 +522,26 @@ private fun FormulaRegionSection(
         }
         Button(
             onClick = {
-                onAddFormulaRegion(
-                    item.asset.id,
-                    label,
-                    draft!!.x,
-                    draft.y,
-                    draft.width,
-                    draft.height,
-                )
+                val activeDraft = draft!!
+                if (editingRegionId == null) {
+                    onAddFormulaRegion(
+                        item.asset.id,
+                        label,
+                        activeDraft.x,
+                        activeDraft.y,
+                        activeDraft.width,
+                        activeDraft.height,
+                    )
+                } else {
+                    onUpdateFormulaRegion(
+                        editingRegionId,
+                        label,
+                        activeDraft.x,
+                        activeDraft.y,
+                        activeDraft.width,
+                        activeDraft.height,
+                    )
+                }
             },
             enabled = canSave,
             modifier = Modifier
@@ -506,7 +549,15 @@ private fun FormulaRegionSection(
                 .heightIn(min = 48.dp),
         ) {
             Icon(Icons.Outlined.NoteAlt, contentDescription = null)
-            Text("Save formula region")
+            Text(if (editingRegionId == null) "Save formula region" else "Update formula region")
+        }
+        if (editingRegionId != null) {
+            TextButton(
+                onClick = onCancelFormulaRegionEdit,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
+                Text("Cancel formula edit")
+            }
         }
     }
 }
@@ -515,6 +566,8 @@ private fun FormulaRegionSection(
 private fun FormulaRegionRow(
     item: ReconstructionAssetUiItem,
     region: com.yuukias.seminararc.domain.model.FormulaRegion,
+    isEditing: Boolean,
+    onEditFormulaRegion: (com.yuukias.seminararc.domain.model.FormulaRegion) -> Unit,
     onDeleteFormulaRegion: (Long) -> Unit,
     onSaveFormulaLatex: (Long, String) -> Unit,
 ) {
@@ -533,6 +586,12 @@ private fun FormulaRegionRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            TextButton(
+                onClick = { onEditFormulaRegion(region) },
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
+                Text(if (isEditing) "Editing" else "Edit crop")
+            }
             TextButton(
                 onClick = { onDeleteFormulaRegion(region.id) },
                 modifier = Modifier.heightIn(min = 48.dp),

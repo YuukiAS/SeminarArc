@@ -14,6 +14,7 @@ import com.yuukias.seminararc.domain.repository.CreateFormulaRegionInput
 import com.yuukias.seminararc.domain.repository.FormulaRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
+import com.yuukias.seminararc.domain.repository.UpdateFormulaRegionInput
 import com.yuukias.seminararc.media.processing.ProcessingWorkScheduler
 import com.yuukias.seminararc.ui.navigation.ReconstructionWorkspaceRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -181,6 +182,35 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
         viewModelScope.launch {
             if (!formulaRepository.deleteRegion(regionId)) {
                 _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Formula region was not deleted."))
+            }
+        }
+    }
+
+    fun onUpdateFormulaRegion(
+        regionId: Long,
+        label: String,
+        normalizedX: Float,
+        normalizedY: Float,
+        normalizedWidth: Float,
+        normalizedHeight: Float,
+    ) {
+        viewModelScope.launch {
+            val updated = runCatching {
+                formulaRepository.updateRegion(
+                    UpdateFormulaRegionInput(
+                        regionId = regionId,
+                        normalizedX = normalizedX,
+                        normalizedY = normalizedY,
+                        normalizedWidth = normalizedWidth,
+                        normalizedHeight = normalizedHeight,
+                        label = label,
+                    ),
+                )
+            }.getOrNull()
+            if (updated == null) {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Formula region was not updated."))
+            } else {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Formula region updated."))
             }
         }
     }

@@ -74,6 +74,7 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - 当前 production 默认 `UnavailableFormulaOcrProvider` 不访问网络；`ManualFormulaProvider` 只处理用户显式输入的 LaTeX。
 - Reconstruction workspace 的公式区域 UI 和 manual LaTeX queue 只写入本地 Room/WorkManager，不读取 credential，也不触发 network/upload。
 - Reconstruction photo preview overlay 只读取本地已保存的 normalized formula region 坐标并在界面上绘制；拖拽框选只更新本地 UI 草稿字段，必须用户显式保存后才写入 Room，不触发截图上传、自动 OCR 或 provider 调用。
+- Saved formula region edit 只更新本地 label/crop/rotation 时间戳，保留原 seminar/source asset provenance，不读取 credential、不调用 provider、不上传图片。
 - 公式识别必须由用户选择具体图片区域后显式触发，不能自动上传或批量处理所有 seminar photos。
 - READY formula results 会进入用户显式触发的 Markdown/Notion-ready/ZIP export；导出内容包含用户确认的 LaTeX、source photo 相对路径、normalized crop、provider metadata、confidence、edited flag 和非敏感 provenance JSON。
 - Mathpix live provider 需要付费 API credential 或安全 token/backend 策略；在获得后续批准前不得把 app-owned key 写入 APK 或仓库。

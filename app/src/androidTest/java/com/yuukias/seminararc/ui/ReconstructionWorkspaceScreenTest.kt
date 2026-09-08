@@ -58,6 +58,7 @@ class ReconstructionWorkspaceScreenTest {
                     onKeySlideChanged = { _, _ -> },
                     onEditOcrResult = { _, _ -> actions += "edit" },
                     onAddFormulaRegion = { _, _, _, _, _, _ -> },
+                    onUpdateFormulaRegion = { _, _, _, _, _, _ -> },
                     onDeleteFormulaRegion = {},
                     onSaveFormulaLatex = { _, _ -> },
                     onEnhancePhoto = { actions += "enhance" },
@@ -101,6 +102,9 @@ class ReconstructionWorkspaceScreenTest {
                     onAddFormulaRegion = { assetId, label, x, y, width, height ->
                         actions += "formula:$assetId:$label:$x:$y:$width:$height"
                     },
+                    onUpdateFormulaRegion = { regionId, label, x, y, width, height ->
+                        actions += "update-formula:$regionId:$label:$x:$y:$width:$height"
+                    },
                     onDeleteFormulaRegion = { regionId -> actions += "delete-formula:$regionId" },
                     onSaveFormulaLatex = { regionId, latex -> actions += "latex:$regionId:$latex" },
                     onEnhancePhoto = {},
@@ -115,11 +119,18 @@ class ReconstructionWorkspaceScreenTest {
         composeRule.onNodeWithText("Main equation: x=0.1, y=0.2, w=0.7, h=0.25").assertIsDisplayed()
         composeRule.onNodeWithText("Formula ready: E = mc^2").assertIsDisplayed()
         composeRule.onAllNodesWithText("Save formula region")[0].performClick()
+        composeRule.onAllNodesWithText("Edit crop")[0].performClick()
+        composeRule.onAllNodesWithText("Update formula region")[0].performClick()
         composeRule.onAllNodesWithText("Queue LaTeX")[0].performClick()
         composeRule.onAllNodesWithText("Delete")[0].performClick()
 
         assertEquals(
-            listOf("formula:10:Formula:0.1:0.1:0.8:0.3", "latex:20:E = mc^2", "delete-formula:20"),
+            listOf(
+                "formula:10:Formula:0.1:0.1:0.8:0.3",
+                "update-formula:20:Main equation:0.1:0.2:0.7:0.25",
+                "latex:20:E = mc^2",
+                "delete-formula:20",
+            ),
             actions,
         )
     }
@@ -210,6 +221,7 @@ class ReconstructionWorkspaceScreenTest {
                     onKeySlideChanged = { _, _ -> },
                     onEditOcrResult = { _, _ -> },
                     onAddFormulaRegion = { _, _, _, _, _, _ -> },
+                    onUpdateFormulaRegion = { _, _, _, _, _, _ -> },
                     onDeleteFormulaRegion = {},
                     onSaveFormulaLatex = { _, _ -> },
                     onEnhancePhoto = {},
@@ -250,6 +262,7 @@ class ReconstructionWorkspaceScreenTest {
                     onAddFormulaRegion = { assetId, label, x, y, width, height ->
                         actions += "formula:$assetId:$label:$x:$y:$width:$height"
                     },
+                    onUpdateFormulaRegion = { _, _, _, _, _, _ -> },
                     onDeleteFormulaRegion = {},
                     onSaveFormulaLatex = { _, _ -> },
                     onEnhancePhoto = {},

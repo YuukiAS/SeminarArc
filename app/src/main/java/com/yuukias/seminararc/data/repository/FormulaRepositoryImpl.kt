@@ -10,6 +10,7 @@ import com.yuukias.seminararc.domain.model.SeminarAssetType
 import com.yuukias.seminararc.domain.repository.CreateFormulaRegionInput
 import com.yuukias.seminararc.domain.repository.FormulaRepository
 import com.yuukias.seminararc.domain.repository.SaveFormulaResultInput
+import com.yuukias.seminararc.domain.repository.UpdateFormulaRegionInput
 import com.yuukias.seminararc.util.ClockProvider
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -59,6 +60,22 @@ class FormulaRepositoryImpl @Inject constructor(
 
     override suspend fun deleteRegion(regionId: Long): Boolean {
         return formulaDao.deleteRegion(regionId) > 0
+    }
+
+    override suspend fun updateRegion(input: UpdateFormulaRegionInput): FormulaRegion? {
+        val existing = formulaDao.getRegion(input.regionId) ?: return null
+        val now = clockProvider.now()
+        val updated = existing.copy(
+            normalizedX = input.normalizedX,
+            normalizedY = input.normalizedY,
+            normalizedWidth = input.normalizedWidth,
+            normalizedHeight = input.normalizedHeight,
+            rotationDegrees = input.rotationDegrees,
+            label = input.label?.trim()?.takeIf { it.isNotBlank() },
+            updatedAt = now,
+        )
+        formulaDao.updateRegion(updated)
+        return formulaDao.getRegion(input.regionId)?.toDomain()
     }
 
     override suspend fun saveFormulaResult(input: SaveFormulaResultInput): FormulaResult? {
