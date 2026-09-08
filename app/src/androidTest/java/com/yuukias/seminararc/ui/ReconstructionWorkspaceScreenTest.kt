@@ -2,6 +2,7 @@ package com.yuukias.seminararc.ui
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -10,6 +11,8 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import com.yuukias.seminararc.domain.model.FormulaRegion
 import com.yuukias.seminararc.domain.model.FormulaResult
 import com.yuukias.seminararc.domain.model.FormulaResultState
@@ -28,6 +31,8 @@ import com.yuukias.seminararc.ui.reconstruction.ReconstructionWorkspaceUiState
 import com.yuukias.seminararc.ui.theme.SeminarArcTheme
 import java.time.Instant
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -215,7 +220,56 @@ class ReconstructionWorkspaceScreenTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Seminar photo with 1 formula regions").assertIsDisplayed()
+        composeRule
+            .onNodeWithContentDescription("Seminar photo with 1 formula regions. Drag to draft formula region.")
+            .assertIsDisplayed()
+        file.delete()
+    }
+
+    @Test
+    fun photoPreviewDragUpdatesFormulaDraftBeforeExplicitSave() {
+        val actions = mutableListOf<String>()
+        val image = android.graphics.Bitmap.createBitmap(4, 4, android.graphics.Bitmap.Config.ARGB_8888)
+        val file = java.io.File.createTempFile("seminararc-formula-drag", ".png").apply {
+            outputStream().use { output -> image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, output) }
+        }
+        composeRule.setContent {
+            val snackbarHostState = remember { SnackbarHostState() }
+            SeminarArcTheme {
+                ReconstructionWorkspaceScreenContent(
+                    uiState = readyStateWithPhoto(file.absolutePath),
+                    snackbarHostState = snackbarHostState,
+                    onBack = {},
+                    onOpenReferenceReview = {},
+                    onOpenTranscriptReview = {},
+                    onSearchQueryChanged = {},
+                    onOcrStatusFilterChanged = {},
+                    onKeySlidesOnlyChanged = {},
+                    onKeySlideChanged = { _, _ -> },
+                    onEditOcrResult = { _, _ -> },
+                    onAddFormulaRegion = { assetId, label, x, y, width, height ->
+                        actions += "formula:$assetId:$label:$x:$y:$width:$height"
+                    },
+                    onDeleteFormulaRegion = {},
+                    onSaveFormulaLatex = { _, _ -> },
+                    onEnhancePhoto = {},
+                    onRunOcr = {},
+                    onRetryJob = {},
+                    onCancelJob = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Seminar photo with 1 formula regions. Drag to draft formula region.")
+            .performTouchInput {
+                swipe(start = Offset(12f, 12f), end = Offset(132f, 84f), durationMillis = 300)
+            }
+        composeRule.onAllNodesWithText("Save formula region")[0].performClick()
+
+        val savedAction = actions.single()
+        assertTrue(savedAction.startsWith("formula:10:Formula:"))
+        assertNotEquals("formula:10:Formula:0.1:0.1:0.8:0.3", savedAction)
         file.delete()
     }
 

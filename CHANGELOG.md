@@ -36,6 +36,7 @@
 - 新增 `0.5.x` export polish：Seminar Detail 可单独保存/分享 BibTeX 和 RIS，本地无 confirmed references 时显示明确失败消息。
 - 新增 `0.5.x` formula result export foundation：READY formula LaTeX results 进入 Markdown/Notion-ready export，保留 normalized crop、source photo、provider、confidence、edited 和 provenance。
 - 新增 `0.5.x` formula UI overlay foundation：Reconstruction photo preview 会绘制已保存公式区域的本地半透明 overlay，并暴露无障碍描述；暂不加入手势写入。
+- 新增 `0.5.x` formula region drag selection foundation：Reconstruction photo preview 可通过拖拽生成 normalized crop 草稿，并将草稿同步到显式保存表单；拖拽不直接写 Room、不触发 formula OCR provider 或上传。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。

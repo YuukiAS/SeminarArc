@@ -3,6 +3,7 @@ package com.yuukias.seminararc.ui.reconstruction
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,11 +49,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,6 +63,9 @@ import com.yuukias.seminararc.domain.model.ProcessingJob
 import com.yuukias.seminararc.domain.model.ProcessingJobState
 import com.yuukias.seminararc.domain.model.ProcessingJobType
 import com.yuukias.seminararc.ui.theme.SeminarArcThemeTokens
+import java.util.Locale
+import kotlin.math.max
+import kotlin.math.min
 
 @Composable
 fun ReconstructionWorkspaceScreen(
@@ -305,6 +311,12 @@ private fun ReconstructionAssetCard(
     var editedText by remember(item.asset.id, item.ocrResult?.updatedAt) {
         mutableStateOf(item.ocrResult?.editedText ?: item.ocrResult?.recognizedText.orEmpty())
     }
+    var formulaLabel by remember(item.asset.id) { mutableStateOf("Formula") }
+    var formulaX by remember(item.asset.id) { mutableStateOf("0.10") }
+    var formulaY by remember(item.asset.id) { mutableStateOf("0.10") }
+    var formulaWidth by remember(item.asset.id) { mutableStateOf("0.80") }
+    var formulaHeight by remember(item.asset.id) { mutableStateOf("0.30") }
+    val formulaDraft = parseFormulaRegionDraft(formulaX, formulaY, formulaWidth, formulaHeight)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(spacing.space4),
@@ -326,7 +338,16 @@ private fun ReconstructionAssetCard(
                     )
                 }
             }
-            PhotoPreview(item)
+            PhotoPreview(
+                item = item,
+                draftRegion = formulaDraft,
+                onDraftRegionChanged = { draft ->
+                    formulaX = draft.x.toFormulaCoordinateText()
+                    formulaY = draft.y.toFormulaCoordinateText()
+                    formulaWidth = draft.width.toFormulaCoordinateText()
+                    formulaHeight = draft.height.toFormulaCoordinateText()
+                },
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
                 Button(
                     onClick = { onEnhancePhoto(item.asset.id) },
@@ -352,6 +373,16 @@ private fun ReconstructionAssetCard(
             )
             FormulaRegionSection(
                 item = item,
+                label = formulaLabel,
+                x = formulaX,
+                y = formulaY,
+                width = formulaWidth,
+                height = formulaHeight,
+                onLabelChanged = { formulaLabel = it },
+                onXChanged = { formulaX = it },
+                onYChanged = { formulaY = it },
+                onWidthChanged = { formulaWidth = it },
+                onHeightChanged = { formulaHeight = it },
                 onAddFormulaRegion = onAddFormulaRegion,
                 onDeleteFormulaRegion = onDeleteFormulaRegion,
                 onSaveFormulaLatex = onSaveFormulaLatex,
@@ -416,24 +447,23 @@ private fun ProcessingJobControls(
 @Composable
 private fun FormulaRegionSection(
     item: ReconstructionAssetUiItem,
+    label: String,
+    x: String,
+    y: String,
+    width: String,
+    height: String,
+    onLabelChanged: (String) -> Unit,
+    onXChanged: (String) -> Unit,
+    onYChanged: (String) -> Unit,
+    onWidthChanged: (String) -> Unit,
+    onHeightChanged: (String) -> Unit,
     onAddFormulaRegion: (Long, String, Float, Float, Float, Float) -> Unit,
     onDeleteFormulaRegion: (Long) -> Unit,
     onSaveFormulaLatex: (Long, String) -> Unit,
 ) {
     val spacing = SeminarArcThemeTokens.spacing
-    var label by remember(item.asset.id) { mutableStateOf("Formula") }
-    var x by remember(item.asset.id) { mutableStateOf("0.10") }
-    var y by remember(item.asset.id) { mutableStateOf("0.10") }
-    var width by remember(item.asset.id) { mutableStateOf("0.80") }
-    var height by remember(item.asset.id) { mutableStateOf("0.30") }
-    val parsed = listOf(x, y, width, height).map { value -> value.toFloatOrNull() }
-    val canSave = parsed.all { value -> value != null } &&
-        parsed[0]!! in 0f..1f &&
-        parsed[1]!! in 0f..1f &&
-        parsed[2]!! > 0f &&
-        parsed[3]!! > 0f &&
-        parsed[0]!! + parsed[2]!! <= 1.0001f &&
-        parsed[1]!! + parsed[3]!! <= 1.0001f
+    val draft = parseFormulaRegionDraft(x, y, width, height)
+    val canSave = draft != null
     Column(verticalArrangement = Arrangement.spacedBy(spacing.space2)) {
         Text("Formula regions", style = MaterialTheme.typography.titleSmall)
         item.formulaRegions.forEach { region ->
@@ -446,28 +476,28 @@ private fun FormulaRegionSection(
         }
         OutlinedTextField(
             value = label,
-            onValueChange = { label = it },
+            onValueChange = onLabelChanged,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Formula label") },
             singleLine = true,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
-            FormulaNumberField(value = x, onValueChange = { x = it }, label = "X", modifier = Modifier.weight(1f))
-            FormulaNumberField(value = y, onValueChange = { y = it }, label = "Y", modifier = Modifier.weight(1f))
+            FormulaNumberField(value = x, onValueChange = onXChanged, label = "X", modifier = Modifier.weight(1f))
+            FormulaNumberField(value = y, onValueChange = onYChanged, label = "Y", modifier = Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.space2)) {
-            FormulaNumberField(value = width, onValueChange = { width = it }, label = "Width", modifier = Modifier.weight(1f))
-            FormulaNumberField(value = height, onValueChange = { height = it }, label = "Height", modifier = Modifier.weight(1f))
+            FormulaNumberField(value = width, onValueChange = onWidthChanged, label = "Width", modifier = Modifier.weight(1f))
+            FormulaNumberField(value = height, onValueChange = onHeightChanged, label = "Height", modifier = Modifier.weight(1f))
         }
         Button(
             onClick = {
                 onAddFormulaRegion(
                     item.asset.id,
                     label,
-                    parsed[0]!!,
-                    parsed[1]!!,
-                    parsed[2]!!,
-                    parsed[3]!!,
+                    draft!!.x,
+                    draft.y,
+                    draft.width,
+                    draft.height,
                 )
             },
             enabled = canSave,
@@ -552,7 +582,11 @@ private fun FormulaNumberField(
 }
 
 @Composable
-private fun PhotoPreview(item: ReconstructionAssetUiItem) {
+private fun PhotoPreview(
+    item: ReconstructionAssetUiItem,
+    draftRegion: FormulaRegionDraft? = null,
+    onDraftRegionChanged: ((FormulaRegionDraft) -> Unit)? = null,
+) {
     val path = item.absolutePhotoPath
     if (path == null) {
         Text(
@@ -573,12 +607,38 @@ private fun PhotoPreview(item: ReconstructionAssetUiItem) {
         )
     } else {
         val color = MaterialTheme.colorScheme.primary
+        val draftColor = MaterialTheme.colorScheme.tertiary
+        val dragModifier = if (onDraftRegionChanged == null) {
+            Modifier
+        } else {
+            Modifier.pointerInput(onDraftRegionChanged) {
+                var dragStart: Offset? = null
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        dragStart = offset
+                        onDraftRegionChanged(normalizedFormulaDraft(offset, offset, size))
+                    },
+                    onDrag = { change, _ ->
+                        val start = dragStart ?: change.position
+                        onDraftRegionChanged(normalizedFormulaDraft(start, change.position, size))
+                        change.consume()
+                    },
+                    onDragEnd = { dragStart = null },
+                    onDragCancel = { dragStart = null },
+                )
+            }
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 160.dp, max = 280.dp)
+                .then(dragModifier)
                 .semantics {
-                    contentDescription = "Seminar photo with ${item.formulaRegions.size} formula regions"
+                    contentDescription = if (onDraftRegionChanged == null) {
+                        "Seminar photo with ${item.formulaRegions.size} formula regions"
+                    } else {
+                        "Seminar photo with ${item.formulaRegions.size} formula regions. Drag to draft formula region."
+                    }
                 },
         ) {
             Image(
@@ -605,10 +665,86 @@ private fun PhotoPreview(item: ReconstructionAssetUiItem) {
                         style = Stroke(width = 3.dp.toPx()),
                     )
                 }
+                if (draftRegion != null) {
+                    val left = size.width * draftRegion.x
+                    val top = size.height * draftRegion.y
+                    val width = size.width * draftRegion.width
+                    val height = size.height * draftRegion.height
+                    drawRect(
+                        color = draftColor.copy(alpha = 0.14f),
+                        topLeft = Offset(left, top),
+                        size = Size(width, height),
+                    )
+                    drawRect(
+                        color = draftColor,
+                        topLeft = Offset(left, top),
+                        size = Size(width, height),
+                        style = Stroke(width = 2.dp.toPx()),
+                    )
+                }
             }
         }
     }
 }
+
+private data class FormulaRegionDraft(
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val height: Float,
+)
+
+private fun parseFormulaRegionDraft(
+    x: String,
+    y: String,
+    width: String,
+    height: String,
+): FormulaRegionDraft? {
+    val parsedX = x.toFloatOrNull() ?: return null
+    val parsedY = y.toFloatOrNull() ?: return null
+    val parsedWidth = width.toFloatOrNull() ?: return null
+    val parsedHeight = height.toFloatOrNull() ?: return null
+    if (parsedX !in 0f..1f || parsedY !in 0f..1f || parsedWidth < MinFormulaRegionSize || parsedHeight < MinFormulaRegionSize) {
+        return null
+    }
+    if (parsedX + parsedWidth > 1.0001f || parsedY + parsedHeight > 1.0001f) return null
+    val maxWidth = 1f - parsedX
+    val maxHeight = 1f - parsedY
+    if (maxWidth < MinFormulaRegionSize || maxHeight < MinFormulaRegionSize) return null
+    return FormulaRegionDraft(
+        x = parsedX.coerceIn(0f, 1f),
+        y = parsedY.coerceIn(0f, 1f),
+        width = parsedWidth.coerceIn(MinFormulaRegionSize, maxWidth),
+        height = parsedHeight.coerceIn(MinFormulaRegionSize, maxHeight),
+    )
+}
+
+private fun normalizedFormulaDraft(
+    start: Offset,
+    end: Offset,
+    containerSize: IntSize,
+): FormulaRegionDraft {
+    val widthPx = containerSize.width.coerceAtLeast(1).toFloat()
+    val heightPx = containerSize.height.coerceAtLeast(1).toFloat()
+    val left = min(start.x, end.x).coerceIn(0f, widthPx)
+    val right = max(start.x, end.x).coerceIn(0f, widthPx)
+    val top = min(start.y, end.y).coerceIn(0f, heightPx)
+    val bottom = max(start.y, end.y).coerceIn(0f, heightPx)
+    val normalizedX = (left / widthPx).coerceIn(0f, 1f - MinFormulaRegionSize)
+    val normalizedY = (top / heightPx).coerceIn(0f, 1f - MinFormulaRegionSize)
+    return FormulaRegionDraft(
+        x = normalizedX,
+        y = normalizedY,
+        width = ((right - left) / widthPx).coerceIn(MinFormulaRegionSize, 1f - normalizedX),
+        height = ((bottom - top) / heightPx).coerceIn(MinFormulaRegionSize, 1f - normalizedY),
+    )
+}
+
+private fun Float.toFormulaCoordinateText(): String {
+    return String.format(Locale.US, "%.2f", this)
+}
+
+private const val MinFormulaRegionSize = 0.01f
 
 private fun ReconstructionAssetUiItem.statusLabel(): String {
     val latestJob = jobs.maxByOrNull { job -> job.createdAt }
