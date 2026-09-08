@@ -18,6 +18,7 @@ sealed interface ReconstructionWorkspaceUiState {
         val items: List<ReconstructionAssetUiItem>,
         val totalPhotoCount: Int,
         val visiblePhotoCount: Int,
+        val formulaProviderStatuses: List<FormulaProviderUiStatus> = emptyList(),
     ) : ReconstructionWorkspaceUiState
 
     data class Missing(val seminarId: Long) : ReconstructionWorkspaceUiState
@@ -36,6 +37,16 @@ data class ReconstructionAssetUiItem(
     val searchableText: String
         get() = ocrResult?.editedText ?: ocrResult?.recognizedText.orEmpty()
 }
+
+data class FormulaProviderUiStatus(
+    val displayName: String,
+    val availabilityLabel: String,
+    val message: String,
+    val supportsImageRecognition: Boolean,
+    val supportsManualLatex: Boolean,
+    val requiresCredential: Boolean,
+    val usesNetwork: Boolean,
+)
 
 enum class OcrStatusFilter {
     ALL,

@@ -2,6 +2,7 @@ package com.yuukias.seminararc.domain
 
 import com.yuukias.seminararc.domain.formula.FormulaLanguageHint
 import com.yuukias.seminararc.domain.formula.FormulaOcrProvider
+import com.yuukias.seminararc.domain.formula.FormulaOcrProviderAvailability
 import com.yuukias.seminararc.domain.formula.FormulaOcrRequest
 import com.yuukias.seminararc.domain.formula.FormulaOcrResult
 import com.yuukias.seminararc.domain.formula.FormulaRecognition
@@ -68,11 +69,35 @@ class FormulaOcrProviderContractTest {
     }
 
     @Test
+    fun manualProviderDeclaresLocalManualCapability() {
+        val status = ManualFormulaProvider().status
+
+        assertEquals("Manual LaTeX", status.displayName)
+        assertEquals(FormulaOcrProviderAvailability.AVAILABLE, status.availability)
+        assertEquals(false, status.capabilities.supportsImageRecognition)
+        assertEquals(true, status.capabilities.supportsManualLatex)
+        assertEquals(false, status.capabilities.requiresCredential)
+        assertEquals(false, status.capabilities.usesNetwork)
+    }
+
+    @Test
     fun unavailableProviderFailsWithoutRetry() = runTest {
         val result = UnavailableFormulaOcrProvider().recognize(request()) as FormulaOcrResult.Failed
 
         assertEquals("Formula OCR provider is not configured.", result.message)
         assertEquals(false, result.isRetryable)
+    }
+
+    @Test
+    fun unavailableProviderDeclaresCredentialBoundaryWithoutNetworkRuntime() {
+        val status = UnavailableFormulaOcrProvider().status
+
+        assertEquals("Formula OCR", status.displayName)
+        assertEquals(FormulaOcrProviderAvailability.UNAVAILABLE, status.availability)
+        assertEquals(false, status.capabilities.supportsImageRecognition)
+        assertEquals(false, status.capabilities.supportsManualLatex)
+        assertEquals(true, status.capabilities.requiresCredential)
+        assertEquals(false, status.capabilities.usesNetwork)
     }
 
     @Test

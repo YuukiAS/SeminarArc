@@ -148,6 +148,8 @@ Room version `7` adds `formula_regions` and `formula_results`. `FormulaDao` expo
 
 `FormulaOcrProvider` defines the provider boundary for normalized crop input, request fingerprinting, LaTeX output, confidence, provenance, failure, and retryability. The production default is `UnavailableFormulaOcrProvider`; `ManualFormulaProvider` supports explicit user-supplied LaTeX without network or credential access.
 
+`FormulaOcrProviderStatus` and `FormulaOcrProviderCapabilities` expose UI-facing provider readiness without enabling provider execution. The default live OCR provider reports unavailable/credential-required/no-network-runtime, while `ManualFormulaProvider` reports available/manual/no-credential/no-network. Reconstruction workspace renders this status summary so the user can distinguish local manual correction from future Mathpix/PaddleOCR/pix2tex provider paths.
+
 `FormulaRepository` validates source photo ownership before persisting regions. Reconstruction workspace observes formula regions through its ViewModel and exposes local create/delete controls; no composable accesses `FormulaDao` directly.
 
 `FORMULA_OCR` jobs now support the local manual LaTeX path through WorkManager. The scheduler persists `FormulaOcrWorkPayload` in `processing_jobs.inputPayloadJson`; Worker re-reads the formula region and source photo from Room/storage before invoking `ManualFormulaProvider`, then writes READY/FAILED formula results through `FormulaRepository`. Live cloud/model providers remain deferred.

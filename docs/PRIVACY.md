@@ -72,6 +72,7 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - `0.5.x` 第一阶段只推进本地公式区域、可编辑 LaTeX、provider contract 和 BibTeX/RIS deterministic export；默认不需要网络。
 - Room version `7` 已加入本地公式区域和公式结果表；这些记录只保存 seminar-owned photo 的相对路径/asset provenance、normalized crop、LaTeX、confidence、provider metadata 和非敏感 provenance JSON。
 - 当前 production 默认 `UnavailableFormulaOcrProvider` 不访问网络；`ManualFormulaProvider` 只处理用户显式输入的 LaTeX。
+- Formula provider status/capability 只描述 availability、manual support、credential requirement 和 network behavior；显示这些状态不会读取 credential、初始化 cloud SDK 或上传图片。
 - Reconstruction workspace 的公式区域 UI 和 manual LaTeX queue 只写入本地 Room/WorkManager，不读取 credential，也不触发 network/upload。
 - Reconstruction photo preview overlay 只读取本地已保存的 normalized formula region 坐标并在界面上绘制；拖拽框选只更新本地 UI 草稿字段，必须用户显式保存后才写入 Room，不触发截图上传、自动 OCR 或 provider 调用。
 - Saved formula region edit 只更新本地 label/crop/rotation 时间戳，保留原 seminar/source asset provenance，不读取 credential、不调用 provider、不上传图片。

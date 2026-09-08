@@ -25,6 +25,7 @@ import com.yuukias.seminararc.domain.model.SeminarAssetType
 import com.yuukias.seminararc.domain.model.SeminarDetail
 import com.yuukias.seminararc.domain.model.SeminarStatus
 import com.yuukias.seminararc.ui.reconstruction.OcrStatusFilter
+import com.yuukias.seminararc.ui.reconstruction.FormulaProviderUiStatus
 import com.yuukias.seminararc.ui.reconstruction.ReconstructionAssetUiItem
 import com.yuukias.seminararc.ui.reconstruction.ReconstructionWorkspaceScreenContent
 import com.yuukias.seminararc.ui.reconstruction.ReconstructionWorkspaceUiState
@@ -71,6 +72,9 @@ class ReconstructionWorkspaceScreenTest {
 
         composeRule.onNodeWithText("OCR running").assertIsDisplayed()
         composeRule.onNodeWithText("Review transcripts").assertIsDisplayed()
+        composeRule.onNodeWithText("Formula providers").assertIsDisplayed()
+        composeRule.onNodeWithText("Formula OCR: Unavailable - No live formula OCR provider is configured. (credential)").assertIsDisplayed()
+        composeRule.onNodeWithText("Manual LaTeX: Available - User-entered LaTeX can be saved locally. (manual)").assertIsDisplayed()
         composeRule.onNodeWithText("Enhancement failed: transform failed").assertIsDisplayed()
         composeRule.onNodeWithText("Enhancement cancelled").assertIsDisplayed()
         composeRule.onNodeWithText("OCR").assertIsNotEnabled()
@@ -197,6 +201,26 @@ class ReconstructionWorkspaceScreenTest {
             ),
             totalPhotoCount = 2,
             visiblePhotoCount = 2,
+            formulaProviderStatuses = listOf(
+                FormulaProviderUiStatus(
+                    displayName = "Formula OCR",
+                    availabilityLabel = "Unavailable",
+                    message = "No live formula OCR provider is configured.",
+                    supportsImageRecognition = false,
+                    supportsManualLatex = false,
+                    requiresCredential = true,
+                    usesNetwork = false,
+                ),
+                FormulaProviderUiStatus(
+                    displayName = "Manual LaTeX",
+                    availabilityLabel = "Available",
+                    message = "User-entered LaTeX can be saved locally.",
+                    supportsImageRecognition = false,
+                    supportsManualLatex = true,
+                    requiresCredential = false,
+                    usesNetwork = false,
+                ),
+            ),
         )
     }
 

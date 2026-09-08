@@ -67,9 +67,44 @@ sealed interface FormulaOcrResult {
     }
 }
 
+enum class FormulaOcrProviderAvailability {
+    AVAILABLE,
+    UNAVAILABLE,
+}
+
+data class FormulaOcrProviderCapabilities(
+    val supportsImageRecognition: Boolean,
+    val supportsManualLatex: Boolean,
+    val requiresCredential: Boolean,
+    val usesNetwork: Boolean,
+)
+
+data class FormulaOcrProviderStatus(
+    val providerId: String,
+    val providerVersion: String,
+    val displayName: String,
+    val availability: FormulaOcrProviderAvailability,
+    val message: String,
+    val capabilities: FormulaOcrProviderCapabilities,
+)
+
 interface FormulaOcrProvider {
     val providerId: String
     val providerVersion: String
+    val status: FormulaOcrProviderStatus
+        get() = FormulaOcrProviderStatus(
+            providerId = providerId,
+            providerVersion = providerVersion,
+            displayName = providerId,
+            availability = FormulaOcrProviderAvailability.UNAVAILABLE,
+            message = "Provider status is not declared.",
+            capabilities = FormulaOcrProviderCapabilities(
+                supportsImageRecognition = false,
+                supportsManualLatex = false,
+                requiresCredential = true,
+                usesNetwork = false,
+            ),
+        )
 
     suspend fun recognize(request: FormulaOcrRequest): FormulaOcrResult
 }

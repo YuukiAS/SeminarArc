@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.yuukias.seminararc.data.storage.MediaStorageManager
+import com.yuukias.seminararc.domain.formula.FormulaOcrProvider
+import com.yuukias.seminararc.domain.formula.FormulaOcrProviderAvailability
+import com.yuukias.seminararc.domain.formula.FormulaOcrProviderStatus
 import com.yuukias.seminararc.domain.image.ImageEnhancementOptions
 import com.yuukias.seminararc.domain.model.ProcessingJobState
 import com.yuukias.seminararc.domain.model.ProcessingJobType
@@ -15,6 +18,7 @@ import com.yuukias.seminararc.domain.repository.FormulaRepository
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.UpdateFormulaRegionInput
+import com.yuukias.seminararc.media.formula.ManualFormulaProvider
 import com.yuukias.seminararc.media.processing.ProcessingWorkScheduler
 import com.yuukias.seminararc.ui.navigation.ReconstructionWorkspaceRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,6 +42,8 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
     private val seminarRepository: SeminarRepository,
     private val reconstructionRepository: ReconstructionRepository,
     private val formulaRepository: FormulaRepository,
+    formulaOcrProvider: FormulaOcrProvider,
+    manualFormulaProvider: ManualFormulaProvider,
     private val mediaStorageManager: MediaStorageManager,
     private val processingWorkScheduler: ProcessingWorkScheduler,
 ) : ViewModel() {
@@ -47,6 +53,10 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
     private val searchQuery = MutableStateFlow("")
     private val ocrStatusFilter = MutableStateFlow(OcrStatusFilter.ALL)
     private val keySlidesOnly = MutableStateFlow(false)
+    private val formulaProviderStatuses = listOf(
+        formulaOcrProvider.status.toUiStatus(),
+        manualFormulaProvider.status.toUiStatus(),
+    ).distinctBy { status -> status.displayName }
 
     private val _events = MutableSharedFlow<ReconstructionWorkspaceEvent>(replay = 0)
     val events: SharedFlow<ReconstructionWorkspaceEvent> = _events.asSharedFlow()
@@ -275,6 +285,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
             items = visible,
             totalPhotoCount = items.size,
             visiblePhotoCount = visible.size,
+            formulaProviderStatuses = formulaProviderStatuses,
         )
     }
 
@@ -304,6 +315,21 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
             formulaResults.joinToString(" ") { result -> result.latex },
         ).any { value -> value.contains(normalized, ignoreCase = true) }
     }
+}
+
+private fun FormulaOcrProviderStatus.toUiStatus(): FormulaProviderUiStatus {
+    return FormulaProviderUiStatus(
+        displayName = displayName,
+        availabilityLabel = when (availability) {
+            FormulaOcrProviderAvailability.AVAILABLE -> "Available"
+            FormulaOcrProviderAvailability.UNAVAILABLE -> "Unavailable"
+        },
+        message = message,
+        supportsImageRecognition = capabilities.supportsImageRecognition,
+        supportsManualLatex = capabilities.supportsManualLatex,
+        requiresCredential = capabilities.requiresCredential,
+        usesNetwork = capabilities.usesNetwork,
+    )
 }
 
 private data class ReconstructionWorkspaceData(

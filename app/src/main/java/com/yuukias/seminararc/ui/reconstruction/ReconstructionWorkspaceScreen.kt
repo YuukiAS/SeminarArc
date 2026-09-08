@@ -264,6 +264,7 @@ private fun ReconstructionReadyContent(
                         )
                     }
                 }
+                FormulaProviderStatusSummary(state.formulaProviderStatuses)
             }
         }
         if (state.items.isEmpty()) {
@@ -426,6 +427,22 @@ private fun ReconstructionAssetCard(
             ) {
                 Text("Save OCR edit")
             }
+        }
+    }
+}
+
+@Composable
+private fun FormulaProviderStatusSummary(statuses: List<FormulaProviderUiStatus>) {
+    if (statuses.isEmpty()) return
+    val spacing = SeminarArcThemeTokens.spacing
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.space1)) {
+        Text("Formula providers", style = MaterialTheme.typography.titleSmall)
+        statuses.forEach { status ->
+            Text(
+                text = "${status.displayName}: ${status.availabilityLabel} - ${status.message} ${status.capabilityLabel()}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -804,6 +821,16 @@ private fun Float.toFormulaCoordinateText(): String {
 }
 
 private const val MinFormulaRegionSize = 0.01f
+
+private fun FormulaProviderUiStatus.capabilityLabel(): String {
+    val capabilities = listOfNotNull(
+        "image".takeIf { supportsImageRecognition },
+        "manual".takeIf { supportsManualLatex },
+        "credential".takeIf { requiresCredential },
+        "network".takeIf { usesNetwork },
+    )
+    return if (capabilities.isEmpty()) "" else "(${capabilities.joinToString(", ")})"
+}
 
 private fun ReconstructionAssetUiItem.statusLabel(): String {
     val latestJob = jobs.maxByOrNull { job -> job.createdAt }
