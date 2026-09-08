@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.yuukias.seminararc.domain.model.FormulaRegion
@@ -180,6 +181,52 @@ class ReconstructionWorkspaceScreenTest {
             ),
             totalPhotoCount = 2,
             visiblePhotoCount = 2,
+        )
+    }
+
+    @Test
+    fun photoPreviewExposesFormulaOverlaySemanticsWhenPhotoIsReadable() {
+        val image = android.graphics.Bitmap.createBitmap(4, 4, android.graphics.Bitmap.Config.ARGB_8888)
+        val file = java.io.File.createTempFile("seminararc-formula-overlay", ".png").apply {
+            outputStream().use { output -> image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, output) }
+        }
+        composeRule.setContent {
+            val snackbarHostState = remember { SnackbarHostState() }
+            SeminarArcTheme {
+                ReconstructionWorkspaceScreenContent(
+                    uiState = readyStateWithPhoto(file.absolutePath),
+                    snackbarHostState = snackbarHostState,
+                    onBack = {},
+                    onOpenReferenceReview = {},
+                    onOpenTranscriptReview = {},
+                    onSearchQueryChanged = {},
+                    onOcrStatusFilterChanged = {},
+                    onKeySlidesOnlyChanged = {},
+                    onKeySlideChanged = { _, _ -> },
+                    onEditOcrResult = { _, _ -> },
+                    onAddFormulaRegion = { _, _, _, _, _, _ -> },
+                    onDeleteFormulaRegion = {},
+                    onSaveFormulaLatex = { _, _ -> },
+                    onEnhancePhoto = {},
+                    onRunOcr = {},
+                    onRetryJob = {},
+                    onCancelJob = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Seminar photo with 1 formula regions").assertIsDisplayed()
+        file.delete()
+    }
+
+    private fun readyStateWithPhoto(path: String): ReconstructionWorkspaceUiState.Ready {
+        val state = readyState()
+        return state.copy(
+            items = listOf(
+                state.items.first().copy(absolutePhotoPath = path),
+            ),
+            totalPhotoCount = 1,
+            visiblePhotoCount = 1,
         )
     }
 

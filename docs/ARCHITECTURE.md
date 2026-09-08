@@ -158,6 +158,8 @@ Seminar Detail exposes local save/share entry points for BibTeX and RIS through 
 
 Export assembly also loads formula regions and formula results through `FormulaRepository`. Only READY formula results with non-empty LaTeX enter `SeminarExportDocument.formulas`; Markdown and Notion-ready renderers include the LaTeX, normalized crop, source photo, provider/version, confidence, edited flag and provenance. Failed, queued, cancelled or blank formula results remain local state and are not exported as ready formula knowledge.
 
+Reconstruction photo preview draws saved formula regions as token-colored overlays using normalized crop coordinates. The first overlay foundation is read-only and semantic: it visualizes persisted regions and exposes the formula-region count for accessibility, while crop creation still requires the explicit numeric save form.
+
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 
 ## Reference Candidate and Seminar Brief
