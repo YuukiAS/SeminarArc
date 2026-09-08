@@ -166,7 +166,7 @@ Saved formula regions can be loaded back into the same draft controls with `Edit
 
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 
-Current `0.5.x` closeout state is `HEADLESS_ALPHA_CANDIDATE`: schema/domain/provider contracts, manual formula queue, region selection/edit UI, provider status display, formula export, and BibTeX/RIS export have passed local JVM/build/lint gates. The release state is not complete until a safe Windows Emulator connected regression can run with ADB seeing only `emulator-*` devices.
+Current `0.5.x` closeout state is `HEADLESS_ALPHA_CANDIDATE`: schema/domain/provider contracts, manual formula queue, region selection/edit UI, provider status display, formula export, and BibTeX/RIS export have passed local JVM/build/lint gates. The release state is not complete until a safe Windows Emulator connected regression can run with ADB seeing only `emulator-*` devices. On 2026-09-09, the Emulator closeout preflight was deferred because Windows ADB still saw protected physical serial `8cc54656` alongside `emulator-5554`.
 
 ## Reference Candidate and Seminar Brief
 
