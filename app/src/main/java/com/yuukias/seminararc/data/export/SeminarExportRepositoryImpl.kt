@@ -5,6 +5,7 @@ import androidx.core.content.FileProvider
 import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.export.SeminarExportAssembler
 import com.yuukias.seminararc.domain.export.SeminarMarkdownRenderer
+import com.yuukias.seminararc.domain.export.SeminarNotionReadyRenderer
 import com.yuukias.seminararc.domain.export.SeminarZipWriter
 import com.yuukias.seminararc.domain.export.TranscriptExportBundle
 import com.yuukias.seminararc.domain.model.SeminarExportPackage
@@ -42,6 +43,7 @@ class SeminarExportRepositoryImpl @Inject constructor(
     private val mediaStorageManager: MediaStorageManager,
     private val assembler: SeminarExportAssembler,
     private val markdownRenderer: SeminarMarkdownRenderer,
+    private val notionReadyRenderer: SeminarNotionReadyRenderer,
     private val zipWriter: SeminarZipWriter,
 ) : SeminarExportRepository {
 
@@ -106,6 +108,15 @@ class SeminarExportRepositoryImpl @Inject constructor(
             text = export.markdown,
             mimeType = "text/markdown",
             title = "${export.document.slug}.md",
+        )
+    }
+
+    override suspend fun prepareNotionReadyMarkdownShare(seminarId: Long): ExportShareResult {
+        val export = buildExportPackage(seminarId) ?: return ExportShareResult.Failed("Seminar was not found.")
+        return ExportShareResult.TextReady(
+            text = notionReadyRenderer.renderMarkdownPreview(export.document),
+            mimeType = "text/markdown",
+            title = "${export.document.slug}-notion-ready.md",
         )
     }
 

@@ -56,6 +56,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` manual transcript import foundation：Transcript Review 可把粘贴的本地文本导入为 `MANUAL` transcript，每个非空行成为可编辑 coarse segment，供 summary/export 后续使用。
 - `0.4.x` summary draft edit foundation：Transcript Review 可在本地编辑并保存 generated summary draft 的各个 brief 字段，保存后作为 `DRAFT` 继续供 Markdown/ZIP 和 Notion-ready export 使用。
 - `0.4.x` summary draft apply foundation：Transcript Review 可由用户显式把某个 summary draft 应用到人工 `SeminarBrief`，让 transcript/summary 整理结果进入既有 Reference Review brief/export 闭环。
+- `0.4.x` Notion-ready share entry foundation：Seminar Detail 可通过 Android share sheet 分享本地生成的 Notion-ready Markdown 预览文本；该路径不包含 Notion OAuth、API client、token、backend 或上传行为。
 
 尚未声明完成：
 

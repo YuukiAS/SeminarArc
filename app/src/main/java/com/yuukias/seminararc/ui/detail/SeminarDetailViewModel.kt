@@ -201,6 +201,10 @@ class SeminarDetailViewModel @Inject constructor(
         share { exportRepository.prepareMarkdownShare(seminarId) }
     }
 
+    fun onShareNotionReadyMarkdownClicked() {
+        share { exportRepository.prepareNotionReadyMarkdownShare(seminarId) }
+    }
+
     fun onShareZipClicked() {
         share { exportRepository.prepareZipShare(seminarId) }
     }

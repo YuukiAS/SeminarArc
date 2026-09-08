@@ -166,6 +166,7 @@ fun SeminarDetailScreen(
         onSaveMarkdown = { markdownExportLauncher.launch("seminar.md") },
         onSaveZip = { zipExportLauncher.launch("seminar.zip") },
         onShareMarkdown = viewModel::onShareMarkdownClicked,
+        onShareNotionReadyMarkdown = viewModel::onShareNotionReadyMarkdownClicked,
         onShareZip = viewModel::onShareZipClicked,
         onPlaybackPlayPause = viewModel::onPlaybackPlayPauseClicked,
         onPlaybackSeek = viewModel::onPlaybackSeek,
@@ -190,6 +191,7 @@ fun SeminarDetailScreenContent(
     onSaveMarkdown: () -> Unit,
     onSaveZip: () -> Unit,
     onShareMarkdown: () -> Unit,
+    onShareNotionReadyMarkdown: () -> Unit,
     onShareZip: () -> Unit,
     onPlaybackPlayPause: () -> Unit,
     onPlaybackSeek: (Long) -> Unit,
@@ -278,6 +280,7 @@ fun SeminarDetailScreenContent(
                         onSaveMarkdown = onSaveMarkdown,
                         onSaveZip = onSaveZip,
                         onShareMarkdown = onShareMarkdown,
+                        onShareNotionReadyMarkdown = onShareNotionReadyMarkdown,
                         onShareZip = onShareZip,
                     )
                     TextButton(
@@ -326,6 +329,7 @@ private fun SeminarExportSection(
     onSaveMarkdown: () -> Unit,
     onSaveZip: () -> Unit,
     onShareMarkdown: () -> Unit,
+    onShareNotionReadyMarkdown: () -> Unit,
     onShareZip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -367,6 +371,14 @@ private fun SeminarExportSection(
                 ) {
                     Icon(Icons.Outlined.Share, contentDescription = null)
                     Text("Share Markdown")
+                }
+                TextButton(
+                    onClick = onShareNotionReadyMarkdown,
+                    enabled = !isExporting,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Share, contentDescription = null)
+                    Text("Share Notion-ready Markdown")
                 }
                 TextButton(
                     onClick = onShareZip,

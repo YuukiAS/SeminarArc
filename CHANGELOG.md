@@ -25,6 +25,7 @@
 - 新增 `0.4.x` manual transcript import foundation：Transcript Review 可将粘贴的本地文本导入为 `MANUAL` transcript，并按非空行生成可编辑 coarse segments。
 - 新增 `0.4.x` summary draft edit foundation：Transcript Review 可本地编辑并保存 generated summary draft 的各个 brief 字段，保存后标记为 `DRAFT` 并保留 provider provenance。
 - 新增 `0.4.x` summary draft apply foundation：Transcript Review 可由用户显式将某个 summary draft 应用到人工 `SeminarBrief`，继续进入既有 confirmed references/key slides Markdown/ZIP export。
+- 新增 `0.4.x` Notion-ready share entry foundation：Seminar Detail 可通过 Android share sheet 分享本地生成的 Notion-ready Markdown 预览文本，不接入 Notion OAuth/API/token 或上传。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。

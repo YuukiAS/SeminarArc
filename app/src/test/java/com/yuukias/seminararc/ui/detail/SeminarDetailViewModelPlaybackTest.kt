@@ -137,6 +137,21 @@ class SeminarDetailViewModelPlaybackTest {
     }
 
     @Test
+    fun shareNotionReadyMarkdown_emitsTextShareEvent() = runTest {
+        val viewModel = viewModel()
+
+        advanceUntilIdle()
+
+        viewModel.events.test {
+            viewModel.onShareNotionReadyMarkdownClicked()
+            val event = awaitItem() as SeminarDetailEvent.ShareText
+            assertEquals("notion", event.text)
+            assertEquals("text/markdown", event.mimeType)
+            assertEquals("seminar-notion-ready.md", event.title)
+        }
+    }
+
+    @Test
     fun latestFailedDoesNotHideOlderCompletedRecording() = runTest {
         val failed = detailRecording(
             id = 8L,
@@ -281,6 +296,7 @@ private class DetailFakeExportRepository : SeminarExportRepository {
     override suspend fun writeMarkdown(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
     override suspend fun writeZip(seminarId: Long, uriString: String): ExportWriteResult = ExportWriteResult.Written
     override suspend fun prepareMarkdownShare(seminarId: Long): ExportShareResult = ExportShareResult.TextReady("markdown", "text/markdown", "seminar.md")
+    override suspend fun prepareNotionReadyMarkdownShare(seminarId: Long): ExportShareResult = ExportShareResult.TextReady("notion", "text/markdown", "seminar-notion-ready.md")
     override suspend fun prepareZipShare(seminarId: Long): ExportShareResult = ExportShareResult.Failed("Not used")
 }
 
