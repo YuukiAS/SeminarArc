@@ -24,11 +24,12 @@ Updated: 2026-09-08
 
 从 `0.3.1-internal` 起，用户下载 APK 的默认入口是 **GitHub Releases**，不是 GitHub Actions artifacts。
 
-- build/test/sign 在受控 Windows 本地环境完成；
+- build/test/sign 在受控 Windows 本地环境完成；`0.3.1-internal.1` 默认使用 `versionCode = 30101`，后续里程碑按版本号派生单调递增 code；
 - accepted milestone 通过 test + Emulator + package/secret scan 后，本地生成签名 APK；
 - 由本地 `gh release create/upload` 或 GitHub API 上传 APK + SHA-256 + release notes；
 - release APK signing key 永远留在本地/repo 外，不上传 GitHub；
 - 相同 internal application id + 相同 signer 才支持覆盖升级并保留数据。
+- 当前 internal application id 为 `com.yuukias.seminararc.internal`，app label 为 `SeminarArc Internal`。
 
 当前仓库为 public，因此 Release asset 也公开可下载；如果未来仓库转 private，再重新评估下载权限和 Actions 配额。
 

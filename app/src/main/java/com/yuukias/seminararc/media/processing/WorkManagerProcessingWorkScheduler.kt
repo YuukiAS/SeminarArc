@@ -69,7 +69,8 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
 
     override suspend fun retry(jobId: Long): ProcessingJob? {
         val job = reconstructionRepository.requeueJob(jobId) ?: return null
-        enqueue(job, requestFor(job), ExistingWorkPolicy.REPLACE)
+        val request = requestFor(job) ?: return null
+        enqueue(job, request, ExistingWorkPolicy.REPLACE)
         return job
     }
 
@@ -81,7 +82,9 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
     override fun recoverProcessingJobs() {
         recoveryScope.launch {
             reconstructionRepository.recoverInterruptedJobs().forEach { job ->
-                enqueue(job, requestFor(job), ExistingWorkPolicy.KEEP)
+                requestFor(job)?.let { request ->
+                    enqueue(job, request, ExistingWorkPolicy.KEEP)
+                }
             }
         }
     }
@@ -94,10 +97,13 @@ class WorkManagerProcessingWorkScheduler @Inject constructor(
         workManager.enqueueUniqueWork(workName(job.id), policy, request)
     }
 
-    private fun requestFor(job: ProcessingJob): OneTimeWorkRequest {
+    private fun requestFor(job: ProcessingJob): OneTimeWorkRequest? {
         return when (job.type) {
             ProcessingJobType.IMAGE_ENHANCEMENT -> imageEnhancementRequest(job.id, ImageEnhancementOptions())
             ProcessingJobType.TEXT_OCR -> textOcrRequest(job.id, TextOcrLanguageMode.LATIN_AND_CHINESE)
+            ProcessingJobType.TRANSCRIPTION,
+            ProcessingJobType.SUMMARY_DRAFT,
+            ProcessingJobType.NOTION_EXPORT_PREP -> null
         }
     }
 

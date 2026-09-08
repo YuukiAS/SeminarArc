@@ -29,6 +29,9 @@ data class SeminarAsset(
 enum class ProcessingJobType {
     IMAGE_ENHANCEMENT,
     TEXT_OCR,
+    TRANSCRIPTION,
+    SUMMARY_DRAFT,
+    NOTION_EXPORT_PREP,
 }
 
 enum class ProcessingJobState {

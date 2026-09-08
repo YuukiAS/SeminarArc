@@ -7,6 +7,27 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+import java.util.Properties
+
+val seminarArcVersionCode = providers.gradleProperty("seminarArc.versionCode")
+    .map { it.toInt() }
+    .orElse(30101)
+    .get()
+val seminarArcVersionName = providers.gradleProperty("seminarArc.versionName")
+    .orElse("0.3.1-internal.1")
+    .get()
+val internalSigningPropertiesPath = providers.environmentVariable("SEMINARARC_INTERNAL_SIGNING_PROPERTIES")
+    .orElse("D:\\Code\\_secrets\\SeminarArc\\internal-signing.properties")
+    .get()
+val internalSigningPropertiesFile = file(internalSigningPropertiesPath)
+val internalSigningProperties = Properties().apply {
+    if (internalSigningPropertiesFile.exists()) {
+        internalSigningPropertiesFile.inputStream().use(::load)
+    }
+}
+val hasInternalSigningConfig = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    .all { internalSigningProperties.getProperty(it).isNullOrBlank().not() }
+
 android {
     namespace = "com.yuukias.seminararc"
     compileSdk = 36
@@ -16,12 +37,23 @@ android {
         applicationId = "com.yuukias.seminararc"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.5-dev"
+        versionCode = seminarArcVersionCode
+        versionName = seminarArcVersionName
 
         testInstrumentationRunner = "com.yuukias.seminararc.SeminarArcTestRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        if (hasInternalSigningConfig) {
+            create("internal") {
+                storeFile = file(internalSigningProperties.getProperty("storeFile"))
+                storePassword = internalSigningProperties.getProperty("storePassword")
+                keyAlias = internalSigningProperties.getProperty("keyAlias")
+                keyPassword = internalSigningProperties.getProperty("keyPassword")
+            }
         }
     }
 
@@ -32,6 +64,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+        }
+        create("internal") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".internal"
+            matchingFallbacks += listOf("release", "debug")
+            if (hasInternalSigningConfig) {
+                signingConfig = signingConfigs.getByName("internal")
+            }
         }
     }
 

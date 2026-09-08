@@ -388,3 +388,91 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_brief_key_slides_assetId` ON `brief_key_slides` (`assetId`)")
     }
 }
+
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `transcripts` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `seminarId` INTEGER NOT NULL,
+                `recordingId` INTEGER,
+                `providerId` TEXT NOT NULL,
+                `providerVersion` TEXT NOT NULL,
+                `languageHint` TEXT NOT NULL,
+                `state` TEXT NOT NULL,
+                `sourceType` TEXT NOT NULL,
+                `sourceAssetId` INTEGER,
+                `errorMessage` TEXT,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`recordingId`) REFERENCES `recordings`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL,
+                FOREIGN KEY(`sourceAssetId`) REFERENCES `seminar_assets`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transcripts_seminarId` ON `transcripts` (`seminarId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transcripts_recordingId` ON `transcripts` (`recordingId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transcripts_sourceAssetId` ON `transcripts` (`sourceAssetId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transcripts_seminarId_recordingId_providerId` ON `transcripts` (`seminarId`, `recordingId`, `providerId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transcripts_seminarId_state` ON `transcripts` (`seminarId`, `state`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `transcript_segments` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `transcriptId` INTEGER NOT NULL,
+                `seminarId` INTEGER NOT NULL,
+                `recordingId` INTEGER,
+                `startOffsetMs` INTEGER NOT NULL,
+                `endOffsetMs` INTEGER NOT NULL,
+                `speakerLabel` TEXT,
+                `language` TEXT,
+                `text` TEXT NOT NULL,
+                `confidence` REAL,
+                `isEdited` INTEGER NOT NULL,
+                `providerSegmentId` TEXT,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                FOREIGN KEY(`transcriptId`) REFERENCES `transcripts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                FOREIGN KEY(`recordingId`) REFERENCES `recordings`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transcript_segments_transcriptId` ON `transcript_segments` (`transcriptId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transcript_segments_seminarId` ON `transcript_segments` (`seminarId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transcript_segments_recordingId` ON `transcript_segments` (`recordingId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transcript_segments_seminarId_startOffsetMs` ON `transcript_segments` (`seminarId`, `startOffsetMs`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_transcript_segments_transcriptId_startOffsetMs` ON `transcript_segments` (`transcriptId`, `startOffsetMs`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `summary_drafts` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `seminarId` INTEGER NOT NULL,
+                `providerId` TEXT NOT NULL,
+                `inputFingerprint` TEXT NOT NULL,
+                `state` TEXT NOT NULL,
+                `backgroundContext` TEXT NOT NULL,
+                `coreQuestion` TEXT NOT NULL,
+                `methods` TEXT NOT NULL,
+                `mainResults` TEXT NOT NULL,
+                `keyTakeaways` TEXT NOT NULL,
+                `unresolvedQuestions` TEXT NOT NULL,
+                `followUpActions` TEXT NOT NULL,
+                `userNotes` TEXT NOT NULL,
+                `provenanceJson` TEXT NOT NULL,
+                `errorMessage` TEXT,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                FOREIGN KEY(`seminarId`) REFERENCES `seminars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_summary_drafts_seminarId` ON `summary_drafts` (`seminarId`)")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_summary_drafts_seminarId_inputFingerprint` ON `summary_drafts` (`seminarId`, `inputFingerprint`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_summary_drafts_seminarId_state` ON `summary_drafts` (`seminarId`, `state`)")
+    }
+}

@@ -2,11 +2,13 @@
 
 Status: canonical product roadmap
 
-Last updated: 2026-07-19
+Last updated: 2026-09-08
 
 ## 0. 文档地位与旧计划关系
 
 本文件是 SeminarArc 当前的产品方向、能力边界和版本路线图，是后续规划的产品级入口。它不直接替代具体 Codex task，也不表示所有条目已经获准执行。
+
+`0.3.1-internal` 起，用户可安装 APK 的分发入口为 GitHub Releases：Windows 本地构建、稳定 repo 外 internal signer 签名、本地 Emulator gate、version tag 触发一次 GitHub Actions version gate，CI PASS 后上传 APK 与 SHA-256。普通代码或文档 push 不触发 GitHub Actions。
 
 仓库中已有材料继续保留，并按以下方式理解：
 
@@ -352,9 +354,29 @@ Notion 集成可使用官方 API 创建页面、追加 block，并在需要时�
 - confirmed references 与 key slides 进入 Markdown/ZIP export。
 - 不自动下载无合法访问权的 PDF。
 
+### `0.3.1-internal` Dogfood APK 分发
+
+目标：建立第一条可重复的 internal APK 分发链，让用户从 GitHub Releases 直接下载并侧载 `SeminarArc Internal`。
+
+范围：
+
+- internal applicationId：`com.yuukias.seminararc.internal`。
+- 默认版本：`versionName = 0.3.1-internal.1`，`versionCode = 30101`。
+- Windows 本地构建、签名、secret scan、SHA-256 和 Emulator regression。
+- push `v0.3.1-internal.1` tag 后仅运行一次 version CI。
+- CI PASS 后创建 GitHub prerelease，上传 APK 和 `.sha256`。
+
+internal signer 只用于 dogfood APK，不是 Google Play production signing key。
+
 ### `0.4.x` 可插拔转写、总结和 Notion
 
 目标：增加云端或本地高级处理，但保持供应商独立。
+
+当前进展：
+
+- 已建立 Room v5 transcript/schema foundation：`transcripts`、`transcript_segments`、`summary_drafts`、`MIGRATION_4_5` 和 schema `5.json`。
+- 已预留 `TRANSCRIPTION`、`SUMMARY_DRAFT`、`NOTION_EXPORT_PREP` processing job 类型。
+- 已新增本地安全的 `TranscriptionProvider` / `SummaryProvider` domain contract 和 fake-provider JVM contract tests；真实 provider、repository processing 和 UI 尚未完成。
 
 范围：
 

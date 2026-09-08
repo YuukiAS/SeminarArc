@@ -8,6 +8,9 @@
 
 ### 新增
 
+- 新增 `0.3.1-internal` dogfood 分发基础：internal build type、`com.yuukias.seminararc.internal` application identity、`0.3.1-internal.1` 版本元数据、repo 外 internal signing 配置读取、安装/更新文档和 secret ignore 规则。
+- 新增 `0.4.x` transcript/schema foundation：Room v5、`transcripts`、`transcript_segments`、`summary_drafts`、`MIGRATION_4_5`、schema `5.json` 和未来 transcription/summary/Notion export processing job 类型边界。
+- 新增 `0.4.x` provider contract foundation：`TranscriptionProvider`、`SummaryProvider`、timestamp granularity、selected transcript window、summary draft provenance、retryability 和 fake-provider JVM contract tests。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。

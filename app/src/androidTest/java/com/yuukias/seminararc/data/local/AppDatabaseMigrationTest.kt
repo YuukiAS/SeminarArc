@@ -72,7 +72,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
         database.openHelper.readableDatabase.query("SELECT retryCount FROM audio_clips WHERE id = 1").use { cursor ->
             cursor.moveToFirst()
@@ -133,7 +133,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB_V2_TO_V3,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
         database.openHelper.readableDatabase.query(
             "SELECT type, relativePath FROM seminar_assets ORDER BY type ASC",
@@ -215,7 +215,7 @@ class AppDatabaseMigrationTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java,
             TEST_DB_V3_TO_V4,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
         database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM seminar_assets").use { cursor ->
             cursor.moveToFirst()
@@ -235,8 +235,100 @@ class AppDatabaseMigrationTest {
         }
         database.close()
     }
+
+    @Test
+    fun migrate4To5_addsTranscriptTablesAndPreservesReferenceRows() {
+        helper.createDatabase(TEST_DB_V4_TO_V5, 4).apply {
+            execSQL(
+                """
+                INSERT INTO seminars (
+                    id, title, speaker, affiliation, scheduledAt, location, abstractText,
+                    abstractPdfPath, status, rating, isFavorite, createdAt, updatedAt,
+                    sessionStartedAt, sessionEndedAt
+                ) VALUES (
+                    1, 'Transcript seminar', NULL, NULL, NULL, NULL, NULL,
+                    NULL, 'COMPLETED', NULL, 0, 100, 200, 100, 200
+                )
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO recordings (
+                    id, seminarId, filePath, startedAt, endedAt, durationMs, state, errorMessage
+                ) VALUES (
+                    1, 1, 'seminars/1/recordings/source.m4a', 100, 200, 100, 'COMPLETED', NULL
+                )
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO seminar_assets (
+                    id, seminarId, type, originAssetId, sourceTimelineEventId, sourceRecordingId, sourceClipId,
+                    relativePath, mimeType, displayName, createdAt, updatedAt
+                ) VALUES (
+                    1, 1, 'RECORDING', NULL, NULL, 1, NULL,
+                    'seminars/1/recordings/source.m4a', 'audio/mp4', 'source.m4a', 100, 200
+                )
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO reference_evidence (
+                    id, seminarId, sourceType, sourceId, sourceAssetId, selectedText, extractedDoi,
+                    titleClue, authorCluesJson, yearClue, venueClue, evidenceQuality, createdAt
+                ) VALUES (
+                    1, 1, 'OCR', 1, 1, 'Reference evidence', NULL,
+                    NULL, NULL, NULL, NULL, 'LOW', 100
+                )
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO seminar_briefs (
+                    id, seminarId, backgroundContext, coreQuestion, methods, mainResults,
+                    keyTakeaways, unresolvedQuestions, followUpActions, userNotes, createdAt, updatedAt
+                ) VALUES (
+                    1, 1, 'background', 'question', 'methods', 'results',
+                    'takeaways', 'questions', 'actions', 'notes', 100, 200
+                )
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB_V4_TO_V5, 5, true, MIGRATION_4_5)
+
+        val database = Room.databaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            AppDatabase::class.java,
+            TEST_DB_V4_TO_V5,
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .build()
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM reference_evidence").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(1, cursor.getInt(0))
+        }
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM seminar_briefs").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(1, cursor.getInt(0))
+        }
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM transcripts").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(0, cursor.getInt(0))
+        }
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM transcript_segments").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(0, cursor.getInt(0))
+        }
+        database.openHelper.readableDatabase.query("SELECT COUNT(*) FROM summary_drafts").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(0, cursor.getInt(0))
+        }
+        database.close()
+    }
 }
 
 private const val TEST_DB = "migration-test"
 private const val TEST_DB_V2_TO_V3 = "migration-test-v2-to-v3"
 private const val TEST_DB_V3_TO_V4 = "migration-test-v3-to-v4"
+private const val TEST_DB_V4_TO_V5 = "migration-test-v4-to-v5"

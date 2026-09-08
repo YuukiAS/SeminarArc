@@ -415,6 +415,9 @@ private fun ProcessingJob.statusText(): String {
     val typeLabel = when (type) {
         ProcessingJobType.IMAGE_ENHANCEMENT -> "Enhancement"
         ProcessingJobType.TEXT_OCR -> "OCR"
+        ProcessingJobType.TRANSCRIPTION -> "Transcription"
+        ProcessingJobType.SUMMARY_DRAFT -> "Summary"
+        ProcessingJobType.NOTION_EXPORT_PREP -> "Notion export"
     }
     val stateLabel = when (state) {
         ProcessingJobState.QUEUED -> "queued"

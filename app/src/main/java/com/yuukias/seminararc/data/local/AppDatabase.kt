@@ -26,6 +26,9 @@ import com.yuukias.seminararc.data.local.entity.SeminarAssetEntity
 import com.yuukias.seminararc.data.local.entity.SeminarEntity
 import com.yuukias.seminararc.data.local.entity.TagEntity
 import com.yuukias.seminararc.data.local.entity.TimelineEventEntity
+import com.yuukias.seminararc.data.local.entity.TranscriptEntity
+import com.yuukias.seminararc.data.local.entity.TranscriptSegmentEntity
+import com.yuukias.seminararc.data.local.entity.SummaryDraftEntity
 
 @Database(
     entities = [
@@ -45,8 +48,11 @@ import com.yuukias.seminararc.data.local.entity.TimelineEventEntity
         SeminarBriefEntity::class,
         BriefReferenceEntity::class,
         BriefKeySlideEntity::class,
+        TranscriptEntity::class,
+        TranscriptSegmentEntity::class,
+        SummaryDraftEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(InstantConverters::class)

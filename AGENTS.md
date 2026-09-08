@@ -16,6 +16,8 @@
 - 2026-08-30 本 WSL session 中 `/mnt/c` 与 `/mnt/d` 以 `ro` 挂载，且直接执行 `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe` 或 `/mnt/c/Windows/System32/cmd.exe` 返回 `Invalid argument`。这表示当前 Codex/WSL 进程暂不能通过 Windows interop 操作 Windows SDK/Emulator，也不能从 WSL 写入 `D:\Code\SeminarArc-emulator`；恢复该能力需要用户在 Windows/WSL 环境层处理，不得用 `wsl --shutdown`、usbipd 或真机 transport 操作绕过。
 - 2026-08-30 Windows 原生 Codex 已建立并验证 Windows test mirror：`D:\Code\SeminarArc-emulator`。当前已确认 AVD `Pixel_8`、serial `emulator-5554`、model `sdk_gphone64_x86_64`、API `36`、ABI `x86_64`、Emulator `37.1.11.0`、acceleration `WHPX(10.0.26100) is installed and usable`。
 - Android Studio JBR 实际位于 `C:\Android\Android Studio\jbr`；该环境当前为 OpenJDK `25.0.2`，与本仓库 Gradle/Kotlin DSL 不兼容。Windows Gradle 验证可使用本地 JDK 17：`D:\Code\_jdks\jdk-17.0.20.1+1`，不要修改系统级 JAVA_HOME。
+- Windows 原生 Codex 执行 Gradle/Android 构建时，大型缓存、wrapper 下载、Gradle user home、Android user home 和构建环境应显式落在 `D:\`。默认不要让 Gradle 写入 `C:\.gradle`、`C:\.android`、`C:\Users\<user>\.gradle` 或其他 C 盘缓存；命令中优先设置 `GRADLE_USER_HOME=D:\Code\SeminarArc-emulator\.gradle-user-home`、`ANDROID_USER_HOME=D:\Code\SeminarArc-emulator\.android-user-home`，并在必要时给 Gradle JVM 传入 `-Duser.home=D:\Code\SeminarArc-emulator\.gradle-user-home`。不要同时设置 deprecated `ANDROID_SDK_HOME`，AGP 会把它和 `ANDROID_USER_HOME` 视为 Android preferences 位置冲突。
+- 当前 `gradle.properties` 固定 `kotlin.compiler.execution.strategy=in-process`，用于避免 Kotlin daemon 在 `C:\Users\<user>\AppData\Local\kotlin\daemon` 创建 marker/cache 文件；不要为了提速随手改回 daemon，除非同时把 Kotlin daemon home 可靠迁到 `D:\` 并验证不触碰 C 盘。
 - `local.properties` 应保持 WSL 构建路径 `sdk.dir=/home/yuukias/Android/Sdk`；不要把 canonical WSL 工作区改指向 Windows SDK。
 - `~/.bashrc` 已写入 JDK、Android SDK 和 scrcpy PATH：`$JAVA_HOME/bin`、`$ANDROID_HOME/cmdline-tools/latest/bin`、`$ANDROID_HOME/platform-tools`、`$SCRCPY_HOME`。
 - Gradle 使用仓库内 wrapper：`./gradlew`；当前 wrapper 为 Gradle `8.10.2`，不要假设系统级 `gradle` 已安装。
@@ -113,6 +115,13 @@ Load supporting references from:
 - Timeline event 必须记录可恢复的 offset。
 - Clip 只有在真实生成并处于 `READY` 后才可播放；`PENDING`、`PROCESSING`、`FAILED` 必须有清晰 fallback。
 - 删除 seminar 或 event 时，Room 记录和 app-owned 文件必须一致清理。
+
+## Internal dogfood 自恢复授权
+
+- `internal dogfood` signer、Windows Emulator、Gradle、build、lint、测试、release packaging、APK checksum 和本地分发管线中的可恢复工程问题，Codex 默认自行定位、修复、重试或重建，不反复询问用户。
+- 该授权只覆盖 `com.yuukias.seminararc.internal` 的 internal/dogfood APK，不覆盖 Google Play production signing 或公开发布。
+- 只有涉及 production signing、付费账号、私有 API credential、recurring-cost backend、真实用户数据破坏风险、Google Play Console、公开发布或 GM1910 真机写操作时才询问用户。
+- 如果本地 internal signer 初始化失败且尚未用于发布，Codex 可以清理本轮失败尝试并重建；仍不得把 keystore、password、secret properties、私钥材料或用户数据写入仓库、Git、日志、result、commit message 或 GitHub Release。
 
 ## Android / Compose 实现约束
 

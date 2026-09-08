@@ -57,6 +57,14 @@ class ProcessingWorker(
                     storage = dependencies.mediaStorageManager(),
                     provider = dependencies.textOcrProvider(),
                 )
+                ProcessingJobType.TRANSCRIPTION,
+                ProcessingJobType.SUMMARY_DRAFT,
+                ProcessingJobType.NOTION_EXPORT_PREP -> fail(
+                    repository = repository,
+                    jobId = job.id,
+                    message = "${job.type} is not wired to ProcessingWorker yet.",
+                    isRetryable = false,
+                )
             }
         } catch (cancellation: CancellationException) {
             repository.markJobCancelled(jobId)

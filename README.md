@@ -10,7 +10,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 ## 当前状态
 
-仓库当前已完成 `0.3.x` Reference Candidate + Seminar Brief 收口；`0.1.x` 本地采集、`0.2.x` Local Visual Reconstruction 和 `0.3.x` 人工复核式论文候选/brief/export 闭环均已落地。
+仓库当前已完成 `0.3.x` Reference Candidate + Seminar Brief 收口，并正在建立 `0.3.1-internal` dogfood APK 分发链；`0.1.x` 本地采集、`0.2.x` Local Visual Reconstruction 和 `0.3.x` 人工复核式论文候选/brief/export 闭环均已落地。
 
 已经具备：
 
@@ -39,11 +39,14 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.3.x` deterministic candidate ranking/dedup：`reference-match-v1` 记录 match reason、score、confidence band、normalized DOI/title/year/source provenance，并支持 confirm/reject/reopen。
 - `0.3.x` Reference Candidate Review / Seminar Brief UI：从 Reconstruction workspace 进入，展示 evidence picker、query preview、provider plan、lookup status、候选复核、可编辑 brief 和 key-slide linking。
 - `0.3.x` Markdown/ZIP export：导出 confirmed references、brief sections 和 key slides；未确认候选不会自动写入 brief。
+- `0.3.1-internal` 分发基础：internal build identity 使用 `com.yuukias.seminararc.internal`，默认 `versionName = 0.3.1-internal.1`、`versionCode = 30101`，签名凭据只从 repo 外 Windows local secret store 或环境变量读取。用户 APK 下载入口见 `docs/INTERNAL_DISTRIBUTION.md`。
+- `0.4.x` schema foundation：Room version 5 新增 transcript、timestamped transcript segment 和 summary draft 本地表，为后续 provider-independent 转写/总结/Notion export pipeline 提供持久化边界。
+- `0.4.x` provider contract foundation：新增本地安全的 `TranscriptionProvider` 与 `SummaryProvider` domain contract，并用 fake-provider JVM tests 固定 timestamp、selected input、provenance 和 retryability 语义。
 
 尚未声明完成：
 
 - 非破坏性真机完整 E2E 验收：创建 seminar、录音、拍照、timeline、clip、重启后持久化、离线导出和删除清理仍需在用户授权的设备会话中执行。
-- 转写、AI 总结、Notion、cloud sync、公式 OCR、广告或支付。
+- 真实转写 provider 接入、AI 总结生成运行时、Notion live OAuth/upload、cloud sync、公式 OCR、广告或支付。
 
 ## 文档入口
 
@@ -55,6 +58,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - 隐私说明：`docs/PRIVACY.md`
 - 设计交付：`design/`
 - 变更记录：`CHANGELOG.md`
+- Internal APK 安装与更新说明：`docs/INTERNAL_DISTRIBUTION.md`
 
 ## 推荐开发顺序
 
@@ -86,6 +90,14 @@ Windows PowerShell 可使用：
 .\gradlew.bat assembleDebug
 .\gradlew.bat testDebugUnitTest
 ```
+
+Internal dogfood APK 使用：
+
+```powershell
+.\gradlew.bat assembleInternal
+```
+
+稳定 internal signing key 不在仓库内。Gradle 通过 `SEMINARARC_INTERNAL_SIGNING_PROPERTIES` 指向 repo 外 properties 文件；若未设置，则默认检查 `D:\Code\_secrets\SeminarArc\internal-signing.properties`。
 
 ## 权限规划
 
