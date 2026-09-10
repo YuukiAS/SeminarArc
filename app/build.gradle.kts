@@ -11,10 +11,10 @@ import java.util.Properties
 
 val seminarArcVersionCode = providers.gradleProperty("seminarArc.versionCode")
     .map { it.toInt() }
-    .orElse(30101)
+    .orElse(50001)
     .get()
 val seminarArcVersionName = providers.gradleProperty("seminarArc.versionName")
-    .orElse("0.3.1-internal.1")
+    .orElse("0.5.0-alpha.1")
     .get()
 val internalSigningPropertiesPath = providers.environmentVariable("SEMINARARC_INTERNAL_SIGNING_PROPERTIES")
     .orElse("D:\\Code\\_secrets\\SeminarArc\\internal-signing.properties")

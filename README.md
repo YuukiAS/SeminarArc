@@ -10,7 +10,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 ## 当前状态
 
-仓库当前已完成 `0.3.x` Reference Candidate + Seminar Brief 收口，并正在建立 `0.3.1-internal` dogfood APK 分发链；`0.1.x` 本地采集、`0.2.x` Local Visual Reconstruction 和 `0.3.x` 人工复核式论文候选/brief/export 闭环均已落地。
+仓库当前已完成 `0.5.x` Formula / Research Export 本地安全 alpha 收口；`0.1.x` 本地采集、`0.2.x` Local Visual Reconstruction、`0.3.x` 人工复核式论文候选/brief/export、`0.4.x` 转写/总结/Notion-ready 本地 foundation，以及 `0.5.x` 公式区域/manual LaTeX/BibTeX/RIS/export 闭环均已落地。
 
 已经具备：
 
@@ -39,7 +39,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.3.x` deterministic candidate ranking/dedup：`reference-match-v1` 记录 match reason、score、confidence band、normalized DOI/title/year/source provenance，并支持 confirm/reject/reopen。
 - `0.3.x` Reference Candidate Review / Seminar Brief UI：从 Reconstruction workspace 进入，展示 evidence picker、query preview、provider plan、lookup status、候选复核、可编辑 brief 和 key-slide linking。
 - `0.3.x` Markdown/ZIP export：导出 confirmed references、brief sections 和 key slides；未确认候选不会自动写入 brief。
-- `0.3.1-internal` 分发基础：internal build identity 使用 `com.yuukias.seminararc.internal`，默认 `versionName = 0.3.1-internal.1`、`versionCode = 30101`，签名凭据只从 repo 外 Windows local secret store 或环境变量读取。用户 APK 下载入口见 `docs/INTERNAL_DISTRIBUTION.md`。
+- `0.5.0-alpha.1` 分发基础：internal build identity 使用 `com.yuukias.seminararc.internal`，默认 `versionName = 0.5.0-alpha.1`、`versionCode = 50001`，签名凭据只从 repo 外 Windows local secret store 或环境变量读取。用户 APK 下载入口见 `docs/INTERNAL_DISTRIBUTION.md`。
 - `0.4.x` schema foundation：Room version 5 新增 transcript、timestamped transcript segment 和 summary draft 本地表，为后续 provider-independent 转写/总结/Notion export pipeline 提供持久化边界。
 - `0.4.x` provider contract foundation：新增本地安全的 `TranscriptionProvider` 与 `SummaryProvider` domain contract，并用 fake-provider JVM tests 固定 timestamp、selected input、provenance 和 retryability 语义。
 - `0.4.x` transcript repository foundation：新增 `TranscriptDao` / `TranscriptRepository` / `RunTranscriptionForRecordingUseCase`，可通过 fake/local provider 从已完成本地录音保存 timestamped transcript segments。
@@ -58,7 +58,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` summary draft apply foundation：Transcript Review 可由用户显式把某个 summary draft 应用到人工 `SeminarBrief`，让 transcript/summary 整理结果进入既有 Reference Review brief/export 闭环。
 - `0.4.x` Notion-ready share entry foundation：Seminar Detail 可通过 Android share sheet 分享本地生成的 Notion-ready Markdown 预览文本；该路径不包含 Notion OAuth、API client、token、backend 或上传行为。
 - `0.4.x` Notion-ready save entry foundation：Seminar Detail 可通过 Android document picker 保存本地生成的 Notion-ready Markdown 预览文本，便于后续手动导入 Notion 或其他知识库；该路径仍不上传、不持有 token。
-- `0.5.x` Formula / Research Export foundation：已形成 `docs/plans/0.5.x-formula-research-export-plan.md`；Room version `7` 已加入本地公式区域、公式结果、`FormulaDao`、domain model 和 `FORMULA_OCR` job 类型；`FormulaOcrProvider`、provider status/capability contract、manual/unavailable providers、JVM contract tests、Reconstruction workspace 本地公式区域 UI、provider status summary、photo preview overlay、drag-to-draft selection、saved region edit/update、manual LaTeX durable queue、READY formula results 的 Markdown/Notion-ready export，以及 confirmed references 的 deterministic `references.bib` / `references.ris` ZIP export artifact、单独保存和分享入口已就位。0.5.x 第一阶段已达到 headless alpha 候选状态；`v0.5.0-alpha.1` 仍等待安全的 Windows Emulator connected gate。Mathpix live provider、PaddleOCR/pix2tex bundling 和任何 cloud upload 均需后续 credential/backend/license 决策。
+- `0.5.x` Formula / Research Export foundation：已形成 `docs/plans/0.5.x-formula-research-export-plan.md`；Room version `7` 已加入本地公式区域、公式结果、`FormulaDao`、domain model 和 `FORMULA_OCR` job 类型；`FormulaOcrProvider`、provider status/capability contract、manual/unavailable providers、JVM contract tests、Reconstruction workspace 本地公式区域 UI、provider status summary、photo preview overlay、drag-to-draft selection、saved region edit/update、manual LaTeX durable queue、READY formula results 的 Markdown/Notion-ready export，以及 confirmed references 的 deterministic `references.bib` / `references.ris` ZIP export artifact、单独保存和分享入口已就位。`v0.5.0-alpha.1` 已通过 Windows mixed-inventory explicit-emulator closeout：在 `8cc54656 unauthorized` 可见时禁用 unscoped connected Gradle task，并用 `adb -s emulator-5554` 显式完成 24 项 instrumentation、internal APK 覆盖升级和启动 smoke。Mathpix live provider、PaddleOCR/pix2tex bundling 和任何 cloud upload 均需后续 credential/backend/license 决策。
 
 尚未声明完成：
 
@@ -115,6 +115,8 @@ Internal dogfood APK 使用：
 ```
 
 稳定 internal signing key 不在仓库内。Gradle 通过 `SEMINARARC_INTERNAL_SIGNING_PROPERTIES` 指向 repo 外 properties 文件；若未设置，则默认检查 `D:\Code\_secrets\SeminarArc\internal-signing.properties`。
+
+当 Windows ADB 同时看到 protected physical serial 时，不要运行 `connectedDebugAndroidTest` 或其他 unscoped connected Gradle task。只有 task 明确授权时，先构建 app/androidTest APK，再用 `adb -s emulator-5554 install` 和 `adb -s emulator-5554 shell am instrument ...` 完成 Emulator-only instrumentation。
 
 ## 权限规划
 

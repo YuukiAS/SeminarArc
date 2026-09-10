@@ -8,6 +8,8 @@
 
 ### 新增
 
+- 完成 `0.5.0-alpha.1` 版本元数据：默认 `versionName = 0.5.0-alpha.1`、`versionCode = 50001`，并生成 `SeminarArc-0.5.0-alpha.1.apk` 与 SHA-256。
+- 新增 mixed-inventory explicit-emulator 测试策略：当 Windows ADB 同时看到 protected physical serial 时，禁止 unscoped connected Gradle task，但允许 task 授权的 `adb -s <emulator>` app/test install 与 `am instrument`。
 - 新增 `0.3.1-internal` dogfood 分发基础：internal build type、`com.yuukias.seminararc.internal` application identity、`0.3.1-internal.1` 版本元数据、repo 外 internal signing 配置读取、安装/更新文档和 secret ignore 规则。
 - 新增 `0.4.x` transcript/schema foundation：Room v5、`transcripts`、`transcript_segments`、`summary_drafts`、`MIGRATION_4_5`、schema `5.json` 和未来 transcription/summary/Notion export processing job 类型边界。
 - 新增 `0.4.x` provider contract foundation：`TranscriptionProvider`、`SummaryProvider`、timestamp granularity、selected transcript window、summary draft provenance、retryability 和 fake-provider JVM contract tests。
@@ -39,7 +41,7 @@
 - 新增 `0.5.x` formula region drag selection foundation：Reconstruction photo preview 可通过拖拽生成 normalized crop 草稿，并将草稿同步到显式保存表单；拖拽不直接写 Room、不触发 formula OCR provider 或上传。
 - 新增 `0.5.x` formula region edit selection foundation：saved formula region 可通过 `Edit crop` 载入草稿并显式更新 label/crop，更新保留原 seminar/source asset 归属且不自动触发 provider。
 - 新增 `0.5.x` formula provider settings boundary：`FormulaOcrProvider` 暴露 availability/capability/status，Reconstruction workspace 显示 live formula OCR 未配置和 Manual LaTeX 本地可用状态。
-- 完成 `0.5.x` formula closeout readiness：第一阶段本地安全 foundation 达到 headless alpha 候选状态，版本发布仍等待 Windows Emulator connected gate。
+- 完成 `0.5.x` formula closeout：第一阶段本地安全 foundation、Windows explicit-emulator instrumentation、internal APK update-in-place smoke、签名检查、secret scan 和 release artifact 均已通过。
 - 完成 `0.2.x` Local Visual Reconstruction readiness gate：明确 Room v2->v3 schema 设计、bundled ML Kit Text Recognition v2 OCR 策略、Android 原生图像增强方案、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
 - 新增 `0.2.x` 数据基础：Room schema version 3、`SeminarAsset`、`ProcessingJob`、`OcrResult`、系统标签、asset-tag mapping、`MIGRATION_2_3` backfill 和 repository/JVM/migration test 覆盖。
 - 新增 `0.2.x` 本地图像增强基础：`ImageEnhancementProvider`、Android Bitmap/Matrix/Canvas/ColorMatrix provider、原图保留的 enhanced derived asset 输出、processing job 状态写回和 use case JVM 测试。
@@ -67,6 +69,7 @@
 
 ### 文档
 
+- 更新 README、TODO、架构、隐私、设备测试策略和 autonomous roadmap，记录 `0.5.x COMPLETE` 与 `0.9.x` release readiness boundary。
 - 新增 `0.3.x` Reference Candidate + Seminar Brief readiness plan，明确 Crossref/OpenAlex/DataCite/Semantic Scholar 取舍、evidence extraction、candidate ranking/dedup、Room v4 设计、联网隐私边界和 Candidate Review / Brief UX。
 - 更新 README、TODO、架构、隐私、设计说明和 `0.3.x` 计划，记录 reference lookup 已实现为 opt-in metadata lookup，并继续明确不上传照片、录音、完整 OCR corpus、timeline 或导出包。
 - 更新 README、架构和隐私说明，准确记录 `0.1.5-dev` 已具备本地 capture/timeline/clip/export headless 实现，并明确真机完整 E2E 验收仍需后续授权设备会话。

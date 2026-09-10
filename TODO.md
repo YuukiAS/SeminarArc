@@ -2,13 +2,13 @@
 
 Status: canonical product roadmap
 
-Last updated: 2026-09-08
+Last updated: 2026-09-10
 
 ## 0. 文档地位与旧计划关系
 
 本文件是 SeminarArc 当前的产品方向、能力边界和版本路线图，是后续规划的产品级入口。它不直接替代具体 Codex task，也不表示所有条目已经获准执行。
 
-`0.3.1-internal` 起，用户可安装 APK 的分发入口为 GitHub Releases：Windows 本地构建、稳定 repo 外 internal signer 签名、本地 Emulator gate、version tag 触发一次 GitHub Actions version gate，CI PASS 后上传 APK 与 SHA-256。普通代码或文档 push 不触发 GitHub Actions。
+`0.3.1-internal` 起，用户可安装 APK 的分发入口为 GitHub Releases：Windows 本地构建、稳定 repo 外 internal signer 签名、本地 Emulator gate、version tag 触发一次 GitHub Actions version gate，CI PASS 后上传 APK 与 SHA-256。普通代码或文档 push 不触发 GitHub Actions。当前 alpha 候选为 `v0.5.0-alpha.1`。
 
 仓库中已有材料继续保留，并按以下方式理解：
 
@@ -393,7 +393,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已新增 summary draft apply foundation：Transcript Review 支持用户显式将某个 summary draft 应用到人工 `SeminarBrief`，不后台覆盖、不调用 provider。
 - 已新增 Notion-ready share entry foundation：Seminar Detail 可通过 Android share sheet 分享本地生成的 Notion-ready Markdown 预览文本，不接入 Notion OAuth/API/token/backend 或上传。
 - 已新增 Notion-ready save entry foundation：Seminar Detail 可通过 Android document picker 保存本地生成的 Notion-ready Markdown 预览文本，作为 live Notion OAuth/upload 之前的本地安全导出路径。
-- `0.4.x` 本地 headless gate 已持续通过；connected Emulator closeout 尚未完成。sandbox 内 Windows `adb.exe devices -l` 会先失败在 `\.android` home 解析；非 sandbox + D-home preflight 可枚举设备，但当前同时看到 protected physical serial `8cc54656` 和 `emulator-5554`，不满足“只看到 emulator-*”安全门。
+- `0.4.x` 本地安全 foundation 已完成，并纳入 `0.5.x` alpha regression。真实 ASR provider、AI summary runtime 和 Notion live OAuth/upload 仍是后续人工批准边界。
 
 范围：
 
@@ -421,8 +421,8 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已完成 `0.5.x_formula_region_drag_selection`：Reconstruction photo preview 支持 drag-to-draft selection，拖拽只更新本地 normalized crop 草稿，仍需用户显式点击 `Save formula region` 才写入 Room。
 - 已完成 `0.5.x_formula_region_edit_selection`：saved formula region 可载入为草稿并显式更新 label/crop，更新不改变 seminar/source asset 归属，也不自动触发 provider。
 - 已完成 `0.5.x_formula_provider_settings_boundary`：`FormulaOcrProvider` 暴露 availability/capability/status，Reconstruction workspace 显示当前 live formula OCR 不可用和 Manual LaTeX 本地可用，不引入 credential 或上传。
-- 已完成 `0.5.x_formula_closeout_readiness`：0.5.x 第一阶段本地安全 foundation 已达到 headless alpha 候选状态，但 `v0.5.0-alpha.1` 发布仍等待安全的 Windows Emulator connected gate。
-- `0.5.x_emulator_closeout` 当前为 deferred：2026-09-09 Windows ADB preflight 仍同时看到 protected physical serial `8cc54656` 和 `emulator-5554`，不满足 connected gate。
+- 已完成 `0.5.x_formula_closeout_readiness`：0.5.x 第一阶段本地安全 foundation 达到 alpha 候选状态。
+- 已完成 `0.5.x_emulator_explicit_serial_resume`：2026-09-10 Windows ADB 同时看到 `8cc54656 unauthorized` 和 `emulator-5554 device` 时，按 mixed-inventory explicit-emulator lane 禁用 unscoped connected Gradle task，改用 `adb -s emulator-5554` 显式 install + `am instrument`；完整 instrumentation `OK (24 tests)`，internal APK 从 `0.3.1-internal.1` 覆盖升级到 `0.5.0-alpha.1` 并启动成功。
 - Mathpix 是高准确度付费云候选，但需要 authenticated API、billing 和 credential/backend/user-key 决策；live provider 暂不进入 APK。
 - PaddleOCR formula recognition 和 pix2tex/LaTeX-OCR 可作为自建/本地候选继续评估，但需要模型大小、Android packaging、性能、耗电、依赖和模型权重 license 审计。
 - 第一阶段优先实现 formula region selection data model、可编辑 LaTeX result、`FormulaOcrProvider` fake/manual contract、BibTeX/RIS deterministic export 和 export polish。
@@ -437,7 +437,8 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 
 下一步：
 
-- 等待用户/环境层隔离 Windows ADB 中的 protected physical serial 后，重新执行 `0.5.x_emulator_closeout_task`。隔离完成前不要运行 connected tests、不要创建 `v0.5.0-alpha.1` tag/release。
+- `0.5.x` 已可进入 `v0.5.0-alpha.1` version tag / CI / GitHub prerelease 流程。
+- `0.5.x` 发布后只做 `0.9.x` release readiness/audit；不得自动进入 Google Play、production signing、AAB 上传、广告/支付或公开发布。
 
 ### `0.9.x` Google Play 内测与发布准备
 

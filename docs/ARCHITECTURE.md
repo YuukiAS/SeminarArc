@@ -166,7 +166,7 @@ Saved formula regions can be loaded back into the same draft controls with `Edit
 
 The detailed readiness plan is `docs/plans/0.5.x-formula-research-export-plan.md`.
 
-Current `0.5.x` closeout state is `HEADLESS_ALPHA_CANDIDATE`: schema/domain/provider contracts, manual formula queue, region selection/edit UI, provider status display, formula export, and BibTeX/RIS export have passed local JVM/build/lint gates. The release state is not complete until a safe Windows Emulator connected regression can run with ADB seeing only `emulator-*` devices. On 2026-09-09, the Emulator closeout preflight was deferred because Windows ADB still saw protected physical serial `8cc54656` alongside `emulator-5554`.
+Current `0.5.x` closeout state is COMPLETE for the approved local-safe alpha scope. Schema/domain/provider contracts, manual formula queue, region selection/edit UI, provider status display, formula export, and BibTeX/RIS export passed local JVM/build/lint gates. On 2026-09-10, Windows Emulator closeout passed under the mixed-inventory explicit-emulator lane: Windows ADB still showed protected physical serial `8cc54656 unauthorized`, so unscoped connected Gradle tasks stayed forbidden; app/test APK install and `am instrument` were run only with `adb -s emulator-5554`, and the suite passed `OK (24 tests)`.
 
 ## Reference Candidate and Seminar Brief
 

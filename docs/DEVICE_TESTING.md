@@ -1,7 +1,7 @@
 # SeminarArc Device Testing Policy
 
 Status: active
-Updated: 2026-08-30
+Updated: 2026-09-10
 
 ## 1. 目标
 
@@ -25,7 +25,7 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 - 负责：Compose instrumentation、Room migration instrumentation、connected Android tests、自动安装测试 APK、可重复 UI regression。
 - 2026-08-30 Windows 原生 Codex 已确认：AVD `Pixel_8`，serial `emulator-5554`，model `sdk_gphone64_x86_64`，API `36`，ABI `x86_64`。
 - Emulator version：`37.1.11.0 (build_id 15917651)`；acceleration：`WHPX(10.0.26100) is installed and usable`。
-- Windows ADB gate 已确认仅看到 `emulator-5554`，未看到 `8cc54656`、GM1910 或其他 physical USB device。
+- Windows ADB preferred gate 是仅看到 `emulator-*`。2026-09-10 已新增并验证 mixed-inventory fallback：当 Windows ADB 同时看到 protected physical serial `8cc54656 unauthorized` 与 `emulator-5554 device` 时，禁止 unscoped connected Gradle task，但 task-authorized `adb -s emulator-5554 install` + `adb -s emulator-5554 shell am instrument` 可完成 Emulator-only instrumentation。
 - 2026-08-30 Windows 原生 onboarding/regression 结果：`EMULATOR_REGRESSION_PASS`。
 - 历史 WSL onboarding 尝试曾因 WSL session 无法执行 Windows interop 且 `/mnt/d` 只读而记录 `EMULATOR_INFRA_NEEDS_FIX`；该 blocker 仅适用于当时的 WSL interop 场景，不适用于 Windows 原生 Codex 执行。
 
@@ -74,12 +74,13 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 运行 Windows connected/instrumentation test 前必须确认：
 
 1. Windows SDK 路径实际存在。
-2. Emulator 已启动。
-3. Windows `adb.exe devices -l` 只看到预期的 `emulator-*`。
-4. Windows ADB 绝不能看到 physical serial `8cc54656`。
-5. 如果 Windows ADB 看见物理真机，停止 connected test，不尝试自行修改 usbipd/ADB transport。
+2. Emulator 已启动，且预期 `emulator-*` 处于 `device`。
+3. 先运行只读 Windows `adb.exe devices -l` inventory。
+4. Preferred fast path：inventory 只看到预期 `emulator-*` 时，可运行普通 connected Gradle task。
+5. Mixed-inventory fallback：inventory 同时看到 protected physical serial `8cc54656` 时，禁止 `connectedDebugAndroidTest`、`connectedAndroidTest`、任何 `connected*AndroidTest` 或 `device*AndroidTest`；只能在 task 明确授权时由 Gradle 构建 app APK/androidTest APK，再用 `adb -s <emulator>` 显式 install 和 `am instrument`。
+6. 不得为了让 `8cc54656` 消失而执行 ADB/USB/usbipd/WSL transport 修改。
 
-只有满足以上条件，才允许 Windows mirror 运行 connected/instrumentation 自动安装链。
+无论哪条路径，physical serial 永远不得接收 install、shell、input、instrumentation、scrcpy 或 transport 命令。
 
 ## 6. Physical-device protection
 
@@ -108,3 +109,4 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 2. existing instrumentation / migration / connected regression 已可在 Windows Emulator 执行。
 3. 每次涉及 GM1910 的 task 只做 task 明确授权的只读/单步检查，默认不操作真机。
 4. 原先等待真机完整 E2E 的 stalled task 不再作为日常开发 blocker；物理验收延期到未来明确的 hardware acceptance checkpoint。
+5. 2026-09-10 `v0.5.0-alpha.1` closeout 在 mixed-inventory fallback 下通过：Windows ADB inventory 为 `8cc54656 unauthorized` + `emulator-5554 device`，所有非 inventory ADB 命令均显式使用 `-s emulator-5554`，完整 instrumentation suite `OK (24 tests)`。

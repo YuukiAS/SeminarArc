@@ -69,7 +69,7 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 
 ## 0.5.x 公式与科研导出边界
 
-- `0.5.x` 第一阶段只推进本地公式区域、可编辑 LaTeX、provider contract 和 BibTeX/RIS deterministic export；默认不需要网络。
+- `0.5.x` 第一阶段已完成本地公式区域、可编辑 LaTeX、provider contract、BibTeX/RIS deterministic export 和 Windows Emulator closeout；默认不需要网络。
 - Room version `7` 已加入本地公式区域和公式结果表；这些记录只保存 seminar-owned photo 的相对路径/asset provenance、normalized crop、LaTeX、confidence、provider metadata 和非敏感 provenance JSON。
 - 当前 production 默认 `UnavailableFormulaOcrProvider` 不访问网络；`ManualFormulaProvider` 只处理用户显式输入的 LaTeX。
 - Formula provider status/capability 只描述 availability、manual support、credential requirement 和 network behavior；显示这些状态不会读取 credential、初始化 cloud SDK 或上传图片。
@@ -81,6 +81,7 @@ SeminarArc 默认把 seminar 材料保存在设备本地，不要求登录，也
 - Mathpix live provider 需要付费 API credential 或安全 token/backend 策略；在获得后续批准前不得把 app-owned key 写入 APK 或仓库。
 - PaddleOCR、pix2tex 或其他自建 provider 在进入 APK 前必须完成模型权重 license、依赖、体积、性能、耗电和数据保留审计。
 - BibTeX/RIS 导出只包含已确认 references，并作为本地 ZIP export artifact 的 `references.bib` / `references.ris` 写入用户选择或分享的外部副本；Seminar Detail 也可把 BibTeX/RIS 文本单独保存到用户选择的 document URI 或交给 Android share sheet。pending/rejected candidates 不作为确定知识导出。
+- `v0.5.0-alpha.1` internal APK 使用 repo 外 local signer 签名；keystore、password、private key 和 provider secret 不进入仓库、GitHub Actions 或 GitHub Release。
 
 ## 0.3.x Reference Lookup 边界
 

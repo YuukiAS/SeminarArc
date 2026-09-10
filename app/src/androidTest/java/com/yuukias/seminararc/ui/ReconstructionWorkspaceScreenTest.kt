@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import com.yuukias.seminararc.domain.model.FormulaRegion
@@ -70,18 +71,18 @@ class ReconstructionWorkspaceScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("OCR running").assertIsDisplayed()
-        composeRule.onNodeWithText("Review transcripts").assertIsDisplayed()
-        composeRule.onNodeWithText("Formula providers").assertIsDisplayed()
-        composeRule.onNodeWithText("Formula OCR: Unavailable - No live formula OCR provider is configured. (credential)").assertIsDisplayed()
-        composeRule.onNodeWithText("Manual LaTeX: Available - User-entered LaTeX can be saved locally. (manual)").assertIsDisplayed()
-        composeRule.onNodeWithText("Enhancement failed: transform failed").assertIsDisplayed()
-        composeRule.onNodeWithText("Enhancement cancelled").assertIsDisplayed()
-        composeRule.onNodeWithText("OCR").assertIsNotEnabled()
-        composeRule.onNodeWithText("Enhance").assertIsEnabled()
+        composeRule.onNodeWithText("Review transcripts").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Formula providers").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Formula OCR: Unavailable - No live formula OCR provider is configured. (credential)").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Manual LaTeX: Available - User-entered LaTeX can be saved locally. (manual)").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("OCR running").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Enhancement failed: transform failed").performScrollTo().assertIsDisplayed()
+        composeRule.onAllNodesWithText("Enhancement cancelled")[0].performScrollTo().assertIsDisplayed()
+        composeRule.onAllNodesWithText("OCR")[0].performScrollTo().assertIsNotEnabled()
+        composeRule.onAllNodesWithText("Enhance")[0].performScrollTo().assertIsEnabled()
 
-        composeRule.onAllNodesWithText("Cancel")[0].performClick()
-        composeRule.onAllNodesWithText("Retry")[0].performClick()
+        composeRule.onAllNodesWithText("Cancel")[0].performScrollTo().performClick()
+        composeRule.onAllNodesWithText("Retry")[0].performScrollTo().performClick()
 
         assertEquals(listOf("cancel:2", "retry:4"), actions)
     }
@@ -119,14 +120,14 @@ class ReconstructionWorkspaceScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Formula regions").assertIsDisplayed()
-        composeRule.onNodeWithText("Main equation: x=0.1, y=0.2, w=0.7, h=0.25").assertIsDisplayed()
-        composeRule.onNodeWithText("Formula ready: E = mc^2").assertIsDisplayed()
-        composeRule.onAllNodesWithText("Save formula region")[0].performClick()
-        composeRule.onAllNodesWithText("Edit crop")[0].performClick()
-        composeRule.onAllNodesWithText("Update formula region")[0].performClick()
-        composeRule.onAllNodesWithText("Queue LaTeX")[0].performClick()
-        composeRule.onAllNodesWithText("Delete")[0].performClick()
+        composeRule.onAllNodesWithText("Formula regions")[0].performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Main equation: x=0.1, y=0.2, w=0.7, h=0.25").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Formula ready: E = mc^2").performScrollTo().assertIsDisplayed()
+        composeRule.onAllNodesWithText("Save formula region")[0].performScrollTo().performClick()
+        composeRule.onAllNodesWithText("Edit crop")[0].performScrollTo().performClick()
+        composeRule.onAllNodesWithText("Update formula region")[0].performScrollTo().performClick()
+        composeRule.onAllNodesWithText("Queue LaTeX")[0].performScrollTo().performClick()
+        composeRule.onAllNodesWithText("Delete")[0].performScrollTo().performClick()
 
         assertEquals(
             listOf(
@@ -299,10 +300,11 @@ class ReconstructionWorkspaceScreenTest {
 
         composeRule
             .onNodeWithContentDescription("Seminar photo with 1 formula regions. Drag to draft formula region.")
+            .performScrollTo()
             .performTouchInput {
                 swipe(start = Offset(12f, 12f), end = Offset(132f, 84f), durationMillis = 300)
             }
-        composeRule.onAllNodesWithText("Save formula region")[0].performClick()
+        composeRule.onAllNodesWithText("Save formula region")[0].performScrollTo().performClick()
 
         val savedAction = actions.single()
         assertTrue(savedAction.startsWith("formula:10:Formula:"))
