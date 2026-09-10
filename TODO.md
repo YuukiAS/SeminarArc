@@ -8,7 +8,7 @@ Last updated: 2026-09-10
 
 本文件是 SeminarArc 当前的产品方向、能力边界和版本路线图，是后续规划的产品级入口。它不直接替代具体 Codex task，也不表示所有条目已经获准执行。
 
-`0.3.1-internal` 起，用户可安装 APK 的分发入口为 GitHub Releases：Windows 本地构建、稳定 repo 外 internal signer 签名、本地 Emulator gate、version tag 触发一次 GitHub Actions version gate，CI PASS 后上传 APK 与 SHA-256。普通代码或文档 push 不触发 GitHub Actions。当前 alpha 候选为 `v0.5.0-alpha.1`。
+`0.3.1-internal` 起，用户可安装 APK 的分发入口为 GitHub Releases：Windows 本地构建、稳定 repo 外 internal signer 签名、本地 Emulator gate、version tag 触发一次 GitHub Actions version gate，CI PASS 后上传 APK 与 SHA-256。普通代码或文档 push 不触发 GitHub Actions。当前 alpha 候选为 `v0.5.0-alpha.2`。
 
 仓库中已有材料继续保留，并按以下方式理解：
 
@@ -437,7 +437,8 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 
 下一步：
 
-- `0.5.x` 已可进入 `v0.5.0-alpha.1` version tag / CI / GitHub prerelease 流程。
+- `v0.5.0-alpha.1` tag 已触发 GitHub Actions，但 Linux runner 因默认 Windows-only signing path 解析失败而未通过；该问题已推进到 `v0.5.0-alpha.2` 修复候选。
+- `0.5.x` 已可进入 `v0.5.0-alpha.2` version tag / CI / GitHub prerelease 流程。
 - `0.5.x` 发布后只做 `0.9.x` release readiness/audit；不得自动进入 Google Play、production signing、AAB 上传、广告/支付或公开发布。
 
 ### `0.9.x` Google Play 内测与发布准备

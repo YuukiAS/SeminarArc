@@ -32,7 +32,7 @@ Updated: 2026-09-08
 - release APK signing key 永远留在本地/repo 外，不上传 GitHub；
 - 相同 internal application id + 相同 signer 才支持覆盖升级并保留数据。
 - 当前 internal application id 为 `com.yuukias.seminararc.internal`，app label 为 `SeminarArc Internal`。
-- Current alpha release identity is `v0.5.0-alpha.1`, `versionCode = 50001`, `versionName = 0.5.0-alpha.1`.
+- Current alpha release identity is `v0.5.0-alpha.2`, `versionCode = 50002`, `versionName = 0.5.0-alpha.2`.
 
 当前仓库为 public，因此 Release asset 也公开可下载；如果未来仓库转 private，再重新评估下载权限和 Actions 配额。
 
@@ -137,7 +137,7 @@ Targets:
 
 Paid API keys/commercial credentials 是 human-approval boundary，绝不提交 repo。
 
-`0.5.x` status: COMPLETE for the approved local-safe alpha scope. The accepted `v0.5.0-alpha.1` closeout used the mixed-inventory explicit-emulator fallback: ordinary connected Gradle tasks remained forbidden while `8cc54656 unauthorized` was visible, and all app/test install plus `am instrument` commands were scoped to `emulator-5554`. The suite passed `OK (24 tests)`, and the signed internal APK passed update-in-place smoke from `0.3.1-internal.1` to `0.5.0-alpha.1`.
+`0.5.x` status: COMPLETE for the approved local-safe alpha scope. The `v0.5.0-alpha.1` closeout used the mixed-inventory explicit-emulator fallback: ordinary connected Gradle tasks remained forbidden while `8cc54656 unauthorized` was visible, and all app/test install plus `am instrument` commands were scoped to `emulator-5554`. The suite passed `OK (24 tests)`, and the signed internal APK passed update-in-place smoke from `0.3.1-internal.1` to `0.5.0-alpha.1`. `v0.5.0-alpha.2` carries the same product scope plus the Linux CI fix for Windows-only signing path parsing.
 
 ## Milestone D — 0.9.x Release Preparation
 

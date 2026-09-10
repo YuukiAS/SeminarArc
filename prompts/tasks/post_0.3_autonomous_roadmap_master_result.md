@@ -2,13 +2,13 @@
 
 Date: 2026-09-10
 
-Status: `POST_0.5_BOUNDARY_REACHED_WITH_REMOTE_RELEASE_BLOCKED`
+Status: `POST_0.5_BOUNDARY_IN_PROGRESS_AFTER_ALPHA_2_CI_FIX`
 
 ## Summary
 
 The roadmap reached the post-0.5 boundary for local implementation and emulator validation. `0.5.x` is complete for the approved local-safe alpha scope, and the repository has recorded the mixed-inventory explicit-emulator testing strategy.
 
-`v0.5.0-alpha.1` was committed, pushed, tagged and pushed to `origin`, but the tag-triggered GitHub Actions version gate failed remotely. Local clean reproduction of the same headless Gradle gate passed on the Windows native environment.
+`v0.5.0-alpha.1` was committed, pushed, tagged and pushed to `origin`, but the tag-triggered GitHub Actions version gate failed remotely because Linux parsed the default Windows internal signing properties path as an invalid URI. The fix is being released as `v0.5.0-alpha.2` instead of force-moving the failed tag.
 
 ## Completed
 
@@ -22,26 +22,22 @@ The roadmap reached the post-0.5 boundary for local implementation and emulator 
 - Generated local ignored release artifacts:
   - `release/SeminarArc-0.5.0-alpha.1.apk`
   - `release/SeminarArc-0.5.0-alpha.1.apk.sha256`
+  - `release/SeminarArc-0.5.0-alpha.2.apk`
+  - `release/SeminarArc-0.5.0-alpha.2.apk.sha256`
 - Updated README, TODO, CHANGELOG, ARCHITECTURE, PRIVACY, DEVICE_TESTING, roadmap and task result documents for the 0.5 closeout.
 - Committed and pushed `main`.
 - Created and pushed tag `v0.5.0-alpha.1`.
-- Completed `0.9.x` release readiness audit to the requested boundary.
+- Diagnosed the failed `v0.5.0-alpha.1` remote version gate from GitHub Actions logs.
+- Added the Linux CI compatibility fix for Windows-only internal signing path parsing.
+- Rebuilt and verified `v0.5.0-alpha.2` local release candidate.
 
 ## Not Completed
 
-- GitHub Actions version gate did not pass for run `34421871475`.
-- GitHub prerelease was not created.
-- APK and SHA-256 assets were not uploaded to GitHub Releases.
+- `v0.5.0-alpha.2` version CI and GitHub prerelease are still pending.
 
 ## External Blocker
 
-The current host does not expose a safe authenticated GitHub release channel:
-
-- `gh` CLI is not installed.
-- `GITHUB_TOKEN` and `GH_TOKEN` are absent.
-- Codex in-app browser was not logged in.
-- Unauthenticated GitHub logs are not available.
-- Using stored Git credentials as a GitHub API token was not approved by the execution policy, so Codex did not use or print those credentials.
+GitHub release upload capability is still pending; continue with the GitHub connector or another safe authenticated release path after `v0.5.0-alpha.2` version CI passes.
 
 ## Final Boundary
 

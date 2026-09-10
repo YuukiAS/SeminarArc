@@ -9,8 +9,8 @@ SeminarArc internal / dogfood APK 从 GitHub `Releases` 页面下载，不从 Gi
 推荐流程：
 
 1. 打开 `YuukiAS/SeminarArc` 的 GitHub `Releases` 页面。
-2. 选择最新的 internal/prerelease 版本，例如 `v0.5.0-alpha.1`。
-3. 下载 `.apk` asset，例如 `SeminarArc-0.5.0-alpha.1.apk`。
+2. 选择最新的 internal/prerelease 版本，例如 `v0.5.0-alpha.2`。
+3. 下载 `.apk` asset，例如 `SeminarArc-0.5.0-alpha.2.apk`。
 4. 可选下载同名 `.apk.sha256`，在本地核对 APK 的 SHA-256。
 5. 在 Android 设备上打开 APK，并只给当前浏览器或文件管理器“安装未知应用”权限。
 6. 安装 `SeminarArc Internal`。

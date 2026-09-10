@@ -11,17 +11,26 @@ import java.util.Properties
 
 val seminarArcVersionCode = providers.gradleProperty("seminarArc.versionCode")
     .map { it.toInt() }
-    .orElse(50001)
+    .orElse(50002)
     .get()
 val seminarArcVersionName = providers.gradleProperty("seminarArc.versionName")
-    .orElse("0.5.0-alpha.1")
+    .orElse("0.5.0-alpha.2")
     .get()
+val defaultInternalSigningPropertiesPath = if (
+    System.getProperty("os.name").startsWith("Windows", ignoreCase = true)
+) {
+    "D:\\Code\\_secrets\\SeminarArc\\internal-signing.properties"
+} else {
+    ""
+}
 val internalSigningPropertiesPath = providers.environmentVariable("SEMINARARC_INTERNAL_SIGNING_PROPERTIES")
-    .orElse("D:\\Code\\_secrets\\SeminarArc\\internal-signing.properties")
+    .orElse(defaultInternalSigningPropertiesPath)
     .get()
-val internalSigningPropertiesFile = file(internalSigningPropertiesPath)
+val internalSigningPropertiesFile = internalSigningPropertiesPath
+    .takeIf { it.isNotBlank() }
+    ?.let { file(it) }
 val internalSigningProperties = Properties().apply {
-    if (internalSigningPropertiesFile.exists()) {
+    if (internalSigningPropertiesFile?.exists() == true) {
         internalSigningPropertiesFile.inputStream().use(::load)
     }
 }

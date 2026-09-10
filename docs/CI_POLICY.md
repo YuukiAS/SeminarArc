@@ -27,6 +27,7 @@ GitHub Actions 是版本级远端验收，不是每次 push 的持续构建器�
 - `v0.4.0-internal.1`
 - `v0.4.0-internal.2`
 - `v0.5.0-alpha.1`
+- `v0.5.0-alpha.2`
 
 远端 gate 至少执行：
 
