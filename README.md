@@ -1,8 +1,6 @@
 # SeminarArc
 
-SeminarArc 是一个本地优先的原生 Android 应用，用于记录、回顾和整理线下学术 seminar。每一场 seminar 都是唯一的所有权容器；当前 `0.1.x` 的录音、幻灯片照片、问题、笔记、clip 和导出记录都必须归属于明确的 `seminarId`。
-
-产品主循环：
+SeminarArc 是一个 **local-first 的原生 Android 学术 seminar 工作流应用**。它把会前准备、现场录音/拍幻灯片、时间线回顾、OCR、参考文献确认、Seminar Brief、公式整理和科研导出放在同一个 seminar-scoped 工作流中。
 
 ```text
 Prepare -> Capture -> Reconstruct -> Research -> Export
@@ -10,141 +8,193 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 ## 当前状态
 
-仓库当前已完成 `0.5.x` Formula / Research Export 本地安全 alpha 收口；`0.1.x` 本地采集、`0.2.x` Local Visual Reconstruction、`0.3.x` 人工复核式论文候选/brief/export、`0.4.x` 转写/总结/Notion-ready 本地 foundation，以及 `0.5.x` 公式区域/manual LaTeX/BibTeX/RIS/export 闭环均已落地。
+当前可安装版本：**`v0.5.0-alpha.2`**
 
-已经具备：
+- `0.1.x` Local Capture：COMPLETE
+- `0.2.x` Local Visual Reconstruction：COMPLETE
+- `0.3.x` Reference Candidate + Seminar Brief：COMPLETE
+- `0.4.x` Transcription / Summary / Notion-ready local-safe foundation：COMPLETE
+- `0.5.x` Formula / Research Export local-safe alpha：COMPLETE
+- 当前 Room schema：**v7**
+- `0.9.x` release readiness audit：`AUDIT_COMPLETE_NOT_READY_FOR_PRODUCTION_RELEASE`
 
-- Android/Compose 单模块应用基线。
-- Material 3 theme 和 SeminarArc 设计令牌映射。
-- Room-backed seminar 容器模型。
-- Seminar list、editor、detail 基础流程。
-- Abstract PDF import / replace / remove 的本地文件生命周期基础。
-- One-active-seminar invariant 与 session start 语义。
-- Microphone foreground service、本地 `.m4a` recording backend、ongoing notification 和 `RecordingEntity` durable lifecycle。
-- Active Session route、录音状态恢复 UI、权限拒绝状态、notification 返回现场页、以及 End Seminar 的 stop/finalize 后完成 seminar 流程。
-- Seminar Detail 的完整录音回放：Media3 页面内播放器、Play/Pause/Seek、duration/position、文件缺失和失败录音状态。
-- CameraX slide capture、photo-only seminar session、MARK/PHOTO/QUESTION/NOTE timeline 写入、统一 timeline review route、last-photo undo/retake 和 `Play from here` 回放入口。
-- Clip generation 韧性基础：MARK 自动创建 `PENDING` clip、WorkManager 本地 `.m4a` 裁剪、`READY` clip 播放入口、failed retry 和完整录音 fallback。
-- 单 seminar Markdown/ZIP 本地导出：包含 metadata、abstract、recording summary、timeline、relative media links、missing media skip 记录，并通过 `ACTION_CREATE_DOCUMENT` 与 Android share sheet 暴露。
-- `0.1.x` 到 `0.2.x` 的分阶段计划文档。
-- `0.2.x` readiness gate：Room v2->v3 migration 设计、bundled ML Kit Text Recognition v2 OCR 决策、Android 原生图像增强决策、provider/privacy/license 边界和 Research Reconstruction 工作区规格。
-- `0.2.x` Room version 3 数据基础：`SeminarAsset`、`ProcessingJob`、`OcrResult`、tags/key-slide mapping、schema `3.json` 和 v2->v3 backfill migration。
-- `0.2.x` 本地图像增强基础：Android Bitmap/Matrix/Canvas/ColorMatrix provider、rotate/crop/perspective/readability options、原图保留的 enhanced derived asset 输出，以及 job success/failure/idempotency 单元测试。
-- `0.2.x` 本地 OCR 基础：bundled ML Kit Text Recognition Latin/Chinese 依赖、`TextOcrProvider`、app-owned OCR block JSON、`RunTextOcrForAssetUseCase` 和 OCR job/result JVM 测试。
-- `0.2.x` Reconstruction workspace 基础：照片 asset、OCR result、processing job、key-slide tag、搜索 query 和 OCR 状态过滤组合成可渲染 UI state，并从 Seminar Detail 进入 Compose 工作区进行照片预览、增强、OCR、OCR 编辑和 key-slide 标记。
-- `0.2.x` WorkManager-backed processing queue：OCR 和 image enhancement 支持 durable `QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED`，并具备 duplicate idempotency、retry、cancel 和 process-start recovery。
-- Windows Emulator closeout：`MIGRATION_2_3`、bundled ML Kit Latin/Chinese/mixed/empty OCR、Android Bitmap enhancement、Reconstruction workspace UI 和 0.1.x regression 已在 `Pixel_8` API 36 Emulator 上通过 connected 验证。
-- `0.3.x` Room version 4 reference/brief 数据基础：reference evidence、lookup attempts、canonical candidates、provider observations、Seminar Brief、confirmed references 和 key-slide join tables。
-- `0.3.x` opt-in metadata lookup：Crossref、OpenAlex、DataCite keyless provider 边界，用户显式选择 evidence 后才发送最小 DOI/title/author/year clue，不发送照片、录音、完整 OCR corpus、timeline、导出包或 app-private 路径。
-- `0.3.x` deterministic candidate ranking/dedup：`reference-match-v1` 记录 match reason、score、confidence band、normalized DOI/title/year/source provenance，并支持 confirm/reject/reopen。
-- `0.3.x` Reference Candidate Review / Seminar Brief UI：从 Reconstruction workspace 进入，展示 evidence picker、query preview、provider plan、lookup status、候选复核、可编辑 brief 和 key-slide linking。
-- `0.3.x` Markdown/ZIP export：导出 confirmed references、brief sections 和 key slides；未确认候选不会自动写入 brief。
-- `0.5.0-alpha.2` 分发基础：internal build identity 使用 `com.yuukias.seminararc.internal`，默认 `versionName = 0.5.0-alpha.2`、`versionCode = 50002`，签名凭据只从 repo 外 Windows local secret store 或环境变量读取。用户 APK 下载入口见 `docs/INTERNAL_DISTRIBUTION.md`。
-- `0.4.x` schema foundation：Room version 5 新增 transcript、timestamped transcript segment 和 summary draft 本地表，为后续 provider-independent 转写/总结/Notion export pipeline 提供持久化边界。
-- `0.4.x` provider contract foundation：新增本地安全的 `TranscriptionProvider` 与 `SummaryProvider` domain contract，并用 fake-provider JVM tests 固定 timestamp、selected input、provenance 和 retryability 语义。
-- `0.4.x` transcript repository foundation：新增 `TranscriptDao` / `TranscriptRepository` / `RunTranscriptionForRecordingUseCase`，可通过 fake/local provider 从已完成本地录音保存 timestamped transcript segments。
-- `0.4.x` summary draft use case foundation：新增 `DraftSummaryForSeminarUseCase`，基于用户选择的 transcript segments、已确认 references、key-slide captions 和 notes 构造 provider-independent summary request，并把 provider 成功/失败结果写入 `summary_drafts`；不会覆盖人工 `SeminarBrief`。
-- `0.4.x` transcript timeline windows foundation：新增 `BuildTranscriptTimelineWindowsUseCase`，可按 timeline/photo offset 生成 transcript segment windows、关联 photo asset，并输出未来 UI/export 可复用 preview。
-- `0.4.x` transcript review UI foundation：从 Reconstruction workspace 进入，查看 transcript 列表、segments、timeline/photo windows 和 summary draft 状态；真实 provider 执行入口仍未接线。
-- `0.4.x` Markdown/ZIP transcript summary export foundation：本地导出现在包含 transcript review metadata、timestamped segments、timeline windows 和 editable generated summary drafts；ZIP 继续写入增强后的 `seminar.md` 与可读媒体。
-- `0.4.x` transcription durable queue foundation：`ProcessingWorkScheduler` 可为完成录音创建 durable `TRANSCRIPTION` job 并交给 WorkManager；默认 `UnavailableTranscriptionProvider` 只记录未配置失败，不上传音频或伪造转写。
-- `0.4.x` transcript review queue entry foundation：Transcript Review 的转写动作会为最新完成录音排入 durable transcription job，并用 snackbar 明确提示仍需配置真实 provider 才会产生 segments。
-- `0.4.x` summary durable queue foundation：Room version 6 为 `processing_jobs` 增加 `inputPayloadJson`，Transcript Review 可为当前 transcript segments 排入 durable `SUMMARY_DRAFT` WorkManager job；默认 `UnavailableSummaryProvider` 只记录未配置失败，不上传 transcript、references、notes 或伪造总结。
-- `0.4.x` Notion-ready export contract foundation：新增本地 `SeminarNotionReadyRenderer`，可从现有 export document 生成 block-like Notion-ready document 和 Markdown 预览；不包含 Notion OAuth、API client、token 或上传行为。
-- `0.4.x` transcript processing queue UI foundation：Transcript Review 现在展示本地 `TRANSCRIPTION` / `SUMMARY_DRAFT` job 状态，并支持对可重试/可取消 job 走 durable scheduler 的 retry/cancel。
-- `0.4.x` transcript segment edit foundation：Transcript Review 可在本地编辑并保存单条 timestamped segment 文本，更新 `isEdited` 与 transcript activity 时间，不触发 provider 或上传。
-- `0.4.x` manual transcript import foundation：Transcript Review 可把粘贴的本地文本导入为 `MANUAL` transcript，每个非空行成为可编辑 coarse segment，供 summary/export 后续使用。
-- `0.4.x` summary draft edit foundation：Transcript Review 可在本地编辑并保存 generated summary draft 的各个 brief 字段，保存后作为 `DRAFT` 继续供 Markdown/ZIP 和 Notion-ready export 使用。
-- `0.4.x` summary draft apply foundation：Transcript Review 可由用户显式把某个 summary draft 应用到人工 `SeminarBrief`，让 transcript/summary 整理结果进入既有 Reference Review brief/export 闭环。
-- `0.4.x` Notion-ready share entry foundation：Seminar Detail 可通过 Android share sheet 分享本地生成的 Notion-ready Markdown 预览文本；该路径不包含 Notion OAuth、API client、token、backend 或上传行为。
-- `0.4.x` Notion-ready save entry foundation：Seminar Detail 可通过 Android document picker 保存本地生成的 Notion-ready Markdown 预览文本，便于后续手动导入 Notion 或其他知识库；该路径仍不上传、不持有 token。
-- `0.5.x` Formula / Research Export foundation：已形成 `docs/plans/0.5.x-formula-research-export-plan.md`；Room version `7` 已加入本地公式区域、公式结果、`FormulaDao`、domain model 和 `FORMULA_OCR` job 类型；`FormulaOcrProvider`、provider status/capability contract、manual/unavailable providers、JVM contract tests、Reconstruction workspace 本地公式区域 UI、provider status summary、photo preview overlay、drag-to-draft selection、saved region edit/update、manual LaTeX durable queue、READY formula results 的 Markdown/Notion-ready export，以及 confirmed references 的 deterministic `references.bib` / `references.ris` ZIP export artifact、单独保存和分享入口已就位。`v0.5.0-alpha.2` 保留 `v0.5.0-alpha.1` 的 Windows mixed-inventory explicit-emulator closeout 覆盖，并修复 Linux GitHub Actions 对 Windows-only signing path 的解析问题。Mathpix live provider、PaddleOCR/pix2tex bundling 和任何 cloud upload 均需后续 credential/backend/license 决策。
+这意味着当前版本适合 **个人 dogfood / 内测**，但还不是 Google Play production release。
 
-尚未声明完成：
+## 下载与安装
 
-- 非破坏性真机完整 E2E 验收：创建 seminar、录音、拍照、timeline、clip、重启后持久化、离线导出和删除清理仍需在用户授权的设备会话中执行。
-- 真实 ASR provider 接入、AI 总结 provider 运行时、Notion live OAuth/upload、cloud sync、live 公式 OCR provider、广告或支付。
+最新 prerelease：
 
-## 文档入口
+[SeminarArc v0.5.0-alpha.2](https://github.com/YuukiAS/SeminarArc/releases/tag/v0.5.0-alpha.2)
 
-- 产品级路线图：`TODO.md`
-- `0.1.x` 总体实现合同：`docs/plans/0.1.x-mvp-implementation-plan.md`
-- 后续分阶段计划索引：`docs/plans/0.1.x-development-plan-index.md`
-- 当前已完成基础批次记录：`docs/plans/0.1.x-mvp-execution-batch-01.md`
-- 架构说明：`docs/ARCHITECTURE.md`
-- 隐私说明：`docs/PRIVACY.md`
-- 设计交付：`design/`
-- 变更记录：`CHANGELOG.md`
-- Internal APK 安装与更新说明：`docs/INTERNAL_DISTRIBUTION.md`
+下载：
 
-## 推荐开发顺序
+- `SeminarArc-0.5.0-alpha.2.apk`
+- 可选：`SeminarArc-0.5.0-alpha.2.apk.sha256`
 
-后续不要直接执行整个 `TODO.md`。默认按以下顺序把计划拆成小 task：
+当前 APK：
 
-1. `0.1.1` closeout：构建、CI、Room、UI、PDF 生命周期和文档收口。
-2. `0.1.2` recording validation：真机/设备录音、notification、完成后 `.m4a` 播放和文档收口验收。
-3. `0.1.3` capture/timeline：CameraX、photo-only、offset、现场交互和统一 timeline。
-4. `0.1.4` clip：WorkManager、clip 状态、retry 和 full-recording fallback。
-5. `0.1.5` local MVP：Markdown/ZIP 导出、数据清理、验收、README/隐私/CI 收口。
-6. `0.2.x` implementation：asset/job/OCR/tag data foundation、WorkManager processing queue、local image enhancement、local OCR、搜索、标签和 Research Reconstruction workspace UI。
-7. `0.3.x` implementation：reference schema/domain、Crossref/OpenAlex/DataCite provider、evidence extraction、candidate ranking/dedup、Reference Review、Seminar Brief 和 brief export。
+- application id：`com.yuukias.seminararc.internal`
+- versionName：`0.5.0-alpha.2`
+- versionCode：`50002`
+- APK 大小：约 **60.6 MB**
+- SHA-256：
 
-实际执行时必须先写入 `prompts/tasks/<id>_task.md`，再由 Codex 按任务单执行并回写 `prompts/tasks/<id>_result.md`。
-
-## 本地构建
-
-在 Java、Android SDK 和 Gradle wrapper 前置条件可用后，预期命令为：
-
-```bash
-./gradlew assembleDebug
-./gradlew testDebugUnitTest
-./gradlew lintDebug
+```text
+5E382F3237A346B60B924716A9D53C3001D467C41517C85A13319117724E49FF
 ```
 
-Windows PowerShell 可使用：
+在 Android 上打开 APK，并仅给当前浏览器或文件管理器授予“安装未知应用”权限即可侧载。
 
-```powershell
-.\gradlew.bat assembleDebug
-.\gradlew.bat testDebugUnitTest
-```
+更完整的安装、升级、签名和数据保留说明见：
 
-Internal dogfood APK 使用：
+[`docs/INTERNAL_DISTRIBUTION.md`](docs/INTERNAL_DISTRIBUTION.md)
 
-```powershell
-.\gradlew.bat assembleInternal
-```
+> `SeminarArc Internal` 使用独立 internal application id 和 repo 外稳定 signer。后续使用相同 application id、相同 signer、且更高 versionCode 的 APK 可以原地升级并保留 app data。
 
-稳定 internal signing key 不在仓库内。Gradle 通过 `SEMINARARC_INTERNAL_SIGNING_PROPERTIES` 指向 repo 外 properties 文件；若未设置，则默认检查 `D:\Code\_secrets\SeminarArc\internal-signing.properties`。
+## 当前能做什么
 
-当 Windows ADB 同时看到 protected physical serial 时，不要运行 `connectedDebugAndroidTest` 或其他 unscoped connected Gradle task。只有 task 明确授权时，先构建 app/androidTest APK，再用 `adb -s emulator-5554 install` 和 `adb -s emulator-5554 shell am instrument ...` 完成 Emulator-only instrumentation。
+### 1. Capture
 
-## 权限规划
+- 创建和管理 seminar。
+- 导入/替换/移除 abstract PDF。
+- 前台录音并保存本地 `.m4a`。
+- CameraX 连续拍摄幻灯片。
+- 记录 MARK / PHOTO / QUESTION / NOTE 时间线事件。
+- 从时间线回看现场内容并从对应 offset 播放录音。
+- 从 MARK 生成本地音频 clip，并提供 retry / full-recording fallback。
 
-- 麦克风：`0.1.2` 起用于 seminar 录音。
-- 通知：`0.1.2` 起用于 foreground recording service。
-- 相机：`0.1.3` 起用于 slide capture。
+### 2. Reconstruct
 
-权限拒绝必须有真实状态和恢复路径；不能用静态 Compose 页面冒充可用功能。
+- 本地图像旋转、裁边、透视矫正和可读性增强；原图始终保留。
+- bundled ML Kit Latin / Chinese OCR。
+- OCR 文本编辑、搜索、过滤。
+- key slide / tags。
+- OCR 与图像增强使用 durable WorkManager queue，支持 retry、cancel、idempotency 和恢复。
 
-## Active Session 与恢复
+### 3. Research
 
-`0.1.2` 现在把详情页的 `Start seminar` / `Resume seminar` 正常流程导航到 Active Session，而不是只在详情页显示临时消息。Active Session 从 Room 中的 durable seminar/recording facts 和当前进程 runtime recorder state 推导 UI：
+- 用户显式选择 OCR / note / DOI / bibliographic clue 后再发起 reference lookup。
+- Crossref primary、OpenAlex fallback/cross-confirmation、DataCite targeted fallback。
+- `reference-match-v1` deterministic matching / dedup；UI 显示 confidence band 和 match reasons，不把 heuristic score 冒充概率。
+- Reference Candidate Review：Confirm / Reject / Reopen。
+- 可编辑 Seminar Brief，并关联 confirmed references 和 key slides。
 
-- 当前进程持有 live recorder 时显示 `Recording` 与本地 elapsed timer。
-- Room 中遗留 `RECORDING` row 但当前进程没有 live recorder 时显示 recovery，而不是伪装正在录音。
-- process-start recovery 会先捕获启动前 stale recording IDs，再只标记这些 rows 为 `FAILED`，避免误杀同一进程中新创建的录音。
-- `End Seminar` 会先停止并 finalize recorder，再条件化完成 seminar 并写 `sessionEndedAt`；stop/finalize 失败时不会把 seminar 宣称为 completed。
+### 4. Transcript / Summary local-safe foundation
 
-计时器使用 `RecordingSession.startedAt` 或 seminar `sessionStartedAt` 作为事实来源，UI 本地 tick 只负责显示，不会每秒写 Room。
+- timestamped transcript / segment 数据模型与本地 review UI。
+- manual transcript import，并可编辑 segment。
+- durable `TRANSCRIPTION` / `SUMMARY_DRAFT` processing job boundary。
+- editable summary draft，可由用户显式应用到 Seminar Brief。
+- Notion-ready Markdown 预览、保存和 share entry。
 
-## 当前明确不做
+当前 **没有接入真实 ASR provider、在线 AI summary provider 或 Notion OAuth/upload**；默认 unavailable provider 不上传录音、transcript 或 brief，也不会伪造结果。
 
-当前明确不做：
+### 5. Formula / Research Export
 
-- 强制登录或云同步。
-- 自动上传全部录音或全部照片。
-- formula OCR、转写、AI 总结、Notion 或 cloud upload。
+- 在幻灯片照片上 drag-to-draft 公式区域。
+- 已保存公式区域可重新编辑 crop / label。
+- local manual LaTeX durable queue。
+- READY formula results 可进入 Markdown / Notion-ready export。
+- confirmed references 可确定性导出：
+  - `references.bib`
+  - `references.ris`
+- Seminar Markdown / ZIP export，包括 brief、confirmed references、key slides 和支持的本地研究材料。
+
+当前 **没有接入 live Mathpix、PaddleOCR/pix2tex 或其他 cloud formula OCR**。
+
+## Alpha 验证状态
+
+`v0.5.0-alpha.2` 已通过：
+
+- Windows local Gradle build / unit / lint gate。
+- Windows Pixel 8 API 36 Emulator 显式 instrumentation：**24 tests PASS**。
+- Room migration / current schema regression。
+- OCR、图像增强、processing queue、Reconstruction、Reference Review、Formula UI 等 connected regression。
+- internal APK install / launch smoke。
+- update-in-place smoke。
+- package / version / signer continuity inspection。
+- release-relevant secret scan。
+- GitHub Actions version gate：PASS。
+- GitHub prerelease APK 远端 SHA-256 与本地一致。
+
+Windows ADB 即使同时能看到受保护真机，所有非 inventory ADB 操作也只允许显式 targeting Emulator；远程真机不承担日常 connected/instrumentation 测试。
+
+## 你现在应该怎么验收
+
+当前最有价值的下一步不是继续加功能，而是 **在你自己的 Android 手机上做 personal dogfood**。
+
+建议先做一次 15–30 分钟的低风险 smoke seminar：
+
+1. 从 Releases 下载并安装 `SeminarArc-0.5.0-alpha.2.apk`。
+2. 新建一个测试 seminar，填标题/abstract。
+3. 开始现场流程：授权麦克风/通知/相机，录音 2–5 分钟，拍几张测试幻灯片。
+4. 添加一个 MARK、QUESTION、NOTE，然后 End Seminar。
+5. 完全退出 App 后重新打开，确认 seminar、录音、照片和 timeline 仍在。
+6. 从 timeline 播放录音，检查 clip / fallback。
+7. 进入 Reconstruction：跑一次英文或中文 OCR，编辑文字，标记 key slide。
+8. 用公开的论文标题/DOI 测试一次 Reference Candidate lookup，并 Confirm 一个候选。
+9. 编辑 Seminar Brief。
+10. 选一张测试幻灯片，画一个公式区域并手动填一段 LaTeX。
+11. 导出 Markdown / ZIP / BibTeX / RIS，检查文件能正常打开。
+12. 删除这个**测试 seminar**，确认 app 内对应记录不再出现。
+
+如果这轮基本稳定，再拿它参加一次低风险的真实 seminar。真实硬件上的麦克风、CameraX、锁屏/后台、文件选择器和厂商 ROM 行为，才是 Emulator 无法替代的下一批证据。
+
+发现问题时，优先记录：
+
+- 操作步骤；
+- 实际结果 vs 预期结果；
+- 是否可稳定复现；
+- Android 版本/机型；
+- 是否涉及录音、相机、后台/锁屏、导出或联网 lookup。
+
+不要在 bug report 中上传真实 seminar 的敏感录音、照片或完整 OCR 文本。
+
+## 当前明确未完成
+
+- 真实 ASR provider。
+- 在线 AI summary provider runtime。
+- Notion live OAuth / upload。
+- live formula OCR provider。
+- cloud sync / account system。
+- Google Play production signing / AAB / Data safety / rollout。
 - 广告、订阅、支付。
-- iOS 或 web 客户端。
+- 系统化真机长时录音、锁屏/后台、弱网/低存储和多厂商 ROM release acceptance。
 
-普通本地 OCR、图像增强和 Reconstruction workspace 已在 `0.2.x` 实现；opt-in reference lookup、候选复核和 Seminar Brief 已在 `0.3.x` 实现。其余上述能力可以保留在 roadmap 中，但不能在 UI 中伪装成已完成。
+这些不会为了“把 roadmap 打勾”而以假按钮、硬编码 token 或不安全上传方式实现。
+
+## 开发与文档入口
+
+- 产品级路线：[`TODO.md`](TODO.md)
+- 架构：[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- 隐私：[`docs/PRIVACY.md`](docs/PRIVACY.md)
+- 设备测试策略：[`docs/DEVICE_TESTING.md`](docs/DEVICE_TESTING.md)
+- CI 策略：[`docs/CI_POLICY.md`](docs/CI_POLICY.md)
+- Internal APK 分发：[`docs/INTERNAL_DISTRIBUTION.md`](docs/INTERNAL_DISTRIBUTION.md)
+- 0.4.x plan：[`docs/plans/0.4.x-transcription-summary-notion-plan.md`](docs/plans/0.4.x-transcription-summary-notion-plan.md)
+- 0.5.x plan：[`docs/plans/0.5.x-formula-research-export-plan.md`](docs/plans/0.5.x-formula-research-export-plan.md)
+- Post-0.3 autonomous roadmap：[`docs/plans/post-0.3-autonomous-roadmap.md`](docs/plans/post-0.3-autonomous-roadmap.md)
+- 0.9.x readiness audit：[`prompts/tasks/0.9.x_release_readiness_audit_result.md`](prompts/tasks/0.9.x_release_readiness_audit_result.md)
+
+## CI / Release 约定
+
+普通开发和文档 push 不自动跑 GitHub Actions。
+
+GitHub Actions 仅在：
+
+- `v*` 版本 tag；或
+- 手动 `workflow_dispatch`
+
+时作为版本级远端验收运行。
+
+Internal APK 在受控 Windows 本地环境 build/sign，随后通过 GitHub Release 发布；GitHub Actions 不是 APK 分发渠道。
+
+## Production boundary
+
+当前 `0.9.x` audit 结论仍然是：
+
+```text
+AUDIT_COMPLETE_NOT_READY_FOR_PRODUCTION_RELEASE
+```
+
+在真正进入 Google Play / production release 前，还需要单独处理：production signing ownership、AAB、Play Console、Data safety、公开隐私政策、权限/FGS/background policy、真机 release acceptance，以及是否需要 crash/performance telemetry。
