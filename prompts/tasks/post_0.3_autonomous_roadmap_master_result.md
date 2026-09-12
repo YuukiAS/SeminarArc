@@ -1,14 +1,14 @@
 # Post-0.3 Autonomous Roadmap Master Result
 
-Date: 2026-09-10
+Date: 2026-09-12
 
-Status: `POST_0.5_BOUNDARY_RELEASE_UPLOAD_PENDING`
+Status: `POST_0.5_BOUNDARY_COMPLETE`
 
 ## Summary
 
-The roadmap reached the post-0.5 boundary for local implementation and emulator validation. `0.5.x` is complete for the approved local-safe alpha scope, and the repository has recorded the mixed-inventory explicit-emulator testing strategy.
+The roadmap reached the post-0.5 boundary for local implementation, emulator validation and authenticated prerelease publication. `0.4.x` and `0.5.x` are complete for the approved local-safe scope, and the repository has recorded the mixed-inventory explicit-emulator testing strategy.
 
-`v0.5.0-alpha.1` was committed, pushed, tagged and pushed to `origin`, but the tag-triggered GitHub Actions version gate failed remotely because Linux parsed the default Windows internal signing properties path as an invalid URI. The fix was released as `v0.5.0-alpha.2` instead of force-moving the failed tag, and its tag-triggered version gate passed.
+`v0.5.0-alpha.1` was committed, pushed, tagged and pushed to `origin`, but the tag-triggered GitHub Actions version gate failed remotely because Linux parsed the default Windows internal signing properties path as an invalid URI. The fix was released as `v0.5.0-alpha.2` instead of force-moving the failed tag, its tag-triggered version gate passed, and its GitHub prerelease has now been published with APK and checksum assets.
 
 ## Completed
 
@@ -30,17 +30,29 @@ The roadmap reached the post-0.5 boundary for local implementation and emulator 
 - Diagnosed the failed `v0.5.0-alpha.1` remote version gate from GitHub Actions logs.
 - Added the Linux CI compatibility fix for Windows-only internal signing path parsing.
 - Rebuilt and verified `v0.5.0-alpha.2` local release candidate.
+- Installed and authenticated GitHub CLI through persistent Windows keyring.
+- Created GitHub prerelease `v0.5.0-alpha.2`.
+- Uploaded `SeminarArc-0.5.0-alpha.2.apk` and `SeminarArc-0.5.0-alpha.2.apk.sha256`.
+- Verified the remote APK asset SHA-256 matches the local expected value.
 
-## Not Completed
+## Release Publication
 
-- GitHub prerelease creation and asset upload for `v0.5.0-alpha.2` are still pending because no release-write/upload tool is currently exposed in the connected GitHub capability set.
+GitHub prerelease:
 
-## External Blocker
+```text
+https://github.com/YuukiAS/SeminarArc/releases/tag/v0.5.0-alpha.2
+```
 
-GitHub release upload capability is still pending. Read-only release lookup for `v0.5.0-alpha.2` returned `404 Not Found`, while the local assets are ready under `release/`:
+Published assets:
 
-- `release/SeminarArc-0.5.0-alpha.2.apk`
-- `release/SeminarArc-0.5.0-alpha.2.apk.sha256`
+- `SeminarArc-0.5.0-alpha.2.apk`
+- `SeminarArc-0.5.0-alpha.2.apk.sha256`
+
+APK SHA-256:
+
+```text
+5E382F3237A346B60B924716A9D53C3001D467C41517C85A13319117724E49FF
+```
 
 The tag-triggered version CI has passed:
 
@@ -48,7 +60,13 @@ The tag-triggered version CI has passed:
 - status: `completed`
 - conclusion: `success`
 
-Continue with the GitHub connector if release-write/upload support becomes available, or with another user-approved authenticated release path. Do not extract or reuse local Git credentials for GitHub API writes without explicit user approval.
+0.9.x audit remains:
+
+```text
+AUDIT_COMPLETE_NOT_READY_FOR_PRODUCTION_RELEASE
+```
+
+Production signing, Google Play, production AAB upload, ads/payment, public release and new feature development remain outside scope.
 
 ## Final Boundary
 
