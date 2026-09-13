@@ -16,9 +16,10 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` Transcription / Summary / Notion-ready local-safe foundation：COMPLETE
 - `0.5.x` Formula / Research Export local-safe alpha：COMPLETE
 - 当前 Room schema：**v7**
+- 当前主动工程阶段：**0.5.x automated black-box QA hardening**
 - `0.9.x` release readiness audit：`AUDIT_COMPLETE_NOT_READY_FOR_PRODUCTION_RELEASE`
 
-这意味着当前版本适合 **个人 dogfood / 内测**，但还不是 Google Play production release。
+这意味着当前版本适合 **个人 dogfood / 内测**，但还不是 Google Play production release。当前优先级不是继续扩展 provider 或新产品功能，而是把大部分“真实用户路径是否能走通”的验收自动化，减少用户逐页逐按钮手工测试。
 
 ## 下载与安装
 
@@ -119,36 +120,43 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 Windows ADB 即使同时能看到受保护真机，所有非 inventory ADB 操作也只允许显式 targeting Emulator；远程真机不承担日常 connected/instrumentation 测试。
 
-## 你现在应该怎么验收
+## 当前 QA 阶段：先自动验收，再让用户做少量真机验收
 
-当前最有价值的下一步不是继续加功能，而是 **在你自己的 Android 手机上做 personal dogfood**。
+当前主动阶段是 **0.5.x automated black-box QA hardening**。目标是把已安装的 `SeminarArc Internal` 当成真实用户看到的黑盒 App，通过 Windows Emulator 自动完成 CRUD、navigation、persistence、session lifecycle、cleanup，以及后续 Reconstruction / Reference / Transcript / Formula / export 用户流。
 
-建议先做一次 15–30 分钟的低风险 smoke seminar：
+长期计划：[`docs/plans/0.5.x-blackbox-acceptance-plan.md`](docs/plans/0.5.x-blackbox-acceptance-plan.md)
 
-1. 从 Releases 下载并安装 `SeminarArc-0.5.0-alpha.2.apk`。
-2. 新建一个测试 seminar，填标题/abstract。
-3. 开始现场流程：授权麦克风/通知/相机，录音 2–5 分钟，拍几张测试幻灯片。
-4. 添加一个 MARK、QUESTION、NOTE，然后 End Seminar。
-5. 完全退出 App 后重新打开，确认 seminar、录音、照片和 timeline 仍在。
-6. 从 timeline 播放录音，检查 clip / fallback。
-7. 进入 Reconstruction：跑一次英文或中文 OCR，编辑文字，标记 key slide。
-8. 用公开的论文标题/DOI 测试一次 Reference Candidate lookup，并 Confirm 一个候选。
-9. 编辑 Seminar Brief。
-10. 选一张测试幻灯片，画一个公式区域并手动填一段 LaTeX。
-11. 导出 Markdown / ZIP / BibTeX / RIS，检查文件能正常打开。
-12. 删除这个**测试 seminar**，确认 app 内对应记录不再出现。
+当前第一张执行任务：[`prompts/tasks/0.5.x_blackbox_acceptance_harness_task.md`](prompts/tasks/0.5.x_blackbox_acceptance_harness_task.md)
 
-如果这轮基本稳定，再拿它参加一次低风险的真实 seminar。真实硬件上的麦克风、CameraX、锁屏/后台、文件选择器和厂商 ROM 行为，才是 Emulator 无法替代的下一批证据。
+第一阶段先建立 `scripts/run-blackbox-acceptance.ps1`，并自动覆盖：
 
-发现问题时，优先记录：
+- B01：fresh install / empty library；
+- B02：Seminar CRUD / force-stop 后 persistence；
+- B03：Emulator-safe session lifecycle；
+- B08：recovery / synthetic seminar cleanup。
 
-- 操作步骤；
-- 实际结果 vs 预期结果；
-- 是否可稳定复现；
-- Android 版本/机型；
-- 是否涉及录音、相机、后台/锁屏、导出或联网 lookup。
+后续再依次扩展：
 
-不要在 bug report 中上传真实 seminar 的敏感录音、照片或完整 OCR 文本。
+1. Reconstruction / Reference / Transcript / Formula / export 黑盒流；
+2. screenshot visual regression（小屏、大字体、长文本、error/empty/loading）；
+3. fixed-seed Monkey / multi-device；
+4. major alpha / `0.9.x` 再评估 Firebase Test Lab Robo / 小型真实设备矩阵。
+
+每个自动 scenario 应输出 PASS/FAIL、screenshot、UI tree、scoped logcat 和耗时证据。普通 navigation、layout、accessibility semantics、persistence、cleanup bug 由 Codex 自动修复并复测，不要求用户逐项证明按钮是否工作。
+
+### 最终仍需要用户亲自验证的内容
+
+自动 QA 稳定后，人工验收应压缩到以下真实硬件/主观项目：
+
+- 真手机麦克风录音质量；
+- CameraX 拍真实投影/PPT 的质量、方向和速度；
+- 锁屏/后台/厂商 ROM 对长时间录音的影响；
+- 一次低风险真实 seminar 的连续操作手感；
+- 主观 UI/UX 判断。
+
+因此当前 **不要求用户手工把所有页面和按钮逐项点完**。现有 APK 可以安装留在手机上，但大范围 dogfood 应等第一轮 black-box harness 把基础路径跑过后再做。
+
+发现真实硬件问题时，优先记录：操作步骤、实际结果 vs 预期、是否可复现、Android 版本/机型，以及是否涉及录音、相机、后台/锁屏、导出或联网 lookup。不要在 bug report 中上传真实 seminar 的敏感录音、照片或完整 OCR 文本。
 
 ## 当前明确未完成
 
@@ -166,6 +174,7 @@ Windows ADB 即使同时能看到受保护真机，所有非 inventory ADB 操�
 ## 开发与文档入口
 
 - 产品级路线：[`TODO.md`](TODO.md)
+- 当前 QA hardening plan：[`docs/plans/0.5.x-blackbox-acceptance-plan.md`](docs/plans/0.5.x-blackbox-acceptance-plan.md)
 - 架构：[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - 隐私：[`docs/PRIVACY.md`](docs/PRIVACY.md)
 - 设备测试策略：[`docs/DEVICE_TESTING.md`](docs/DEVICE_TESTING.md)
@@ -188,6 +197,8 @@ GitHub Actions 仅在：
 时作为版本级远端验收运行。
 
 Internal APK 在受控 Windows 本地环境 build/sign，随后通过 GitHub Release 发布；GitHub Actions 不是 APK 分发渠道。
+
+Black-box QA / docs / harness 的普通提交不会为了留痕创建无意义版本 tag。只有修复了值得用户重新安装验证的 P0/P1 或明显 dogfood blocker，才准备新的 `0.5.1-alpha.*` Release。
 
 ## Production boundary
 
