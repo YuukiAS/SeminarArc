@@ -2,11 +2,11 @@
 
 Status: active roadmap
 
-Updated: 2026-09-08
+Updated: 2026-09-13
 
 ## Goal
 
-在用户无法频繁参与开发接力时，让 SeminarArc 在严格 gate、Emulator-first、安全边界和文档化 handoff 下，尽可能沿既定产品路线自动推进。
+在用户无法频繁参与开发接力时，让 SeminarArc 在严格 gate、Emulator-first、安全边界和文档化 handoff 下自动推进；同时避免把“功能已实现”误当成“真实用户流程已充分验收”。
 
 `origin/main` 是唯一源码事实来源。普通 compile/test/lint/Emulator bug 不应成为人工 blocker；只有产品选择、外部账号/secret、付费 provider、真实数据破坏风险、商店发布或真实物理设备操作需要人工参与。
 
@@ -18,130 +18,184 @@ Updated: 2026-09-08
 - `0.4.x` Transcription/Summary/Notion-ready local-safe foundation: COMPLETE.
 - `0.5.x` Formula + Research Export local-safe alpha: COMPLETE.
 - Current Room schema: v7.
-- Default connected/instrumentation target: Windows `Pixel_8` API 36 Emulator.
-- Protected GM1910 is not a daily test target.
+- Current installable prerelease: `v0.5.0-alpha.2`.
+- Current active engineering phase: **0.5.x automated black-box QA hardening**.
+- `0.9.x` audit: `AUDIT_COMPLETE_NOT_READY_FOR_PRODUCTION_RELEASE`.
+- Default connected/instrumentation target: Windows Pixel 8 API 36 Emulator.
+- Protected GM1910 is not a daily automated test target.
 - Repository visibility is currently public.
 
-## Distribution principle
+## Distribution / CI principle
 
-从 `0.3.1-internal` 起，用户下载 APK 的默认入口是 **GitHub Releases**，不是 GitHub Actions artifacts。
+GitHub Releases 是用户 APK 下载入口；GitHub Actions 是版本级远端验收，不是每次 push 的持续构建器，也不是 APK 分发渠道。
 
-- build/test/sign 在受控 Windows 本地环境完成；`0.3.1-internal.1` 默认使用 `versionCode = 30101`，后续里程碑按版本号派生单调递增 code；
-- accepted milestone 通过 test + Emulator + package/secret scan 后，本地生成签名 APK；
-- 由本地 `gh release create/upload` 或 GitHub API 上传 APK + SHA-256 + release notes；
-- release APK signing key 永远留在本地/repo 外，不上传 GitHub；
-- 相同 internal application id + 相同 signer 才支持覆盖升级并保留数据。
-- 当前 internal application id 为 `com.yuukias.seminararc.internal`，app label 为 `SeminarArc Internal`。
-- Current alpha release identity is `v0.5.0-alpha.2`, `versionCode = 50002`, `versionName = 0.5.0-alpha.2`.
+当前策略：
 
-当前仓库为 public，因此 Release asset 也公开可下载；如果未来仓库转 private，再重新评估下载权限和 Actions 配额。
-
-## CI principle
-
-GitHub Actions 是**版本级远端验收**，不是每次 push 的持续构建器，也不是 APK 分发渠道。
-
-当前策略见 `docs/CI_POLICY.md`：
-
-- 普通代码 push 不自动跑；
-- docs/task/result/review/README/TODO/design 更新不自动跑；
-- push `v*` 版本 tag 时跑一次；
+- 普通 code/docs/task/result/review push 不自动跑 GitHub Actions；
+- push `v*` version tag 时跑一次 version gate；
 - 必要时可 `workflow_dispatch` 手动跑一次；
-- 每个面向用户的 internal/alpha 版本至少有一次远端 version gate；
-- 远端 gate 至少执行 `testDebugUnitTest assembleDebug lintDebug`；
-- Windows Emulator connected/instrumentation 仍只在本地 Windows 运行。
+- Windows 本地 build/sign；
+- Windows Emulator 完成 connected/instrumentation；
+- package/version/signature/secret scan 后生成 signed internal APK；
+- version tag -> GitHub Actions PASS -> GitHub Release；
+- stable internal signer 始终留在 repo 外。
 
-版本发布顺序固定为：本地完整验收 -> commit/push -> 本地签名 APK -> push version tag -> GitHub Actions version gate -> CI PASS -> GitHub Release。
+当前 internal identity：
 
-## Milestone A — 0.3.1-internal Dogfood Distribution
+- application id: `com.yuukias.seminararc.internal`
+- current version: `0.5.0-alpha.2`
+- versionCode: `50002`
 
-在大型 `0.4.x` production work 前完成。
+## Milestone A — 0.3.1 Internal Dogfood Distribution
 
-Goal: 产出用户可以从仓库 `Releases` 直接下载并侧载的 internal APK，无需用户自行 build。
+Status: COMPLETE.
 
-Required work:
+已建立：
 
-- 修正 stale app version metadata，建立可重复版本约定；
-- internal application id/build variant，例如 `.internal`；
-- Windows 本地 assemble/sign；
-- unit/build/lint + Windows Emulator regression；
-- APK package/version/signature/secret scan；
-- SHA-256；
-- Git tag + version CI；
-- CI PASS 后创建 GitHub prerelease + APK release asset；
-- `docs/INTERNAL_DISTRIBUTION.md`；
-- 不提交 keystore/private key/password。
+- 独立 internal application id；
+- repo 外稳定 signer；
+- Windows local build/sign；
+- Emulator validation；
+- GitHub version CI；
+- GitHub Release APK + SHA-256；
+- update-in-place 路径。
 
-### Signing
+## Milestone B — 0.4.x Advanced Processing Foundation
 
-稳定 internal signer 保存在 Windows 本地、repo 外；Gradle 从环境变量或本地非版本化配置读取。GitHub 只收到已经签名的 APK，不需要 GitHub Actions Secrets。
+Status: COMPLETE for approved local-safe scope.
 
-若当前还没有稳定 signer，可先完成 disposable dogfood build/release foundation；真正 update-in-place 的稳定 signer 初始化可作为一次性 human approval，但不得阻塞其他 roadmap 开发。
+已完成：
 
-### Distribution stages
+- transcript / timestamped segment schema 与 repository；
+- provider-independent `TranscriptionProvider` / `SummaryProvider` boundary；
+- manual transcript import / segment edit；
+- durable transcription / summary job foundation；
+- transcript timeline windows；
+- editable summary draft 与显式 Apply to Seminar Brief；
+- Notion-ready local Markdown/save/share boundary；
+- Markdown/ZIP compatibility。
 
-- `0.3.1-internal.*`: first downloadable dogfood APK/releases.
-- `0.4.x-internal.*`: accepted 0.4.x milestones publish new GitHub prerelease APKs.
-- `0.5.x-alpha.*`: formula/research export line稳定后继续 GitHub prerelease APKs.
-- `0.9.x`: primary tester distribution 迁到 signed AAB / Google Play internal testing；APK 可保留诊断副产物。
+Deferred：
 
-## Milestone B — 0.4.x Advanced Processing
+- live ASR provider；
+- online AI summary runtime；
+- Notion OAuth/upload/backend。
 
-不要直接执行 TODO 粗略范围；先做 readiness gate。
-
-### Readiness topics
-
-- transcription provider architecture：local/open-source/self-hosted/cloud、Android 可行性、语言、timestamp、资源、license/cost/privacy、cancel/retry/idempotency/offline；
-- Room migration from v4；
-- transcript segment 与 recording offset / slide / timeline window；
-- SummaryProvider：用户选定输入、draft/provenance/edit，不覆盖 manual Brief；
-- Notion：Markdown-first、official API/OAuth、file upload、credential/backend 边界；
-- secrets/backend decision；
-- privacy/network contract；
-- UI/design/test/Emulator strategy。
-
-### Production target after readiness
-
-如果 readiness PASS 且无真正产品/安全冲突：
-
-1. transcript schema/provider boundary；
-2. 至少一个批准的 transcription path；
-3. timestamped transcript review 与 timeline/photo window 联动；
-4. cancellable/retryable processing；
-5. SummaryProvider 只产生 editable draft；
-6. Notion 只实现安全 credential/privacy 架构允许的部分；
-7. Markdown/ZIP compatibility；
-8. Windows Emulator closeout；
-9. accepted milestone 后本地 build/sign；
-10. push version tag 跑一次远端 CI；
-11. CI PASS 后发布 GitHub Release APK。
-
-如果某 provider 需要 app-owned secret/backend 且没有安全路径，只冻结该子路径，继续其他 local-safe work。
+这些 deferred provider 不应阻塞本地核心和 QA hardening。
 
 ## Milestone C — 0.5.x Formula + Research Export
 
-先做 readiness/license gate。
+Status: COMPLETE for approved local-safe alpha scope.
 
-Targets:
+已完成：
 
-- formula region selection；
-- formula OCR provider boundary；
-- Mathpix 与 licensable local/open/self-hosted alternatives；
-- LaTeX correction/review + confidence/provenance；
-- BibTeX/RIS export；
-- research export polish；
-- no automatic paywalled PDF retrieval；
-- Windows Emulator regression；
-- accepted milestone 本地构建/sign；
-- version tag remote CI；
-- CI PASS 后发布 GitHub prerelease APK。
+- formula region create / drag / edit；
+- Room v7 formula domain；
+- manual LaTeX durable queue；
+- provider capability/status boundary；
+- READY formula result export；
+- deterministic BibTeX / RIS；
+- Windows explicit-emulator regression；
+- `v0.5.0-alpha.2` Release。
 
-Paid API keys/commercial credentials 是 human-approval boundary，绝不提交 repo。
+Deferred：
 
-`0.5.x` status: COMPLETE for the approved local-safe alpha scope. The `v0.5.0-alpha.1` closeout used the mixed-inventory explicit-emulator fallback: ordinary connected Gradle tasks remained forbidden while `8cc54656 unauthorized` was visible, and all app/test install plus `am instrument` commands were scoped to `emulator-5554`. The suite passed `OK (24 tests)`, and the signed internal APK passed update-in-place smoke from `0.3.1-internal.1` to `0.5.0-alpha.1`. `v0.5.0-alpha.2` carries the same product scope plus the Linux CI fix for Windows-only signing path parsing.
+- live Mathpix；
+- PaddleOCR / pix2tex bundling；
+- cloud formula OCR。
 
-## Milestone D — 0.9.x Release Preparation
+## Milestone D — 0.5.x Automated Black-box QA Hardening
 
-`0.5.x` 完成后不要自动公开发布，只做 0.9.x readiness/audit。
+Status: ACTIVE.
+
+Plan:
+
+`docs/plans/0.5.x-blackbox-acceptance-plan.md`
+
+目标：把验收模式从“用户逐项手工点击”升级为“自动 package-level black-box acceptance + 少量真人真机验收”。
+
+### D1 — Harness foundation
+
+Task:
+
+`prompts/tasks/0.5.x_blackbox_acceptance_harness_task.md`
+
+建立长期入口：
+
+`scripts/run-blackbox-acceptance.ps1`
+
+第一阶段自动覆盖：
+
+- B01 fresh install / empty library；
+- B02 seminar CRUD / persistence；
+- B03 Emulator-safe session lifecycle；
+- B08 force-stop recovery / synthetic cleanup。
+
+Acceptance 必须从安装后的 App 外部驱动，通过 UI tree / UI Automator / adb input / screenshot / scoped logcat 完成，禁止直接写 Room 或调用 repository 来伪造用户路径。
+
+### D2 — Research-flow black-box
+
+Harness foundation 稳定后再覆盖：
+
+- B04 Reconstruction；
+- B05 Reference lookup / Candidate Review / Brief；
+- B06 Transcript / Summary local-safe flow；
+- B07 Formula / Markdown / ZIP / BibTeX / RIS / Notion-ready local export。
+
+未配置的 live ASR / AI / Notion / formula providers 只验证 unavailable 状态正确，不要求用户手工证明未实现功能。
+
+### D3 — Visual regression
+
+核心 E2E 稳定后建立 screenshot/golden：
+
+- empty/populated library；
+- New Seminar；
+- Detail / Active Session；
+- Reconstruction；
+- Reference Review；
+- Transcript Review；
+- Formula UI；
+- normal/small screen；
+- normal/enlarged font；
+- long text / empty / error / loading。
+
+Golden 更新必须显式批准，测试失败不能自动接受新截图。
+
+### D4 — Exploratory / device matrix
+
+在核心 E2E 稳定后：
+
+- package-scoped Monkey + fixed seed；
+- current API 36 phone；
+- smaller-screen Emulator；
+- 一个仍在支持范围内的旧 API profile；
+- major alpha / 0.9 再评估 Firebase Test Lab Robo / 小型真实设备矩阵。
+
+没有现成 Firebase 配置时，不自动创建付费资源。
+
+### Human-only acceptance after automation
+
+自动 QA 稳定后，用户人工验收应只剩：
+
+1. 真手机麦克风录音质量；
+2. CameraX 拍真实投影/PPT 的质量和方向；
+3. 锁屏/后台/厂商 ROM 对长录音的影响；
+4. 一次低风险真实 seminar 的连续使用手感；
+5. 主观 UI/UX 判断。
+
+用户不再负责逐项证明普通 CRUD、navigation、export、persistence 按钮是否工作。
+
+### Release rule during QA hardening
+
+Black-box harness / docs / tests 的普通提交不创建版本 tag。
+
+只有当 QA 发现并修复 P0/P1 或明显 dogfood blocker、值得用户重新安装验证时，才准备 `0.5.1-alpha.*`；否则继续完善 harness，不制造无意义 Release。
+
+## Milestone E — 0.9.x Release Preparation
+
+当前仅允许 readiness/audit，不自动进入 production release。
+
+`0.5.x` QA hardening 与必要的真实手机 dogfood 证据完成后，再决定是否启动 production-readiness work。
 
 以下必须用户明确批准：
 
@@ -159,31 +213,29 @@ Before release work require：
 - release APK/AAB secret scan；
 - backup/upgrade/migration tests from installed internal versions；
 - no-network/weak-network/low-storage/long-session tests；
+- automated black-box acceptance baseline；
 - hardware checkpoint plan；
 - permission/FGS/background-policy review；
 - privacy + third-party SDK inventory。
 
 ## Autonomous execution policy
 
-At each version line:
+Current default sequence：
 
-1. research/readiness；
-2. plan/result；
-3. production master if gate passes；
-4. JVM/build/lint continuously；
-5. Windows Emulator connected closeout；
-6. docs/README/TODO/CHANGELOG/architecture/privacy/design update；
-7. accepted milestone 本地生成 signed internal APK；
-8. 创建并 push version tag；
-9. 等待 GitHub Actions version gate PASS；
-10. 创建 GitHub prerelease，上传 APK + SHA-256 + notes；
-11. 无 hard blocker 则继续下一版本。
+1. execute current black-box task；
+2. review result；
+3. continue research-flow black-box if foundation is stable；
+4. visual regression；
+5. exploratory/multi-device；
+6. user performs only remaining human-only hardware/usability checks；
+7. if serious bug fixes justify it, publish a new internal alpha；
+8. only then revisit `0.9.x` production-readiness decisions。
 
-Codex 可以在已授权 master 下创建内部 task/result 并连续推进，无需每阶段等用户。
+Codex may automatically fix ordinary navigation/layout/accessibility/persistence/export/testability bugs discovered by QA and add regression coverage without repeatedly asking the user.
 
 Hard stop / human approval：
 
-- new paid API/provider account or secret；
+- paid API/provider account or secret；
 - recurring-cost backend/service deployment；
 - external cloud upload of seminar content；
 - destructive migration/data-loss risk；
@@ -193,14 +245,10 @@ Hard stop / human approval：
 
 ## User installation target
 
-从 `0.3.1-internal` 起：
+Current dogfood build:
 
-1. 打开 SeminarArc 仓库的 `Releases` 页面；
-2. 打开最新 internal/prerelease；
-3. 直接下载 `.apk` asset（不是 Actions artifact，不应需要解 ZIP）；
-4. Android 打开 APK；
-5. 只给当前浏览器/文件管理器“安装未知应用”权限；
-6. 安装 `SeminarArc Internal`；
-7. 后续同 applicationId + 同 signing key 的 Release APK 可以直接覆盖升级并保留数据。
+`v0.5.0-alpha.2`
 
-production Play build 使用独立 release identity/signing 计划；internal dogfood 不自动成为 production signing contract。
+用户可从 GitHub Releases 直接下载 APK。现阶段可以保留安装在手机上，但不要求用户在 automated black-box foundation 完成前手工逐项走完整功能清单。
+
+后续同 applicationId + 同 signing key + 更高 versionCode 的 Release APK 可以直接覆盖升级并保留数据。production Play build 使用独立 release identity/signing 计划。
