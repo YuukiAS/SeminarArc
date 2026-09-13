@@ -21,10 +21,7 @@ class AndroidRecordingServiceStarter @Inject constructor(
     }
 
     override fun stop() {
-        ContextCompat.startForegroundService(
-            context,
-            SeminarRecordingService.stopIntent(context),
-        )
+        context.startService(SeminarRecordingService.stopIntent(context))
     }
 }
 

@@ -34,12 +34,15 @@ class EndSeminarUseCase @Inject constructor(
                 }
             }
         } else {
+            val openRecordingIds = recordingRepository.getOpenRecordingIdsForSeminar(seminarId)
             recordingRepository.failRecordings(
-                recordingIds = recordingRepository.getOpenRecordingIdsForSeminar(seminarId),
+                recordingIds = openRecordingIds,
                 endedAt = clockProvider.now(),
                 errorMessage = "Recording was marked failed while ending an active seminar without a live recorder.",
             )
-            serviceStarter.stop()
+            if (openRecordingIds.isNotEmpty()) {
+                serviceStarter.stop()
+            }
         }
 
         return when (val completed = seminarRepository.completeActiveSeminar(seminarId)) {

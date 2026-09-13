@@ -65,10 +65,12 @@ class EndSeminarUseCaseTest {
         val recordingRepository = EndFakeRecordingRepository(openRecordingIds = listOf(7L))
         val seminarRepository = EndFakeSeminarRepository(CompleteSeminarResult.Completed(12L))
         val runtime = EndFakeRuntimeController(hasLive = false)
+        val serviceStarter = EndFakeServiceStarter()
         val useCase = useCase(
             seminarRepository = seminarRepository,
             recordingRepository = recordingRepository,
             runtime = runtime,
+            serviceStarter = serviceStarter,
         )
 
         val result = useCase(12L)
@@ -76,6 +78,28 @@ class EndSeminarUseCaseTest {
         assertEquals(EndSeminarResult.Completed(12L), result)
         assertEquals(listOf(12L), recordingRepository.openIdsRequestedForSeminar)
         assertEquals(listOf(listOf(7L)), recordingRepository.failedRecordingIdBatches)
+        assertEquals(1, serviceStarter.stopCalls)
+    }
+
+    @Test
+    fun invoke_whenPhotosOnlySessionHasNoOpenRecordingRows_completesWithoutStoppingService() = runTest {
+        val recordingRepository = EndFakeRecordingRepository(openRecordingIds = emptyList())
+        val seminarRepository = EndFakeSeminarRepository(CompleteSeminarResult.Completed(12L))
+        val runtime = EndFakeRuntimeController(hasLive = false)
+        val serviceStarter = EndFakeServiceStarter()
+        val useCase = useCase(
+            seminarRepository = seminarRepository,
+            recordingRepository = recordingRepository,
+            runtime = runtime,
+            serviceStarter = serviceStarter,
+        )
+
+        val result = useCase(12L)
+
+        assertEquals(EndSeminarResult.Completed(12L), result)
+        assertEquals(listOf(12L), recordingRepository.openIdsRequestedForSeminar)
+        assertEquals(listOf(emptyList<Long>()), recordingRepository.failedRecordingIdBatches)
+        assertEquals(0, serviceStarter.stopCalls)
     }
 
     @Test
