@@ -80,6 +80,7 @@ import java.io.File
 import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun ActiveSessionScreen(
@@ -115,7 +116,10 @@ fun ActiveSessionScreen(
                 is ActiveSessionEvent.NavigateToActiveSession -> onNavigateToActiveSession(event.seminarId)
                 is ActiveSessionEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
                 is ActiveSessionEvent.CapturePhoto -> {
-                    when (val result = cameraController.capture(File(event.absolutePath))) {
+                    val result = withTimeoutOrNull(PhotoCaptureTimeoutMillis) {
+                        cameraController.capture(File(event.absolutePath))
+                    } ?: PhotoCaptureResult.Failed("Camera capture timed out.")
+                    when (result) {
                         PhotoCaptureResult.Saved -> viewModel.onAction(
                             ActiveSessionAction.PhotoCaptureCompleted(event.relativePath),
                         )
@@ -751,3 +755,5 @@ private fun formatElapsed(elapsedMillis: Long): String {
     val seconds = totalSeconds % 60
     return "%02d:%02d:%02d".format(hours, minutes, seconds)
 }
+
+private const val PhotoCaptureTimeoutMillis = 15_000L

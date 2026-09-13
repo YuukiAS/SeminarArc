@@ -224,7 +224,6 @@ private fun ReconstructionReadyContent(
                 )
                 Button(
                     onClick = { onOpenReferenceReview(state.detail.id) },
-                    enabled = state.items.any { item -> item.ocrResult != null || item.isKeySlide },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Outlined.Search, contentDescription = null)
