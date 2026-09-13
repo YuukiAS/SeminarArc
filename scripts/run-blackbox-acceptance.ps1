@@ -2,6 +2,8 @@ param(
     [string]$PackageName = "com.yuukias.seminararc.internal",
     [string]$Serial = "",
     [string]$ApkPath = "",
+    [string[]]$Scenarios = @(),
+    [string]$CameraFixturePath = "",
     [switch]$SkipBuild,
     [switch]$SkipInstall,
     [int]$AdbTimeoutSeconds = 45
@@ -35,11 +37,41 @@ $script:ScenarioStartSteps = @{}
 $script:Limitations = New-Object System.Collections.Generic.List[string]
 $script:Exports = New-Object System.Collections.Generic.List[object]
 $script:BriefText = $null
+$script:FixturePhotoPrepared = $false
 $script:ReferenceFixture = [ordered]@{
     doi = "10.1038/nature12373"
     title = "An integrated encyclopedia of DNA elements in the human genome"
     provider = "Crossref/OpenAlex/DataCite public metadata"
 }
+
+function Normalize-ScenarioSelection {
+    param([string[]]$RequestedScenarios)
+    $valid = @("B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08")
+    $normalized = New-Object System.Collections.Generic.List[string]
+    foreach ($item in $RequestedScenarios) {
+        foreach ($part in ($item -split ",")) {
+            $scenario = $part.Trim().ToUpperInvariant()
+            if ([string]::IsNullOrWhiteSpace($scenario)) {
+                continue
+            }
+            if ($valid -notcontains $scenario) {
+                throw "Unknown scenario '$scenario'. Valid scenarios: $($valid -join ', ')."
+            }
+            if (-not $normalized.Contains($scenario)) {
+                $normalized.Add($scenario) | Out-Null
+            }
+        }
+    }
+    if ($normalized.Count -eq 0) {
+        foreach ($scenario in $valid) {
+            $normalized.Add($scenario) | Out-Null
+        }
+    }
+    return $normalized.ToArray()
+}
+
+$script:SelectedScenarios = Normalize-ScenarioSelection -RequestedScenarios $Scenarios
+$script:RunFullCatalog = ($script:SelectedScenarios.Count -eq 8)
 
 function Write-Status {
     param([string]$Message)
@@ -1043,6 +1075,66 @@ function Open-Synthetic-Detail {
     Wait-ForNode -Scenario $Scenario -Label "detail-open" -Text "Seminar detail" -TimeoutSeconds 20 | Out-Null
 }
 
+function Ensure-FocusedPhotoFixtureSeminar {
+    param([string]$Scenario)
+    if ($script:FixturePhotoPrepared) {
+        return
+    }
+
+    Step "Prepare focused seminar with deterministic camera fixture"
+    Clear-App-State
+    Launch-App
+    Tap-Text -Scenario $Scenario -Text "Create seminar"
+    Wait-ForNode -Scenario $Scenario -Label "fixture-new-editor" -Text "New seminar" -TimeoutSeconds 20 | Out-Null
+    [void](Append-EditTextTextByIndex -Scenario $Scenario -Index 0 -AppendText "updatedfixture" -Label "fixture-title-field")
+    Press-Back
+    Tap-Text -Scenario $Scenario -Text "Save draft" -ScrollAttempts 2
+    Wait-ForNode -Scenario $Scenario -Label "fixture-detail-created" -Text "updatedfixture" -Contains -TimeoutSeconds 20 | Out-Null
+
+    Step "Start photos-only session for deterministic fixture"
+    Invoke-Adb -Arguments @("shell", "pm", "revoke", $PackageName, "android.permission.RECORD_AUDIO") -TimeoutSeconds 30 -IgnoreExitCode | Out-Null
+    Tap-TextClickableAncestor -Scenario $Scenario -Text "Start photos only" -ScrollAttempts 2
+    Wait-ForNode -Scenario $Scenario -Label "fixture-active-session" -Text "Active session" -TimeoutSeconds 25 | Out-Null
+    Wait-ForNode -Scenario $Scenario -Label "fixture-photos-only" -Text "PHOTOS ONLY" -Contains -TimeoutSeconds 20 | Out-Null
+
+    Step "Capture deterministic slide through CameraX"
+    Invoke-Adb -Arguments @("shell", "pm", "grant", $PackageName, "android.permission.CAMERA") -TimeoutSeconds 30 -IgnoreExitCode | Out-Null
+    Start-Sleep -Seconds 2
+    Tap-Text -Scenario $Scenario -Text "Capture Slide" -ScrollAttempts 3
+    try {
+        $photoResult = Wait-ForAnyText -Scenario $Scenario -Label "fixture-photo-capture-result" -Texts @("Slide photo saved.", "Photo capture failed:") -Contains -TimeoutSeconds 45
+    } catch {
+        Capture-Evidence -Scenario $Scenario -Label "fixture-photo-capture-timeout" -WithLogcat
+        throw "BLOCKED_EMULATOR_CAMERA_FIXTURE: CameraX did not report a terminal photo capture state for the deterministic camera fixture."
+    }
+    if ($photoResult.Text -like "Photo capture failed:*") {
+        Capture-Evidence -Scenario $Scenario -Label "fixture-photo-capture-failed" -WithLogcat
+        throw "BLOCKED_EMULATOR_CAMERA_FIXTURE: CameraX reported photo capture failure for the deterministic camera fixture."
+    }
+    Wait-ForNode -Scenario $Scenario -Label "fixture-last-photo" -Text "Last photo" -TimeoutSeconds 20 | Out-Null
+
+    Step "Complete focused fixture seminar"
+    $endDialogVisible = $false
+    $endDialogError = $null
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        Tap-TextClickableAncestor -Scenario $Scenario -Text "End Seminar" -ScrollAttempts 3
+        try {
+            Wait-ForNode -Scenario $Scenario -Label "fixture-end-dialog-$attempt" -Text "End this seminar?" -TimeoutSeconds 15 | Out-Null
+            $endDialogVisible = $true
+            break
+        } catch {
+            $endDialogError = $_.Exception.Message
+            Write-Status "Focused fixture End Seminar retry ${attempt}: $endDialogError"
+        }
+    }
+    if (-not $endDialogVisible) {
+        throw $endDialogError
+    }
+    Tap-TextClickableAncestor -Scenario $Scenario -Text "Stop and end"
+    Wait-ForNode -Scenario $Scenario -Label "fixture-completed-detail" -Text "This seminar is completed." -Contains -TimeoutSeconds 25 | Out-Null
+    $script:FixturePhotoPrepared = $true
+}
+
 function Save-Current-CreateDocument {
     param(
         [string]$Scenario,
@@ -1414,6 +1506,9 @@ function Run-B03 {
 
 function Run-B04 {
     Run-Scenario "B04" {
+        if (-not $script:RunFullCatalog) {
+            Ensure-FocusedPhotoFixtureSeminar "B04"
+        }
         Step "Open reconstruction from completed seminar detail"
         Open-Synthetic-Detail "B04"
         Tap-Text -Scenario "B04" -Text "Open reconstruction" -ScrollAttempts 5
@@ -1436,6 +1531,13 @@ function Run-B04 {
         Step "Queue and verify OCR lifecycle"
         Tap-Text -Scenario "B04" -Text "OCR" -ScrollAttempts 2
         [void](Wait-ForJobTerminal -Scenario "B04" -JobPrefix "OCR" -TimeoutSeconds 120 -AllowFailure)
+
+        Step "Inspect deterministic OCR clue"
+        try {
+            [void](Wait-ForAnyText -Scenario "B04" -Label "ocr-fixture-clue" -Texts @("SeminarArc", "10.1038", "nature12373") -Contains -TimeoutSeconds 25)
+        } catch {
+            Add-Limitation "B04 OCR completed, but the deterministic fixture title/DOI clue was not visible in the bounded UI tree wait; editable OCR surface is still exercised."
+        }
 
         Step "Edit OCR result through UI"
         Tap-Text -Scenario "B04" -Text "OCR text" -ScrollAttempts 5
@@ -1593,9 +1695,15 @@ function Run-B07 {
     Run-Scenario "B07" {
         Cleanup-Export-Files
         $formulaBlocked = $false
+        $b05Passed = $script:Results.Contains("B05") -and (($script:Results["B05"]).status -eq "PASS")
 
-        Step "Return to reconstruction for formula workflow"
-        Press-Back
+        if (-not $script:RunFullCatalog) {
+            Ensure-FocusedPhotoFixtureSeminar "B07"
+        }
+
+        Step "Open reconstruction for formula workflow"
+        Open-Synthetic-Detail "B07"
+        Tap-Text -Scenario "B07" -Text "Open reconstruction" -ScrollAttempts 5
         Wait-ForNode -Scenario "B07" -Label "reconstruction-visible" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
         Wait-ForNode -Scenario "B07" -Label "formula-provider-status" -Text "Formula OCR: Unavailable" -Contains -TimeoutSeconds 20 | Out-Null
         Add-Limitation "B07 live Formula OCR provider is unavailable by design; manual LaTeX path is validated instead."
@@ -1639,20 +1747,28 @@ function Run-B07 {
         }
         Tap-Text -Scenario "B07" -Text "Markdown" -ScrollAttempts 8
         $markdownSnippets = @("updated")
-        if (($script:Results["B05"]).status -eq "PASS" -and -not [string]::IsNullOrWhiteSpace($script:BriefText)) {
+        if ($b05Passed -and -not [string]::IsNullOrWhiteSpace($script:BriefText)) {
             $markdownSnippets += $script:BriefText
         }
         if (-not $formulaBlocked) {
             $markdownSnippets += "E=mc^2"
         }
         Save-Current-CreateDocument -Scenario "B07" -Kind "Markdown" -DevicePath "/sdcard/Download/seminar.md" -ExpectedSnippets $markdownSnippets
+        if (-not $script:RunFullCatalog) {
+            Capture-Evidence -Scenario "B07" -Label "final"
+            Assert-NoCrash "B07"
+            if ($formulaBlocked) {
+                throw "BLOCKED_BY_EMULATOR_FIXTURE_LIMITATION: Formula region/manual LaTeX workflow requires a saved photo asset, but CameraX capture did not produce one on this Emulator run; export surface was still minimally validated where possible."
+            }
+            return
+        }
         Tap-Text -Scenario "B07" -Text "Save Notion-ready Markdown" -ScrollAttempts 8
         $notionSnippets = @("updated")
-        if (($script:Results["B05"]).status -eq "PASS" -and -not [string]::IsNullOrWhiteSpace($script:BriefText)) {
+        if ($b05Passed -and -not [string]::IsNullOrWhiteSpace($script:BriefText)) {
             $notionSnippets += $script:BriefText
         }
         Save-Current-CreateDocument -Scenario "B07" -Kind "NotionMarkdown" -DevicePath "/sdcard/Download/seminar-notion-ready.md" -ExpectedSnippets $notionSnippets
-        if (($script:Results["B05"]).status -eq "PASS") {
+        if ($b05Passed) {
             Tap-Text -Scenario "B07" -Text "BibTeX" -ScrollAttempts 8
             Save-Current-CreateDocument -Scenario "B07" -Kind "BibTeX" -DevicePath "/sdcard/Download/references.bib" -ExpectedSnippets @("@", "doi")
             Tap-Text -Scenario "B07" -Text "RIS" -ScrollAttempts 8
@@ -1662,7 +1778,7 @@ function Run-B07 {
         }
         Tap-Text -Scenario "B07" -Text "ZIP" -ScrollAttempts 8
         $zipEntries = @("seminar.md")
-        if (($script:Results["B05"]).status -eq "PASS") {
+        if ($b05Passed) {
             $zipEntries += @("references.bib", "references.ris")
         }
         Save-Current-CreateDocument -Scenario "B07" -Kind "ZIP" -DevicePath "/sdcard/Download/seminar.zip" -Binary -ExpectedZipEntries $zipEntries
@@ -1707,16 +1823,25 @@ function Run-B08 {
 
 try {
     Write-Status "Evidence root: $evidenceRoot"
+    Write-Status "Selected scenarios: $($script:SelectedScenarios -join ', ')"
+    if (-not [string]::IsNullOrWhiteSpace($CameraFixturePath)) {
+        Write-Status "Camera fixture path: $CameraFixturePath"
+    }
     Select-EmulatorSerial
     Build-And-Install
-    Run-B01
-    Run-B02
-    Run-B03
-    Run-B04
-    Run-B05
-    Run-B06
-    Run-B07
-    Run-B08
+    $scenarioCatalog = [ordered]@{
+        B01 = { Run-B01 }
+        B02 = { Run-B02 }
+        B03 = { Run-B03 }
+        B04 = { Run-B04 }
+        B05 = { Run-B05 }
+        B06 = { Run-B06 }
+        B07 = { Run-B07 }
+        B08 = { Run-B08 }
+    }
+    foreach ($scenario in $script:SelectedScenarios) {
+        & $scenarioCatalog[$scenario]
+    }
     $overall = "PASS"
 } catch {
     $overall = "FAIL"
@@ -1727,6 +1852,8 @@ try {
         status = $overall
         package = $PackageName
         emulatorSerial = $script:SelectedSerial
+        selectedScenarios = $script:SelectedScenarios
+        cameraFixturePath = $CameraFixturePath
         stepCount = $script:StepCount
         evidenceRoot = $evidenceRoot
         referenceFixture = $script:ReferenceFixture
@@ -1743,6 +1870,8 @@ try {
         "- status: $overall",
         "- package: $PackageName",
         "- emulator: $script:SelectedSerial",
+        "- selectedScenarios: $($script:SelectedScenarios -join ', ')",
+        "- cameraFixturePath: $CameraFixturePath",
         "- steps: $script:StepCount",
         ""
     )

@@ -83,6 +83,7 @@ profiling/
 # Local private exports and manual release staging
 exports/private/
 private/blackbox-acceptance/
+private/blackbox-fixtures/
 release/
 
 # Keep wrapper files, placeholder structure, and checked-in assets
