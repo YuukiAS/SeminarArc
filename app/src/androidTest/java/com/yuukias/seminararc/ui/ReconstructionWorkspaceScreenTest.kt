@@ -54,6 +54,7 @@ class ReconstructionWorkspaceScreenTest {
                     onBack = {},
                     onOpenReferenceReview = {},
                     onOpenTranscriptReview = { actions += "transcripts:$it" },
+                    onImportSlideImage = { actions += "import" },
                     onSearchQueryChanged = {},
                     onOcrStatusFilterChanged = {},
                     onKeySlidesOnlyChanged = {},
@@ -71,6 +72,8 @@ class ReconstructionWorkspaceScreenTest {
             }
         }
 
+        composeRule.onNodeWithText("Import slide image").performScrollTo().assertIsDisplayed().assertIsEnabled()
+        composeRule.onNodeWithText("Import slide image").performScrollTo().performClick()
         composeRule.onNodeWithText("Review transcripts").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Formula providers").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Formula OCR: Unavailable - No live formula OCR provider is configured. (credential)").performScrollTo().assertIsDisplayed()
@@ -84,7 +87,7 @@ class ReconstructionWorkspaceScreenTest {
         composeRule.onAllNodesWithText("Cancel")[0].performScrollTo().performClick()
         composeRule.onAllNodesWithText("Retry")[0].performScrollTo().performClick()
 
-        assertEquals(listOf("cancel:2", "retry:4"), actions)
+        assertEquals(listOf("import", "cancel:2", "retry:4"), actions)
     }
 
     @Test
@@ -99,6 +102,7 @@ class ReconstructionWorkspaceScreenTest {
                     onBack = {},
                     onOpenReferenceReview = {},
                     onOpenTranscriptReview = {},
+                    onImportSlideImage = {},
                     onSearchQueryChanged = {},
                     onOcrStatusFilterChanged = {},
                     onKeySlidesOnlyChanged = {},
@@ -240,6 +244,7 @@ class ReconstructionWorkspaceScreenTest {
                     onBack = {},
                     onOpenReferenceReview = {},
                     onOpenTranscriptReview = {},
+                    onImportSlideImage = {},
                     onSearchQueryChanged = {},
                     onOcrStatusFilterChanged = {},
                     onKeySlidesOnlyChanged = {},
@@ -279,6 +284,7 @@ class ReconstructionWorkspaceScreenTest {
                     onBack = {},
                     onOpenReferenceReview = {},
                     onOpenTranscriptReview = {},
+                    onImportSlideImage = {},
                     onSearchQueryChanged = {},
                     onOcrStatusFilterChanged = {},
                     onKeySlidesOnlyChanged = {},

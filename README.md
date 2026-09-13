@@ -67,6 +67,7 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 ### 2. Reconstruct
 
 - 本地图像旋转、裁边、透视矫正和可读性增强；原图始终保留。
+- 可从 Reconstruction workspace 通过 Android system picker 导入已有 slide/photo；导入文件会复制到 app-private seminar media storage，并登记为 `PHOTO_ORIGINAL`，不伪造 timeline event 或 recording offset。
 - bundled ML Kit Latin / Chinese OCR。
 - OCR 文本编辑、搜索、过滤。
 - key slide / tags。
@@ -135,9 +136,16 @@ Windows ADB 即使同时能看到受保护真机，所有非 inventory ADB 操�
 - B03：Emulator-safe session lifecycle；
 - B08：recovery / synthetic seminar cleanup。
 
+当前 deterministic research-flow closeout 已通过 imported-photo path 自动覆盖：
+
+- B04：Reconstruction import、enhancement、OCR、OCR edit、key slide 和 force-stop 后 persistence；
+- B07：formula drag selection、crop/label edit、manual LaTeX READY result、force-stop 后 persistence 和本地 Markdown export 文件验证。
+
+CameraX 在 Windows Emulator 上的 deterministic camera fixture 仍单独记录为 Emulator/hardware acquisition limitation；它没有被改写为 CameraX PASS。真实相机质量、方向和速度仍保留给后续真实硬件 acceptance。
+
 后续再依次扩展：
 
-1. Reconstruction / Reference / Transcript / Formula / export 黑盒流；
+1. real-world media corpus robustness；
 2. screenshot visual regression（小屏、大字体、长文本、error/empty/loading）；
 3. fixed-seed Monkey / multi-device；
 4. major alpha / `0.9.x` 再评估 Firebase Test Lab Robo / 小型真实设备矩阵。

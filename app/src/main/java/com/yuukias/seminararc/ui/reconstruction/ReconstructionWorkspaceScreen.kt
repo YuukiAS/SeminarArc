@@ -1,5 +1,8 @@
 package com.yuukias.seminararc.ui.reconstruction
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -20,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.AddPhotoAlternate
 import androidx.compose.material.icons.outlined.NoteAlt
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.StarBorder
@@ -77,6 +81,11 @@ fun ReconstructionWorkspaceScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val importSlideImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri: Uri? ->
+        uri?.let { selected -> viewModel.onImportSlideImage(selected.toString()) }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -92,6 +101,7 @@ fun ReconstructionWorkspaceScreen(
         onBack = onBack,
         onOpenReferenceReview = onOpenReferenceReview,
         onOpenTranscriptReview = onOpenTranscriptReview,
+        onImportSlideImage = { importSlideImageLauncher.launch(arrayOf("image/*")) },
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
         onOcrStatusFilterChanged = viewModel::onOcrStatusFilterChanged,
         onKeySlidesOnlyChanged = viewModel::onKeySlidesOnlyChanged,
@@ -117,6 +127,7 @@ fun ReconstructionWorkspaceScreenContent(
     onBack: () -> Unit,
     onOpenReferenceReview: (Long) -> Unit,
     onOpenTranscriptReview: (Long) -> Unit,
+    onImportSlideImage: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onOcrStatusFilterChanged: (OcrStatusFilter) -> Unit,
     onKeySlidesOnlyChanged: (Boolean) -> Unit,
@@ -168,6 +179,7 @@ fun ReconstructionWorkspaceScreenContent(
                 state = uiState,
                 onOpenReferenceReview = onOpenReferenceReview,
                 onOpenTranscriptReview = onOpenTranscriptReview,
+                onImportSlideImage = onImportSlideImage,
                 onSearchQueryChanged = onSearchQueryChanged,
                 onOcrStatusFilterChanged = onOcrStatusFilterChanged,
                 onKeySlidesOnlyChanged = onKeySlidesOnlyChanged,
@@ -192,6 +204,7 @@ private fun ReconstructionReadyContent(
     state: ReconstructionWorkspaceUiState.Ready,
     onOpenReferenceReview: (Long) -> Unit,
     onOpenTranscriptReview: (Long) -> Unit,
+    onImportSlideImage: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onOcrStatusFilterChanged: (OcrStatusFilter) -> Unit,
     onKeySlidesOnlyChanged: (Boolean) -> Unit,
@@ -222,6 +235,14 @@ private fun ReconstructionReadyContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Button(
+                    onClick = onImportSlideImage,
+                    enabled = !state.isImportingPhoto,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.AddPhotoAlternate, contentDescription = null)
+                    Text(if (state.isImportingPhoto) "Importing slide image..." else "Import slide image")
+                }
                 Button(
                     onClick = { onOpenReferenceReview(state.detail.id) },
                     modifier = Modifier.fillMaxWidth(),

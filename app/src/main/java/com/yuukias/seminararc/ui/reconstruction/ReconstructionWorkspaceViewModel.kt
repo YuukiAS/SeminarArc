@@ -15,6 +15,7 @@ import com.yuukias.seminararc.domain.model.SeminarSystemTag
 import com.yuukias.seminararc.domain.ocr.TextOcrLanguageMode
 import com.yuukias.seminararc.domain.repository.CreateFormulaRegionInput
 import com.yuukias.seminararc.domain.repository.FormulaRepository
+import com.yuukias.seminararc.domain.repository.ImportOriginalPhotoInput
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SeminarRepository
 import com.yuukias.seminararc.domain.repository.UpdateFormulaRegionInput
@@ -53,6 +54,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
     private val searchQuery = MutableStateFlow("")
     private val ocrStatusFilter = MutableStateFlow(OcrStatusFilter.ALL)
     private val keySlidesOnly = MutableStateFlow(false)
+    private val isImportingPhoto = MutableStateFlow(false)
     private val formulaProviderStatuses = listOf(
         formulaOcrProvider.status.toUiStatus(),
         manualFormulaProvider.status.toUiStatus(),
@@ -94,7 +96,8 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
         searchQuery,
         ocrStatusFilter,
         keySlidesOnly,
-    ) { data, query, filter, showKeySlidesOnly ->
+        isImportingPhoto,
+    ) { data, query, filter, showKeySlidesOnly, importingPhoto ->
         ReconstructionWorkspaceInputs(
             detail = data.detail,
             photoAssets = data.photoAssets,
@@ -106,6 +109,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
             searchQuery = query,
             ocrStatusFilter = filter,
             keySlidesOnly = showKeySlidesOnly,
+            isImportingPhoto = importingPhoto,
         )
     }
         .mapLatest { inputs -> inputs.toUiState() }
@@ -126,6 +130,28 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
     fun onKeySlideChanged(assetId: Long, enabled: Boolean) {
         viewModelScope.launch {
             reconstructionRepository.setSystemTag(assetId, SeminarSystemTag.KEY_SLIDE, enabled)
+        }
+    }
+
+    fun onImportSlideImage(sourceUri: String) {
+        viewModelScope.launch {
+            if (isImportingPhoto.value) return@launch
+            isImportingPhoto.value = true
+            val result = runCatching {
+                reconstructionRepository.importOriginalPhoto(
+                    ImportOriginalPhotoInput(
+                        seminarId = seminarId,
+                        sourceUri = sourceUri,
+                    ),
+                )
+            }
+            isImportingPhoto.value = false
+            if (result.isSuccess) {
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Slide image imported."))
+            } else {
+                val reason = result.exceptionOrNull()?.message?.takeIf { it.isNotBlank() } ?: "Selected image could not be imported."
+                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("Slide image import failed: $reason"))
+            }
         }
     }
 
@@ -286,6 +312,7 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
             totalPhotoCount = items.size,
             visiblePhotoCount = visible.size,
             formulaProviderStatuses = formulaProviderStatuses,
+            isImportingPhoto = isImportingPhoto,
         )
     }
 
@@ -353,4 +380,5 @@ private data class ReconstructionWorkspaceInputs(
     val searchQuery: String,
     val ocrStatusFilter: OcrStatusFilter,
     val keySlidesOnly: Boolean,
+    val isImportingPhoto: Boolean,
 )

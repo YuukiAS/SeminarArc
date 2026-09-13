@@ -4,6 +4,9 @@ param(
     [string]$ApkPath = "",
     [string[]]$Scenarios = @(),
     [string]$CameraFixturePath = "",
+    [string]$PhotoFixturePath = "",
+    [ValidateSet("Import", "CameraCapture")]
+    [string]$PhotoAcquisition = "Import",
     [switch]$SkipBuild,
     [switch]$SkipInstall,
     [int]$AdbTimeoutSeconds = 45
@@ -38,6 +41,9 @@ $script:Limitations = New-Object System.Collections.Generic.List[string]
 $script:Exports = New-Object System.Collections.Generic.List[object]
 $script:BriefText = $null
 $script:FixturePhotoPrepared = $false
+$script:ResolvedPhotoFixturePath = $null
+$script:DevicePhotoFixtureName = "seminararc-camera-fixture.png"
+$script:DevicePhotoFixturePath = "/sdcard/Download/$($script:DevicePhotoFixtureName)"
 $script:ReferenceFixture = [ordered]@{
     doi = "10.1038/nature12373"
     title = "An integrated encyclopedia of DNA elements in the human genome"
@@ -70,7 +76,7 @@ function Normalize-ScenarioSelection {
     return $normalized.ToArray()
 }
 
-$script:SelectedScenarios = Normalize-ScenarioSelection -RequestedScenarios $Scenarios
+$script:SelectedScenarios = @(Normalize-ScenarioSelection -RequestedScenarios $Scenarios)
 $script:RunFullCatalog = ($script:SelectedScenarios.Count -eq 8)
 
 function Write-Status {
@@ -1014,11 +1020,12 @@ function Scroll-UntilTextVisible {
         [string]$Scenario,
         [string]$Text,
         [string]$Label,
+        [switch]$Contains,
         [int]$ScrollAttempts = 8
     )
     for ($i = 0; $i -le $ScrollAttempts; $i++) {
         $tree = Get-UiXml -Scenario $Scenario -Label ("$Label-$i")
-        $node = Find-Node -Xml $tree.Xml -Text $Text
+        $node = Find-Node -Xml $tree.Xml -Text $Text -Contains:$Contains
         if ($null -ne $node) {
             return $node
         }
@@ -1028,6 +1035,28 @@ function Scroll-UntilTextVisible {
         }
     }
     throw "Text node not found after scrolling: $Text"
+}
+
+function Scroll-UntilDescriptionVisible {
+    param(
+        [string]$Scenario,
+        [string]$Description,
+        [string]$Label,
+        [switch]$Contains,
+        [int]$ScrollAttempts = 8
+    )
+    for ($i = 0; $i -le $ScrollAttempts; $i++) {
+        $tree = Get-UiXml -Scenario $Scenario -Label ("$Label-$i")
+        $node = Find-Node -Xml $tree.Xml -Description $Description -Contains:$Contains
+        if ($null -ne $node) {
+            return $node
+        }
+        if ($i -lt $ScrollAttempts) {
+            Swipe-Up
+            Start-Sleep -Milliseconds 700
+        }
+    }
+    throw "Description node not found after scrolling: $Description"
 }
 
 function Wait-ForJobTerminal {
@@ -1075,9 +1104,120 @@ function Open-Synthetic-Detail {
     Wait-ForNode -Scenario $Scenario -Label "detail-open" -Text "Seminar detail" -TimeoutSeconds 20 | Out-Null
 }
 
+function Resolve-PhotoFixturePath {
+    if (-not [string]::IsNullOrWhiteSpace($script:ResolvedPhotoFixturePath)) {
+        return $script:ResolvedPhotoFixturePath
+    }
+    $candidate = $PhotoFixturePath
+    if ([string]::IsNullOrWhiteSpace($candidate) -and -not [string]::IsNullOrWhiteSpace($CameraFixturePath)) {
+        $candidate = $CameraFixturePath
+    }
+    if ([string]::IsNullOrWhiteSpace($candidate)) {
+        $candidate = Join-Path $repoRoot "private\blackbox-fixtures\seminararc-camera-fixture.png"
+    } elseif (-not [System.IO.Path]::IsPathRooted($candidate)) {
+        $candidate = Join-Path $repoRoot $candidate
+    }
+
+    if (-not (Test-Path -LiteralPath $candidate)) {
+        $generator = Join-Path $scriptRoot "blackbox\New-DeterministicCameraFixture.ps1"
+        if (-not (Test-Path -LiteralPath $generator)) {
+            throw "Photo fixture is missing and generator was not found: $candidate"
+        }
+        Write-Status "Generating deterministic photo fixture: $candidate"
+        & $generator -OutputPath $candidate | Out-Null
+    }
+    $script:ResolvedPhotoFixturePath = (Resolve-Path -LiteralPath $candidate).Path
+    return $script:ResolvedPhotoFixturePath
+}
+
+function Push-PhotoFixtureToEmulatorDownloads {
+    param([string]$Scenario)
+    $fixture = Resolve-PhotoFixturePath
+    Step "Push deterministic photo fixture to Emulator Downloads"
+    Invoke-Adb -Arguments @("shell", "rm", "-f", $script:DevicePhotoFixturePath) -TimeoutSeconds 30 -IgnoreExitCode | Out-Null
+    Invoke-Adb -Arguments @("push", $fixture, $script:DevicePhotoFixturePath) -TimeoutSeconds 60 | Out-Null
+    Invoke-Adb -Arguments @(
+        "shell",
+        "am",
+        "broadcast",
+        "-a",
+        "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
+        "-d",
+        "file://$($script:DevicePhotoFixturePath)"
+    ) -TimeoutSeconds 30 -IgnoreExitCode | Out-Null
+    Capture-Evidence -Scenario $Scenario -Label "fixture-pushed"
+}
+
+function Select-PhotoFixtureInSystemPicker {
+    param([string]$Scenario)
+    $deadline = (Get-Date).AddSeconds(75)
+    $attempt = 0
+    do {
+        $attempt += 1
+        $tree = Get-UiXml -Scenario $Scenario -Label "photo-picker-$attempt"
+        foreach ($text in @($script:DevicePhotoFixtureName, "seminararc-camera-fixture")) {
+            $node = Find-Node -Xml $tree.Xml -Text $text -Contains
+            if ($null -eq $node) {
+                $node = Find-Node -Xml $tree.Xml -Description $text -Contains
+            }
+            if ($null -ne $node) {
+                Tap-Node $node
+                Wait-ForPackageVisible -Scenario $Scenario -Label "photo-picker-return" -ExpectedPackage $PackageName -TimeoutSeconds 20 | Out-Null
+                return
+            }
+        }
+        foreach ($text in @("Allow", "Downloads", "Images", "Recent")) {
+            $node = Find-Node -Xml $tree.Xml -Text $text -Contains
+            if ($null -ne $node) {
+                Tap-Node $node
+                Start-Sleep -Seconds 1
+                break
+            }
+        }
+        Swipe-Up
+        Start-Sleep -Milliseconds 700
+    } while ((Get-Date) -lt $deadline)
+    Capture-Evidence -Scenario $Scenario -Label "photo-picker-file-not-found" -WithLogcat
+    throw "Timed out selecting deterministic photo fixture in Android system picker."
+}
+
+function Ensure-FocusedImportedPhotoFixtureSeminar {
+    param([string]$Scenario)
+    if ($script:FixturePhotoPrepared) {
+        return
+    }
+
+    Step "Prepare focused seminar with imported deterministic photo fixture"
+    Clear-App-State
+    Push-PhotoFixtureToEmulatorDownloads -Scenario $Scenario
+    Launch-App
+    Tap-Text -Scenario $Scenario -Text "Create seminar"
+    Wait-ForNode -Scenario $Scenario -Label "fixture-new-editor" -Text "New seminar" -TimeoutSeconds 20 | Out-Null
+    [void](Append-EditTextTextByIndex -Scenario $Scenario -Index 0 -AppendText "updatedfixture" -Label "fixture-title-field")
+    Press-Back
+    Tap-Text -Scenario $Scenario -Text "Save draft" -ScrollAttempts 2
+    Wait-ForNode -Scenario $Scenario -Label "fixture-detail-created" -Text "updatedfixture" -Contains -TimeoutSeconds 20 | Out-Null
+
+    Step "Import deterministic slide image through system picker"
+    Tap-Text -Scenario $Scenario -Text "Open reconstruction" -ScrollAttempts 5
+    Wait-ForNode -Scenario $Scenario -Label "fixture-reconstruction-open" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
+    Tap-Text -Scenario $Scenario -Text "Import slide image" -ScrollAttempts 2
+    Select-PhotoFixtureInSystemPicker -Scenario $Scenario
+    Wait-ForNode -Scenario $Scenario -Label "fixture-imported-message" -Text "Slide image imported." -Contains -TimeoutSeconds 25 | Out-Null
+    Wait-ForNode -Scenario $Scenario -Label "fixture-imported-photo-count" -Text "1 of 1 photos" -TimeoutSeconds 25 | Out-Null
+    Wait-ForNode -Scenario $Scenario -Label "fixture-imported-display-name" -Text $script:DevicePhotoFixtureName -Contains -TimeoutSeconds 20 | Out-Null
+    Capture-Evidence -Scenario $Scenario -Label "fixture-imported"
+    $script:FixturePhotoPrepared = $true
+}
+
 function Ensure-FocusedPhotoFixtureSeminar {
     param([string]$Scenario)
     if ($script:FixturePhotoPrepared) {
+        return
+    }
+
+    if ($PhotoAcquisition -eq "Import") {
+        Ensure-FocusedImportedPhotoFixtureSeminar -Scenario $Scenario
         return
     }
 
@@ -1517,7 +1657,7 @@ function Run-B04 {
             Wait-ForNode -Scenario "B04" -Label "photo-count" -Text "1 of 1 photos" -TimeoutSeconds 20 | Out-Null
         } catch {
             $tree = Get-UiXml -Scenario "B04" -Label "no-photo-inspect"
-            if ((Find-Node -Xml $tree.Xml -Text "0 of 0 photos" -Contains) -or (Find-Node -Xml $tree.Xml -Text "No photos match the current filters." -Contains)) {
+            if ($PhotoAcquisition -eq "CameraCapture" -and ((Find-Node -Xml $tree.Xml -Text "0 of 0 photos" -Contains) -or (Find-Node -Xml $tree.Xml -Text "No photos match the current filters." -Contains))) {
                 Add-Limitation "B04 photo asset path is BLOCKED_BY_EMULATOR_FIXTURE_LIMITATION because CameraX capture did not yield a saved slide photo on this Emulator."
                 throw "BLOCKED_BY_EMULATOR_FIXTURE_LIMITATION: CameraX did not provide a saved photo asset; exact OCR/image workflow is deferred to a stable emulator camera fixture or real-world corpus task."
             }
@@ -1547,17 +1687,22 @@ function Run-B04 {
         Wait-ForNode -Scenario "B04" -Label "ocr-edited" -Text "BlackboxOcrEditedText" -Contains -TimeoutSeconds 20 | Out-Null
 
         Step "Mark key slide"
-        Swipe-Down
-        Swipe-Down
-        Tap-Description -Scenario "B04" -Description "Mark key slide" -Contains
-        Wait-ForNode -Scenario "B04" -Label "key-slide-marked" -Description "Remove key slide" -TimeoutSeconds 15 | Out-Null
+        Open-Synthetic-Detail "B04"
+        Tap-Text -Scenario "B04" -Text "Open reconstruction" -ScrollAttempts 5
+        Wait-ForNode -Scenario "B04" -Label "reconstruction-before-key-slide" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
+        Scroll-UntilTextVisible -Scenario "B04" -Text "BlackboxOcrEditedText" -Label "ocr-before-key-slide" -Contains -ScrollAttempts 8 | Out-Null
+        Open-Synthetic-Detail "B04"
+        Tap-Text -Scenario "B04" -Text "Open reconstruction" -ScrollAttempts 5
+        Wait-ForNode -Scenario "B04" -Label "reconstruction-before-key-slide-toggle" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
+        Tap-Description -Scenario "B04" -Description "Mark key slide" -Contains -ScrollAttempts 6
+        Scroll-UntilDescriptionVisible -Scenario "B04" -Description "Remove key slide" -Label "key-slide-marked" -Contains -ScrollAttempts 4 | Out-Null
 
         Step "Force-stop and verify reconstruction persistence"
         Open-Synthetic-Detail "B04"
         Tap-Text -Scenario "B04" -Text "Open reconstruction" -ScrollAttempts 5
         Wait-ForNode -Scenario "B04" -Label "reconstruction-after-relaunch" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
-        Wait-ForNode -Scenario "B04" -Label "ocr-persisted" -Text "BlackboxOcrEditedText" -Contains -TimeoutSeconds 20 | Out-Null
-        Wait-ForNode -Scenario "B04" -Label "key-slide-persisted" -Description "Remove key slide" -TimeoutSeconds 20 | Out-Null
+        Scroll-UntilDescriptionVisible -Scenario "B04" -Description "Remove key slide" -Label "key-slide-persisted" -Contains -ScrollAttempts 8 | Out-Null
+        Scroll-UntilTextVisible -Scenario "B04" -Text "BlackboxOcrEditedText" -Label "ocr-persisted" -Contains -ScrollAttempts 8 | Out-Null
         Capture-Evidence -Scenario "B04" -Label "final"
         Assert-NoCrash "B04"
     }
@@ -1720,7 +1865,7 @@ function Run-B07 {
             Enter-Text "MainEquation"
             Press-Back
             Tap-Text -Scenario "B07" -Text "Update formula region" -ScrollAttempts 3
-            Wait-ForNode -Scenario "B07" -Label "formula-region-updated" -Text "FormulaMainEquation" -Contains -TimeoutSeconds 20 | Out-Null
+            Wait-ForNode -Scenario "B07" -Label "formula-region-updated" -Text "MainEquation" -Contains -TimeoutSeconds 20 | Out-Null
 
             Step "Save manual LaTeX and verify READY result"
             Tap-Text -Scenario "B07" -Text "LaTeX" -ScrollAttempts 5
@@ -1732,11 +1877,15 @@ function Run-B07 {
             Step "Force-stop and verify formula persistence"
             Open-Synthetic-Detail "B07"
             Tap-Text -Scenario "B07" -Text "Open reconstruction" -ScrollAttempts 5
-            Wait-ForNode -Scenario "B07" -Label "formula-after-relaunch" -Text "Formula ready: E=mc^2" -Contains -TimeoutSeconds 25 | Out-Null
+            Scroll-UntilTextVisible -Scenario "B07" -Text "E=mc^2" -Label "formula-after-relaunch" -Contains -ScrollAttempts 8 | Out-Null
         } catch {
-            $formulaBlocked = $true
-            Add-Limitation "B07 formula region/manual LaTeX workflow is BLOCKED_BY_EMULATOR_FIXTURE_LIMITATION because no saved photo asset is available."
-            Open-Synthetic-Detail "B07"
+            if ($PhotoAcquisition -eq "CameraCapture") {
+                $formulaBlocked = $true
+                Add-Limitation "B07 formula region/manual LaTeX workflow is BLOCKED_BY_EMULATOR_FIXTURE_LIMITATION because no saved photo asset is available."
+                Open-Synthetic-Detail "B07"
+            } else {
+                throw
+            }
         }
 
         Step "Save and verify local exports"
@@ -1824,8 +1973,12 @@ function Run-B08 {
 try {
     Write-Status "Evidence root: $evidenceRoot"
     Write-Status "Selected scenarios: $($script:SelectedScenarios -join ', ')"
+    Write-Status "Photo acquisition: $PhotoAcquisition"
     if (-not [string]::IsNullOrWhiteSpace($CameraFixturePath)) {
         Write-Status "Camera fixture path: $CameraFixturePath"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($PhotoFixturePath)) {
+        Write-Status "Photo fixture path: $PhotoFixturePath"
     }
     Select-EmulatorSerial
     Build-And-Install
@@ -1853,6 +2006,9 @@ try {
         package = $PackageName
         emulatorSerial = $script:SelectedSerial
         selectedScenarios = $script:SelectedScenarios
+        photoAcquisition = $PhotoAcquisition
+        photoFixturePath = $script:ResolvedPhotoFixturePath
+        devicePhotoFixturePath = $script:DevicePhotoFixturePath
         cameraFixturePath = $CameraFixturePath
         stepCount = $script:StepCount
         evidenceRoot = $evidenceRoot
@@ -1871,6 +2027,9 @@ try {
         "- package: $PackageName",
         "- emulator: $script:SelectedSerial",
         "- selectedScenarios: $($script:SelectedScenarios -join ', ')",
+        "- photoAcquisition: $PhotoAcquisition",
+        "- photoFixturePath: $script:ResolvedPhotoFixturePath",
+        "- devicePhotoFixturePath: $script:DevicePhotoFixturePath",
         "- cameraFixturePath: $CameraFixturePath",
         "- steps: $script:StepCount",
         ""

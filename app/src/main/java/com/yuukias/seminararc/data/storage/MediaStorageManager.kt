@@ -20,6 +20,12 @@ data class PhotoOutputFile(
     val file: File,
 )
 
+data class ImportedPhotoFile(
+    val displayName: String,
+    val relativePath: String,
+    val mimeType: String?,
+)
+
 data class EnhancedPhotoOutputFile(
     val displayName: String,
     val relativePath: String,
@@ -34,6 +40,9 @@ data class ClipOutputFile(
 
 interface MediaStorageManager {
     suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): StoredFile
+    suspend fun importPhotoImage(seminarId: Long, sourceUri: String): ImportedPhotoFile {
+        throw UnsupportedOperationException("Photo import is not available for this storage manager.")
+    }
     suspend fun createRecordingOutputFile(seminarId: Long, startedAt: Instant): RecordingOutputFile
     suspend fun createPhotoOutputFile(seminarId: Long, capturedAt: Instant): PhotoOutputFile
     suspend fun createEnhancedPhotoOutputFile(

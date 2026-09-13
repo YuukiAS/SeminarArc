@@ -19,6 +19,7 @@ sealed interface ReconstructionWorkspaceUiState {
         val totalPhotoCount: Int,
         val visiblePhotoCount: Int,
         val formulaProviderStatuses: List<FormulaProviderUiStatus> = emptyList(),
+        val isImportingPhoto: Boolean = false,
     ) : ReconstructionWorkspaceUiState
 
     data class Missing(val seminarId: Long) : ReconstructionWorkspaceUiState

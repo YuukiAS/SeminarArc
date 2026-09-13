@@ -7,14 +7,20 @@ import com.yuukias.seminararc.data.local.entity.ProcessingJobEntity
 import com.yuukias.seminararc.data.local.entity.SeminarAssetEntity
 import com.yuukias.seminararc.data.local.entity.TagEntity
 import com.yuukias.seminararc.data.repository.ReconstructionRepositoryImpl
+import com.yuukias.seminararc.data.storage.ImportedPhotoFile
+import com.yuukias.seminararc.data.storage.MediaStorageManager
+import com.yuukias.seminararc.data.storage.PhotoOutputFile
+import com.yuukias.seminararc.data.storage.StoredFile
 import com.yuukias.seminararc.domain.model.ProcessingJobState
 import com.yuukias.seminararc.domain.model.ProcessingJobType
 import com.yuukias.seminararc.domain.model.SeminarAssetType
 import com.yuukias.seminararc.domain.model.SeminarSystemTag
 import com.yuukias.seminararc.domain.repository.CreateDerivedAssetInput
 import com.yuukias.seminararc.domain.repository.EnqueueProcessingJobInput
+import com.yuukias.seminararc.domain.repository.ImportOriginalPhotoInput
 import com.yuukias.seminararc.domain.repository.SaveOcrResultInput
 import com.yuukias.seminararc.util.ClockProvider
+import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,10 +33,80 @@ import org.junit.Test
 
 class ReconstructionRepositoryImplTest {
     private val dao = FakeReconstructionDao()
+    private val storage = FakeReconstructionStorage()
     private val repository = ReconstructionRepositoryImpl(
         dao = dao,
+        mediaStorageManager = storage,
         clockProvider = ClockProvider { NOW },
     )
+
+    @Test
+    fun importOriginalPhoto_copiesImageAndCreatesUnlinkedPhotoAsset() = runTest {
+        storage.nextImportedPhoto = ImportedPhotoFile(
+            displayName = "fixture.png",
+            relativePath = "seminars/1/photos/imported-fixture.png",
+            mimeType = "image/png",
+        )
+
+        val asset = repository.importOriginalPhoto(
+            ImportOriginalPhotoInput(
+                seminarId = SEMINAR_ID,
+                sourceUri = "content://fixture/photo",
+            ),
+        )
+
+        assertEquals(SeminarAssetType.PHOTO_ORIGINAL, asset.type)
+        assertEquals("seminars/1/photos/imported-fixture.png", asset.relativePath)
+        assertEquals("image/png", asset.mimeType)
+        assertEquals("fixture.png", asset.displayName)
+        assertEquals(null, asset.originAssetId)
+        assertEquals(null, asset.sourceTimelineEventId)
+        assertEquals(null, asset.sourceRecordingId)
+        assertEquals(null, asset.sourceClipId)
+        assertEquals(listOf("content://fixture/photo"), storage.importedUris)
+        assertEquals(1, repository.observePhotoAssetsForSeminar(SEMINAR_ID).first().size)
+    }
+
+    @Test
+    fun importOriginalPhoto_whenCopyFailsDoesNotCreateAsset() = runTest {
+        storage.importFailure = IllegalStateException("broken URI")
+
+        val failed = runCatching {
+            repository.importOriginalPhoto(
+                ImportOriginalPhotoInput(
+                    seminarId = SEMINAR_ID,
+                    sourceUri = "content://fixture/broken",
+                ),
+            )
+        }
+
+        assertTrue(failed.isFailure)
+        assertEquals(emptyList<Any>(), repository.observePhotoAssetsForSeminar(SEMINAR_ID).first())
+        assertEquals(emptyList<String>(), storage.deletedPaths)
+    }
+
+    @Test
+    fun importOriginalPhoto_whenDatabaseInsertFailsDeletesCopiedFile() = runTest {
+        storage.nextImportedPhoto = ImportedPhotoFile(
+            displayName = "fixture.png",
+            relativePath = "seminars/1/photos/orphan.png",
+            mimeType = "image/png",
+        )
+        dao.failNextInsert = true
+
+        val failed = runCatching {
+            repository.importOriginalPhoto(
+                ImportOriginalPhotoInput(
+                    seminarId = SEMINAR_ID,
+                    sourceUri = "content://fixture/photo",
+                ),
+            )
+        }
+
+        assertTrue(failed.isFailure)
+        assertEquals(listOf("seminars/1/photos/orphan.png"), storage.deletedPaths)
+        assertEquals(emptyList<Any>(), repository.observePhotoAssetsForSeminar(SEMINAR_ID).first())
+    }
 
     @Test
     fun enqueueJob_returnsExistingActiveJobForSameInputAndType() = runTest {
@@ -194,6 +270,7 @@ private class FakeReconstructionDao : ReconstructionDao {
     private val version = MutableStateFlow(0)
     var nextAssetId = 1L
         private set
+    var failNextInsert = false
     private var nextJobId = 1L
     private var nextOcrResultId = 1L
     private var nextTagId = 1L
@@ -221,6 +298,10 @@ private class FakeReconstructionDao : ReconstructionDao {
     }
 
     override suspend fun insertAsset(entity: SeminarAssetEntity): Long {
+        if (failNextInsert) {
+            failNextInsert = false
+            error("insert failed")
+        }
         val id = nextAssetId++
         assets += entity.copy(id = id)
         bump()
@@ -352,4 +433,43 @@ private class FakeReconstructionDao : ReconstructionDao {
             this[index] = value
         }
     }
+}
+
+private class FakeReconstructionStorage : MediaStorageManager {
+    var nextImportedPhoto = ImportedPhotoFile(
+        displayName = "imported.jpg",
+        relativePath = "seminars/1/photos/imported.jpg",
+        mimeType = "image/jpeg",
+    )
+    var importFailure: Throwable? = null
+    val importedUris = mutableListOf<String>()
+    val deletedPaths = mutableListOf<String>()
+
+    override suspend fun importAbstractPdf(seminarId: Long, sourceUri: String): StoredFile = error("Not used")
+
+    override suspend fun importPhotoImage(seminarId: Long, sourceUri: String): ImportedPhotoFile {
+        importFailure?.let { throw it }
+        importedUris += sourceUri
+        return nextImportedPhoto
+    }
+
+    override suspend fun createPhotoOutputFile(seminarId: Long, capturedAt: Instant): PhotoOutputFile = error("Not used")
+
+    override suspend fun createClipOutputFile(
+        seminarId: Long,
+        clipId: Long,
+    ): com.yuukias.seminararc.data.storage.ClipOutputFile = error("Not used")
+
+    override suspend fun createRecordingOutputFile(
+        seminarId: Long,
+        startedAt: Instant,
+    ): com.yuukias.seminararc.data.storage.RecordingOutputFile = error("Not used")
+
+    override suspend fun resolveReadableRelativeFile(relativePath: String): File? = null
+
+    override suspend fun deleteRelativeFile(relativePath: String) {
+        deletedPaths += relativePath
+    }
+
+    override suspend fun deleteSeminarMedia(seminarId: Long) = Unit
 }

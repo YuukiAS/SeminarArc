@@ -8,6 +8,8 @@
 
 ### 新增
 
+- 新增 Reconstruction workspace 的 `Import slide image` 正式用户入口：通过 Android system picker 选择已有 slide/photo，复制到 app-private seminar media storage，并登记为 seminar-scoped `PHOTO_ORIGINAL` asset，不伪造 timeline event 或 recording offset。
+- 新增 black-box harness 的 imported-photo acquisition mode：focused B04/B07 可将 deterministic PNG 推送到 Emulator Downloads，再经系统 picker 完成真实 UI 导入，保留 CameraX fixture limitation 为独立 hardware/emulator boundary。
 - 完成 `0.5.0-alpha.2` 版本元数据：默认 `versionName = 0.5.0-alpha.2`、`versionCode = 50002`，用于替代远端 CI 未通过的 `v0.5.0-alpha.1` 候选。
 - 完成 `0.5.0-alpha.1` 版本元数据：默认 `versionName = 0.5.0-alpha.1`、`versionCode = 50001`，并生成 `SeminarArc-0.5.0-alpha.1.apk` 与 SHA-256。
 - 新增 mixed-inventory explicit-emulator 测试策略：当 Windows ADB 同时看到 protected physical serial 时，禁止 unscoped connected Gradle task，但允许 task 授权的 `adb -s <emulator>` app/test install 与 `am instrument`。
@@ -82,6 +84,8 @@
 
 ### 修复
 
+- 修复 deterministic B04/B07 black-box closeout 被 Windows Emulator CameraX fixture 阻塞的问题：Reconstruction/Formula 的 deterministic QA 改由正式 imported-photo 用户路径完成，CameraX capture quality 仍留给真实硬件专项验收。
+- 修复 black-box harness 多处 selective-run 稳定性问题：单场景 selection 数组 unwrap、DocumentsUI 文件名只在 content description 中暴露、key-slide/OCR/formula persistence 需要滚动后的 UI tree 验证，以及 B07 formula label 输入断言过窄。
 - 修复 GitHub Actions Linux runner 解析默认 Windows internal signing properties 路径时抛出的 `URISyntaxException`；非 Windows 环境默认不再解析 `D:\Code\_secrets\...`，Windows 本地 internal signer 行为保持不变。
 - 修复 `0.2.x` closeout 期间暴露的 instrumentation 问题：旧 migration test 未在当前 v3 database builder 上注册 `MIGRATION_2_3`、mixed OCR fixture 断言过窄、workspace queue UI 只显示同类最新 job 导致 cancelled state 不可见。
 - 修复 `0.3.x` closeout 期间暴露的问题：Crossref DOI endpoint 携带 `select` 导致 400、Compose instrumentation 缺少稳定 debug host Activity、emulator screen-off 导致 UI hierarchy 不可见、低置信 DOI OCR repair 误用风险，以及 rejected/reopened candidate 与 brief reference 关系未及时收敛。

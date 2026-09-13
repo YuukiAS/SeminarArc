@@ -31,6 +31,10 @@ interface ReconstructionRepository {
 
     suspend fun recoverInterruptedJobs(): List<ProcessingJob>
 
+    suspend fun importOriginalPhoto(input: ImportOriginalPhotoInput): SeminarAsset {
+        throw UnsupportedOperationException("Original photo import is not available for this repository.")
+    }
+
     suspend fun createDerivedAsset(input: CreateDerivedAssetInput): SeminarAsset
 
     suspend fun enqueueJob(input: EnqueueProcessingJobInput): ProcessingJob
@@ -59,6 +63,11 @@ data class CreateDerivedAssetInput(
     val relativePath: String,
     val mimeType: String?,
     val displayName: String?,
+)
+
+data class ImportOriginalPhotoInput(
+    val seminarId: Long,
+    val sourceUri: String,
 )
 
 data class EnqueueProcessingJobInput(

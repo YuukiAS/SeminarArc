@@ -6,6 +6,7 @@ import com.yuukias.seminararc.data.local.entity.OcrResultEntity
 import com.yuukias.seminararc.data.local.entity.ProcessingJobEntity
 import com.yuukias.seminararc.data.local.entity.SeminarAssetEntity
 import com.yuukias.seminararc.data.local.entity.TagEntity
+import com.yuukias.seminararc.data.storage.MediaStorageManager
 import com.yuukias.seminararc.domain.model.AssetTag
 import com.yuukias.seminararc.domain.model.OcrResult
 import com.yuukias.seminararc.domain.model.ProcessingJob
@@ -16,6 +17,7 @@ import com.yuukias.seminararc.domain.model.SeminarAssetType
 import com.yuukias.seminararc.domain.model.SeminarSystemTag
 import com.yuukias.seminararc.domain.repository.CreateDerivedAssetInput
 import com.yuukias.seminararc.domain.repository.EnqueueProcessingJobInput
+import com.yuukias.seminararc.domain.repository.ImportOriginalPhotoInput
 import com.yuukias.seminararc.domain.repository.ReconstructionRepository
 import com.yuukias.seminararc.domain.repository.SaveOcrResultInput
 import com.yuukias.seminararc.util.ClockProvider
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.map
 
 class ReconstructionRepositoryImpl @Inject constructor(
     private val dao: ReconstructionDao,
+    private val mediaStorageManager: MediaStorageManager,
     private val clockProvider: ClockProvider,
 ) : ReconstructionRepository {
 
@@ -92,6 +95,33 @@ class ReconstructionRepositoryImpl @Inject constructor(
             } else {
                 job
             }.toDomain()
+        }
+    }
+
+    override suspend fun importOriginalPhoto(input: ImportOriginalPhotoInput): SeminarAsset {
+        require(input.sourceUri.isNotBlank()) { "Source URI must not be blank." }
+        val stored = mediaStorageManager.importPhotoImage(input.seminarId, input.sourceUri)
+        return try {
+            val now = clockProvider.now()
+            val id = dao.insertAsset(
+                SeminarAssetEntity(
+                    seminarId = input.seminarId,
+                    type = SeminarAssetType.PHOTO_ORIGINAL,
+                    originAssetId = null,
+                    sourceTimelineEventId = null,
+                    sourceRecordingId = null,
+                    sourceClipId = null,
+                    relativePath = stored.relativePath,
+                    mimeType = stored.mimeType,
+                    displayName = stored.displayName,
+                    createdAt = now,
+                    updatedAt = now,
+                ),
+            )
+            dao.getAsset(id)?.toDomain() ?: error("Asset $id was not readable after insert.")
+        } catch (throwable: Throwable) {
+            mediaStorageManager.deleteRelativeFile(stored.relativePath)
+            throw throwable
         }
     }
 

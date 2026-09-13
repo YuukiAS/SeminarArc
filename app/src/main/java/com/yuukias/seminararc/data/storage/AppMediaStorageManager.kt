@@ -12,6 +12,7 @@ import java.nio.file.StandardCopyOption
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,6 +42,41 @@ class AppMediaStorageManager @Inject constructor(
         StoredFile(
             displayName = safeName,
             relativePath = targetFile.relativeTo(context.filesDir).invariantSeparatorsPath,
+        )
+    }
+
+    override suspend fun importPhotoImage(seminarId: Long, sourceUri: String): ImportedPhotoFile = withContext(Dispatchers.IO) {
+        val uri = sourceUri.toUri()
+        val mimeType = context.contentResolver.getType(uri)?.lowercase(Locale.US)
+        val sourceName = (resolveDisplayName(uri) ?: uri.lastPathSegment ?: "slide-image").toDisplayName()
+        val extension = sourceName.imageExtension()
+            ?: mimeType?.imageExtensionFromMime()
+            ?: error("Selected file is not a supported image.")
+        val resolvedMimeType = mimeType ?: extension.mimeTypeFromImageExtension()
+        if (resolvedMimeType?.startsWith("image/") != true) {
+            error("Selected file is not a supported image.")
+        }
+
+        val targetDir = seminarMediaDir(seminarId, "photos").apply { mkdirs() }
+        val timestamp = RECORDING_FILE_TIMESTAMP_FORMATTER.format(Instant.now())
+        val baseName = sourceName.substringBeforeLast('.').toSafeFileToken().ifBlank { "slide-image" }
+        val targetFile = uniqueFile(targetDir, "imported-$timestamp-$baseName", extension)
+        val tempFile = File(targetDir, ".${targetFile.name}.tmp-${System.nanoTime()}")
+
+        try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output -> input.copyTo(output) }
+            } ?: error("Unable to open image URI: $sourceUri")
+            moveReplacing(tempFile, targetFile)
+        } catch (throwable: Throwable) {
+            tempFile.delete()
+            throw throwable
+        }
+
+        ImportedPhotoFile(
+            displayName = sourceName,
+            relativePath = targetFile.relativeTo(context.filesDir).invariantSeparatorsPath,
+            mimeType = resolvedMimeType,
         )
     }
 
@@ -177,8 +213,47 @@ class AppMediaStorageManager @Inject constructor(
             .ifBlank { "default" }
     }
 
+    private fun String.toDisplayName(): String {
+        return replace('\\', '/')
+            .substringAfterLast('/')
+            .trim()
+            .take(MAX_DISPLAY_NAME_LENGTH)
+            .ifBlank { "slide-image" }
+    }
+
+    private fun String.imageExtension(): String? {
+        val extension = substringAfterLast('.', missingDelimiterValue = "")
+            .lowercase(Locale.US)
+            .takeIf { it.isNotBlank() }
+        return extension?.takeIf { it in SUPPORTED_IMAGE_EXTENSIONS }
+    }
+
+    private fun String.imageExtensionFromMime(): String? {
+        return when (this) {
+            "image/jpeg", "image/jpg" -> "jpg"
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/heic" -> "heic"
+            "image/heif" -> "heif"
+            else -> null
+        }
+    }
+
+    private fun String.mimeTypeFromImageExtension(): String? {
+        return when (this) {
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "webp" -> "image/webp"
+            "heic" -> "image/heic"
+            "heif" -> "image/heif"
+            else -> null
+        }
+    }
+
     private companion object {
         const val MAX_VARIANT_KEY_LENGTH = 48
+        const val MAX_DISPLAY_NAME_LENGTH = 120
+        val SUPPORTED_IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "heic", "heif")
         val RECORDING_FILE_TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter
             .ofPattern("yyyyMMdd-HHmmss-SSS")
             .withZone(ZoneOffset.UTC)
