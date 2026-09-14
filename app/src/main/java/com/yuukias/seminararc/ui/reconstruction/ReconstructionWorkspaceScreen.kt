@@ -436,7 +436,9 @@ private fun ReconstructionAssetCard(
             OutlinedTextField(
                 value = editedText,
                 onValueChange = { editedText = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp, max = 220.dp),
                 label = { Text("OCR text") },
                 minLines = 3,
             )
