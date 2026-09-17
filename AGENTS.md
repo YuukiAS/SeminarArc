@@ -30,6 +30,9 @@
 
 ## Emulator-first 测试策略
 
+- 根 `AGENTS.md` 负责醒目的真机安全摘要；详细 device/environment/test
+  mechanics、命令限制、易变 inventory 和历史事故证据由 `docs/DEVICE_TESTING.md`
+  负责。
 - **后续 Android 自动化默认 Emulator-first。** JVM unit tests、Room/repository/ViewModel 测试继续在 WSL canonical repo 运行；Compose/instrumentation/Room migration/connected Android tests 优先在 Windows Emulator 运行。远程物理真机不再承担日常 CI/connected test 角色。
 - Windows Android Studio / Emulator 使用独立 Windows SDK `D:\Android\Sdk`。WSL 与 Windows SDK 可以重复下载 platform/build-tools/Gradle 缓存；为了隔离平台二进制和降低真机风险，不要强行共享 SDK 或 ADB server。
 - Windows/NTFS 测试镜像 checkout 为 `D:\Code\SeminarArc-emulator`，只用于从 `origin/main` 同步代码并在 Windows Gradle/SDK/Emulator 上跑 connected/instrumentation tests。canonical 开发工作区仍是 `/home/yuukias/code/SeminarArc`。测试镜像不得反向成为源码事实来源。
@@ -44,6 +47,9 @@
 
 ## 真机解锁与设备操作安全
 
+- 本节作为 root 中醒目的不可妥协安全摘要保留。详细 mechanics、当前
+  inventory、mixed-emulator fallback 和事故证据见 `docs/DEVICE_TESTING.md`；
+  不要创建第三份 device/environment manual。
 - 当前常用本地测试机：serial `8cc54656`，型号 `GM1910` / OnePlus 7 Pro，Android 10 / API 29；每次真机验收前仍必须用 `adb devices -l` 和 `adb shell getprop` 复核，不要把这些信息当成永久不变。
 - **该真机长期位于远程工位且经常处于无人值守状态。保持 USB / usbipd / WSL / ADB 链路连续可用是最高优先级安全约束，高于完成测试、收集 coverage、运行 instrumentation 或追求一次性验收完整度。只要某个命令是否可能影响连接存在合理不确定性，默认停止并请求用户确认，不得“先试一下”。**
 - **严禁以任何直接或间接方式导致真机从 Windows、usbipd、WSL 或 ADB 中断开、重枚举、切换连接形态或失去当前可访问状态。禁止范围不仅包括显式 disconnect，也包括可能重置 USB/ADB transport、重启设备/服务、切换 USB mode、重新绑定 passthrough、重启 WSL 或触发高风险 instrumentation 安装链的操作。**

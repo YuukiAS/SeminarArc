@@ -84,7 +84,9 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 
 ## 6. Physical-device protection
 
-完整物理真机约束以 `AGENTS.md` 为最高优先级。
+根 `AGENTS.md` 负责醒目的不可妥协安全摘要和 locator。本文件负责详细
+device/environment/test mechanics、命令限制、易变 inventory、mixed-inventory
+流程和历史事故证据。不要创建第三份 device/environment manual。
 
 特别强调：
 
