@@ -14,9 +14,30 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 ### WSL canonical development
 
 - canonical repo：`/home/yuukias/code/SeminarArc`
+- 不要使用旧的 `/home/yuukias/Code/SeminarArc`。
+- JDK 位置：`/home/yuukias/opt/jdk-17`；当前 `JAVA_HOME=/home/yuukias/opt/jdk-17`。
 - WSL Android SDK：`/home/yuukias/Android/Sdk`
+- 当前 `ANDROID_HOME` 和 `ANDROID_SDK_ROOT` 都指向该目录。
 - 负责：JVM tests、build、lint、代码开发、Git、文档。
 - WSL repo 不改指向 Windows SDK。
+- `local.properties` 应保持 WSL 构建路径 `sdk.dir=/home/yuukias/Android/Sdk`。
+- `~/.bashrc` 已写入 JDK、Android SDK 和 scrcpy PATH：`$JAVA_HOME/bin`、
+  `$ANDROID_HOME/cmdline-tools/latest/bin`、`$ANDROID_HOME/platform-tools`、
+  `$SCRCPY_HOME`。
+- Gradle 使用仓库内 wrapper：`./gradlew`；当前 wrapper 为 Gradle `8.10.2`。
+- WSL ADB 位置：`/home/yuukias/Android/Sdk/platform-tools/adb`。
+- Android command-line tools 已在 `PATH`：`sdkmanager` 和 `avdmanager` 位于
+  `/home/yuukias/Android/Sdk/cmdline-tools/latest/bin/`。
+- scrcpy 位置：`/home/yuukias/Android/scrcpy-linux-x86_64-v4.1`；当前
+  `SCRCPY_HOME=/home/yuukias/Android/scrcpy-linux-x86_64-v4.1`，版本为
+  `scrcpy 4.1`。
+- 当前 WSL Android SDK 已安装 `platforms;android-36`、`build-tools;36.0.0`、
+  `platform-tools 37.0.1`，与项目 `compileSdk = 36` 对齐。
+- 当前 `gradle.properties` 固定
+  `kotlin.compiler.execution.strategy=in-process`，用于避免 Kotlin daemon 在
+  `C:\Users\<user>\AppData\Local\kotlin\daemon` 创建 marker/cache 文件；不要为了
+  提速随手改回 daemon，除非同时把 Kotlin daemon home 可靠迁到 `D:\` 并验证不触碰
+  C 盘。
 
 ### Windows Emulator
 
@@ -28,6 +49,25 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 - Windows ADB preferred gate 是仅看到 `emulator-*`。2026-09-10 已新增并验证 mixed-inventory fallback：当 Windows ADB 同时看到 protected physical serial `8cc54656 unauthorized` 与 `emulator-5554 device` 时，禁止 unscoped connected Gradle task，但 task-authorized `adb -s emulator-5554 install` + `adb -s emulator-5554 shell am instrument` 可完成 Emulator-only instrumentation。
 - 2026-08-30 Windows 原生 onboarding/regression 结果：`EMULATOR_REGRESSION_PASS`。
 - 历史 WSL onboarding 尝试曾因 WSL session 无法执行 Windows interop 且 `/mnt/d` 只读而记录 `EMULATOR_INFRA_NEEDS_FIX`；该 blocker 仅适用于当时的 WSL interop 场景，不适用于 Windows 原生 Codex 执行。
+- Android Studio JBR 实际位于 `C:\Android\Android Studio\jbr`；该环境当前为
+  OpenJDK `25.0.2`，与本仓库 Gradle/Kotlin DSL 不兼容。Windows Gradle 验证可使用
+  本地 JDK 17：`D:\Code\_jdks\jdk-17.0.20.1+1`，不要修改系统级 JAVA_HOME。
+- Windows 原生 Codex 执行 Gradle/Android 构建时，大型缓存、wrapper 下载、
+  Gradle user home、Android preferences 和构建环境应显式落在 `D:\`。默认不要让
+  Gradle 写入 `C:\.gradle`、`C:\.android`、`C:\Users\<user>\.gradle` 或其他 C 盘
+  缓存；当前实测组合是
+  `GRADLE_USER_HOME=D:\Code\SeminarArc-emulator\.gradle-user-home`、
+  `ANDROID_PREFS_ROOT=D:\Code\SeminarArc-emulator\.android-user-home`，并给 Gradle
+  JVM 传入 `-Duser.home=D:\Code\SeminarArc-emulator\.gradle-user-home`。
+- Android preference 位置只能设置一种入口；不要同时设置 `ANDROID_USER_HOME`、
+  `ANDROID_PREFS_ROOT` 或 deprecated `ANDROID_SDK_HOME`，否则 AGP 会报 location
+  conflict。
+- 2026-08-30 本 WSL session 中 `/mnt/c` 与 `/mnt/d` 以 `ro` 挂载，且直接执行
+  `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe` 或
+  `/mnt/c/Windows/System32/cmd.exe` 返回 `Invalid argument`。这表示该 Codex/WSL
+  进程暂不能通过 Windows interop 操作 Windows SDK/Emulator，也不能从 WSL 写入
+  `D:\Code\SeminarArc-emulator`；恢复能力需要用户在 Windows/WSL 环境层处理，不得用
+  `wsl --shutdown`、usbipd 或真机 transport 操作绕过。
 
 ### Protected physical device
 
@@ -35,6 +75,8 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 - 通过 usbipd attach 给 WSL。
 - 只用于少量真实硬件/系统 smoke：真实麦克风、CameraX、厂商 ROM 后台/锁屏、notification、真实媒体链路等。
 - 不再作为日常 connected/instrumentation target。
+- 每次真机验收前仍必须用 `adb devices -l` 和 `adb shell getprop` 复核，不要把这些
+  信息当成永久不变。
 
 ## 3. 默认测试矩阵
 
@@ -82,6 +124,12 @@ SeminarArc 后续采用 **Emulator-first + protected physical-device smoke** 的
 
 无论哪条路径，physical serial 永远不得接收 install、shell、input、instrumentation、scrcpy 或 transport 命令。
 
+2026-09-10 Windows 原生 Codex 已验证 mixed-inventory explicit-emulator lane：
+sandbox 内直接运行 `D:\Android\Sdk\platform-tools\adb.exe devices -l` 仍可能失败于
+`Cannot mkdir '\.android': Permission denied`；非 sandbox 且临时设置
+`USERPROFILE`、`HOME`、`ANDROID_SDK_HOME` 到
+`D:\Code\SeminarArc-emulator\.android-user-home` 后，ADB 可枚举设备。
+
 ## 6. Physical-device protection
 
 根 `AGENTS.md` 负责醒目的不可妥协安全摘要和 locator。本文件负责详细
@@ -94,6 +142,52 @@ device/environment/test mechanics、命令限制、易变 inventory、mixed-inve
 - 禁止 agent 自行执行 ADB/usbipd transport 恢复。
 - 物理设备异常只冻结 physical-device channel；只要 WSL headless 或 Emulator 仍能工作，开发任务继续。
 - 真机专项 smoke 必须由 task 明确授权，且使用显式 serial、单步动作和 preflight/postflight。
+- 远程无人值守真机默认禁止作为通用 connected/instrumentation CI 目标。未经用户对
+  该次执行明确授权，不得运行 `connectedDebugAndroidTest`、`connectedAndroidTest`、
+  任何 `connected*AndroidTest` / `device*AndroidTest` Gradle task、会自动安装
+  instrumentation APK 的 connected test、批量 device test、测试 runner 安装链、
+  Gradle Managed Device 对真机的等价流程或其他可能触发 package/transport 重置的
+  自动化设备测试。优先使用 JVM tests、静态检查或 emulator。
+- 除 `adb devices -l` 这种枚举命令外，所有针对真机的 ADB 命令必须显式指定
+  `-s 8cc54656`，不得依赖“只有一台设备”而使用隐式默认 target。执行前仍需先确认
+  当前实际 serial，没有核对时不得盲用历史 serial。
+- 当设备已经通过 usbipd `Attached` 给 WSL 时，不要再启动或使用 Windows 侧 ADB 去
+  争用/探测同一手机；真机 ADB 操作统一使用 WSL 内
+  `/home/yuukias/Android/Sdk/platform-tools/adb`。
+- 如需自动短暂解锁，优先复用 EchoSelect 的 WSL 本地 harness：
+  `/home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py`。
+  默认 PIN secret 文件为 `~/.config/echoselect/device-secrets/8cc54656.pin.wsl`，
+  该文件不是仓库内容，不得复制进 SeminarArc。
+- 可用只读锁屏检查：
+  `python /home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py check-lock-state --serial 8cc54656`。
+- 可用短暂解锁：
+  `python /home/yuukias/code/EchoSelect/scripts/device_test_harness/wsl_device_harness.py unlock --serial 8cc54656 --evidence-root /tmp/seminararc-device-evidence`。
+  该流程只允许 wake/swipe/text/keyevent 这类解锁输入，并通过 `deviceLocked=0`
+  验证成功；输出证据不得包含 PIN。
+- 真机验收期间禁止执行会断开、重置或改变连接形态的命令，包括但不限于
+  `adb disconnect`、`adb reconnect`、`adb kill-server`、`adb reboot`、`adb tcpip`、
+  `adb usb`、`adb pair`、`adb connect`、`svc usb`、修改 `sys.usb.config` / USB 模式、
+  USB detach/unbind、`usbipd attach/detach/bind/unbind`、重启 usbipd 服务、
+  `wsl --shutdown` 或任何等价操作。即使目的是“恢复连接”，也必须先取得用户明确授权。
+- `adb install -r` 只允许在 task 明确需要更新 app 且当前设备链路已确认稳定时使用；
+  必须使用显式 serial，执行前后都必须重新运行 `adb devices -l` 核对同一 serial 仍为
+  `device`。禁止把 `adb install -r` 扩展成 uninstall/reinstall/clear-data 流程。
+- 任何会写入、安装、启动 instrumentation、改变 package 状态、向 UI 注入输入或长时间
+  占用设备的命令，在执行前必须先做设备 preflight，执行后立即做 postflight；不得把
+  多个真机写操作串成无检查的长 shell 链。
+- `scrcpy` 只能作为单一、受控的观察/交互通道使用；禁止 `--tcpip` 或任何改变
+  transport 的选项。启动前后做 ADB 状态检查，且不得与 Gradle connected test、
+  另一个 scrcpy 实例或其他真机自动化并行。
+- 如果 `adb devices -l` 为空、设备状态不是 `device`、serial 改变，或 Windows/WSL 对
+  设备可见性出现任何异常，立即把真机视为连接安全事件并停止 physical-device 子流程；
+  不得为了继续任务自行尝试恢复连接。
+- 如果设备从 `Attached` 退回 `Shared (forced)` 或其他非 Attached 状态，agent 不得
+  自动运行 `usbipd attach`。
+- 真机验收期间禁止卸载 app、清空 app data、删除或移动设备上的用户文件/媒体/数据库，
+  除非用户对该具体动作给出明确授权。
+- `scrcpy -S` 或黑屏只算显示隐私措施，不等于安全锁屏；如果某项验收要求锁屏状态，
+  必须用 `dumpsys trust` / `dumpsys window policy` 或 harness 的 `check-lock-state`
+  明确验证。
 
 ## 7. 2026-08-30 连接事故
 
