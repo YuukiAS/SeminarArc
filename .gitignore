@@ -84,7 +84,12 @@ profiling/
 exports/private/
 private/blackbox-acceptance/
 private/blackbox-fixtures/
+private/visual-regression/
 release/
+
+# Python helper bytecode
+__pycache__/
+*.pyc
 
 # Keep wrapper files, placeholder structure, and checked-in assets
 !gradle/wrapper/

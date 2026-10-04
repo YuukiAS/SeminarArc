@@ -1,6 +1,7 @@
 package com.yuukias.seminararc.ui.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.PhotoCamera
@@ -98,11 +101,19 @@ fun SeminarLibraryScreenContent(
 
             is SeminarLibraryUiState.Ready -> {
                 val ready = uiState
+                val readyContentModifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .padding(horizontal = spacing.space5)
+                    .let { baseModifier ->
+                        if (ready.seminars.isEmpty()) {
+                            baseModifier.verticalScroll(rememberScrollState())
+                        } else {
+                            baseModifier
+                        }
+                    }
                 Column(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .fillMaxSize()
-                        .padding(horizontal = spacing.space5),
+                    modifier = readyContentModifier,
                 ) {
                     Spacer(Modifier.height(spacing.space3))
                     Text(
@@ -125,7 +136,9 @@ fun SeminarLibraryScreenContent(
                     )
                     Spacer(Modifier.height(spacing.space3))
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(spacing.space2),
                     ) {
                         SeminarListFilter.entries.forEach { filter ->

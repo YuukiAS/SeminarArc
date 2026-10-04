@@ -8,6 +8,8 @@
 
 ### 新增
 
+- 新增首套 `0.5.x` visual regression baseline：5 个显示 profile、33 个逐张目检状态，覆盖 normal/small/large-font/landscape/tablet，以及 empty/error/processing/long-text/formula/export/delete 等关键状态；普通 compare run 不得自动覆盖 golden。
+- 新增 `scripts/run-visual-regression.ps1` 与图片比较器：显式管理并恢复 Emulator size/density/font scale/rotation，baseline 缺失、viewport 尺寸不符或显著视觉差异会失败，candidate/diff 只保存在 ignored private 证据目录。
 - 新增第二轮真实 seminar 私有语料验收：按 `round-*` 递归盘点照片、PDF 和录音，记录录音容器元数据，并在 Windows Emulator 上完成 9 张真实投影照片的导入、增强、本地 OCR、关键页、公式代表流程和全量重启持久化。
 - 新增 Reconstruction workspace 的 `Import slide image` 正式用户入口：通过 Android system picker 选择已有 slide/photo，复制到 app-private seminar media storage，并登记为 seminar-scoped `PHOTO_ORIGINAL` asset，不伪造 timeline event 或 recording offset。
 - 新增 black-box harness 的 imported-photo acquisition mode：focused B04/B07 可将 deterministic PNG 推送到 Emulator Downloads，再经系统 picker 完成真实 UI 导入，保留 CameraX fixture limitation 为独立 hardware/emulator boundary。
@@ -85,6 +87,10 @@
 
 ### 修复
 
+- 修复短 viewport 下 New Seminar 保存失败后 `Title is required.` 停留在不可见滚动位置的问题；错误出现时会回到表单顶部，并补充 Compose 回归测试。
+- 修复窄屏 filter row 横向溢出和短屏 empty library CTA 不可达的问题；filter row 可横向滚动，空状态主体可纵向滚动。
+- 修复 OCR edit 缺少成功持久化反馈的问题；Room 更新成功后明确显示 `OCR result saved.`，black-box harness 可据此验证真实保存边界。
+- 修复 black-box harness 在 redirected Gradle 输出、横屏键盘、长列表双向滚动、可拖拽照片区域和系统 picker 记忆目录下的多项不稳定行为。
 - 修复真实语料与确定性 black-box harness 的多项假失败：正确定位包含 `OCR text` 标签的 Compose `EditText`，不再用文件名测试 OCR 搜索，将长列表手势移出可拖拽图片区域，延后公式编辑流程，并通过 DocumentsUI `Show roots` 返回 `Downloads`。
 - 修复 deterministic B04/B07 black-box closeout 被 Windows Emulator CameraX fixture 阻塞的问题：Reconstruction/Formula 的 deterministic QA 改由正式 imported-photo 用户路径完成，CameraX capture quality 仍留给真实硬件专项验收。
 - 修复 black-box harness 多处 selective-run 稳定性问题：单场景 selection 数组 unwrap、DocumentsUI 文件名只在 content description 中暴露、key-slide/OCR/formula persistence 需要滚动后的 UI tree 验证，以及 B07 formula label 输入断言过窄。

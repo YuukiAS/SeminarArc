@@ -116,6 +116,8 @@ Plan:
 
 ### D1 — Harness foundation
 
+Status: COMPLETE.
+
 Task:
 
 `prompts/tasks/0.5.x_blackbox_acceptance_harness_task.md`
@@ -135,6 +137,8 @@ Acceptance 必须从安装后的 App 外部驱动，通过 UI tree / UI Automato
 
 ### D2 — Research-flow black-box
 
+Status: COMPLETE.
+
 Harness foundation 稳定后再覆盖：
 
 - B04 Reconstruction；
@@ -145,6 +149,8 @@ Harness foundation 稳定后再覆盖：
 未配置的 live ASR / AI / Notion / formula providers 只验证 unavailable 状态正确，不要求用户手工证明未实现功能。
 
 ### D3 — Visual regression
+
+Status: COMPLETE. 已建立 5 个显示 profile、33 个逐张目检状态的 canonical golden；结果见 `prompts/tasks/0.5.x_visual_regression_result.md`。
 
 核心 E2E 稳定后建立 screenshot/golden：
 
@@ -162,6 +168,8 @@ Harness foundation 稳定后再覆盖：
 Golden 更新必须显式批准，测试失败不能自动接受新截图。
 
 ### D4 — Exploratory / device matrix
+
+Status: ACTIVE. 下一执行入口为 `prompts/tasks/0.5.x_exploratory_stress_task.md`。
 
 在核心 E2E 稳定后：
 

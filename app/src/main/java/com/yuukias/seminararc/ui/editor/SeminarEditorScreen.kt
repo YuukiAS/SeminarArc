@@ -131,11 +131,17 @@ fun SeminarEditorScreenContent(
             }
 
             is SeminarEditorUiState.Editing -> {
+                val editorScrollState = rememberScrollState()
+                LaunchedEffect(uiState.errorMessage) {
+                    if (uiState.errorMessage != null) {
+                        editorScrollState.animateScrollTo(0)
+                    }
+                }
                 Column(
                     modifier = Modifier
                         .padding(innerPadding)
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(editorScrollState)
                         .padding(spacing.space5),
                     verticalArrangement = Arrangement.spacedBy(spacing.space4),
                 ) {

@@ -158,9 +158,11 @@ class ReconstructionWorkspaceViewModel @Inject constructor(
     fun onEditOcrResult(assetId: Long, editedText: String) {
         viewModelScope.launch {
             val updated = reconstructionRepository.editOcrResult(assetId, editedText)
-            if (!updated) {
-                _events.emit(ReconstructionWorkspaceEvent.ShowMessage("OCR result was not updated."))
-            }
+            _events.emit(
+                ReconstructionWorkspaceEvent.ShowMessage(
+                    if (updated) "OCR result saved." else "OCR result was not updated.",
+                ),
+            )
         }
     }
 

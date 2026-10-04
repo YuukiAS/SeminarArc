@@ -127,7 +127,9 @@ Windows ADB 即使同时能看到受保护真机，所有非 inventory ADB 操�
 
 长期计划：[`docs/plans/0.5.x-blackbox-acceptance-plan.md`](docs/plans/0.5.x-blackbox-acceptance-plan.md)
 
-当前第一张执行任务：[`prompts/tasks/0.5.x_blackbox_acceptance_harness_task.md`](prompts/tasks/0.5.x_blackbox_acceptance_harness_task.md)
+当前已完成 visual regression：[`prompts/tasks/0.5.x_visual_regression_result.md`](prompts/tasks/0.5.x_visual_regression_result.md)
+
+下一张执行任务：`prompts/tasks/0.5.x_exploratory_stress_task.md`
 
 第一阶段先建立 `scripts/run-blackbox-acceptance.ps1`，并自动覆盖：
 
@@ -143,11 +145,17 @@ Windows ADB 即使同时能看到受保护真机，所有非 inventory ADB 操�
 
 CameraX 在 Windows Emulator 上的 deterministic camera fixture 仍单独记录为 Emulator/hardware acquisition limitation；它没有被改写为 CameraX PASS。真实相机质量、方向和速度仍保留给后续真实硬件 acceptance。
 
+当前还已完成：
+
+- 第二轮真实 seminar 私有语料：9 张照片的导入、增强、OCR、关键页和重启持久化均为 9/9 PASS；2 段录音完成私有 inventory，不伪装成产品录音导入能力；
+- 首套 visual golden：5 个显示 profile、33 个逐张目检状态，覆盖 normal/small/large-font/landscape/tablet；
+- visual comparator：baseline 缺失/尺寸不符/显著差异会失败，普通运行不能自动覆盖 golden。
+
 后续再依次扩展：
 
-1. real-world media corpus robustness；
-2. screenshot visual regression（小屏、大字体、长文本、error/empty/loading）；
-3. fixed-seed Monkey / multi-device；
+1. fixed-seed Monkey 与确定性压力路径；
+2. API 29/36 关键流程 device matrix；
+3. internal release 决策；
 4. major alpha / `0.9.x` 再评估 Firebase Test Lab Robo / 小型真实设备矩阵。
 
 每个自动 scenario 应输出 PASS/FAIL、screenshot、UI tree、scoped logcat 和耗时证据。普通 navigation、layout、accessibility semantics、persistence、cleanup bug 由 Codex 自动修复并复测，不要求用户逐项证明按钮是否工作。

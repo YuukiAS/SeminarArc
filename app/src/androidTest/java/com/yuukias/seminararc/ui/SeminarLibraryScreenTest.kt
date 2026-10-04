@@ -1,8 +1,14 @@
 package com.yuukias.seminararc.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import com.yuukias.seminararc.domain.model.SeminarListFilter
 import com.yuukias.seminararc.domain.model.SeminarStatus
 import com.yuukias.seminararc.domain.model.SeminarSummary
@@ -37,6 +43,30 @@ class SeminarLibraryScreenTest {
         }
 
         composeRule.onNodeWithText("Your seminar library is empty").assertIsDisplayed()
+    }
+
+    @Test
+    fun compactHeight_emptyStateRemainsReachable() {
+        composeRule.setContent {
+            SeminarArcTheme {
+                Box(Modifier.width(800.dp).height(360.dp)) {
+                    SeminarLibraryScreenContent(
+                        uiState = SeminarLibraryUiState.Ready(
+                            query = "",
+                            filter = SeminarListFilter.ALL,
+                            seminars = emptyList(),
+                        ),
+                        onCreateSeminar = {},
+                        onOpenSeminar = { _ -> },
+                        onQueryChanged = { _ -> },
+                        onFilterChanged = { _ -> },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Your seminar library is empty").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Create seminar").performScrollTo().assertIsDisplayed()
     }
 
     @Test

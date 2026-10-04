@@ -423,6 +423,9 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已完成 `0.5.x_formula_provider_settings_boundary`：`FormulaOcrProvider` 暴露 availability/capability/status，Reconstruction workspace 显示当前 live formula OCR 不可用和 Manual LaTeX 本地可用，不引入 credential 或上传。
 - 已完成 `0.5.x_formula_closeout_readiness`：0.5.x 第一阶段本地安全 foundation 达到 alpha 候选状态。
 - 已完成 `0.5.x_emulator_explicit_serial_resume`：2026-09-10 Windows ADB 同时看到 `8cc54656 unauthorized` 和 `emulator-5554 device` 时，按 mixed-inventory explicit-emulator lane 禁用 unscoped connected Gradle task，改用 `adb -s emulator-5554` 显式 install + `am instrument`；完整 instrumentation `OK (24 tests)`，internal APK 从 `0.3.1-internal.1` 覆盖升级到 `0.5.0-alpha.1` 并启动成功。
+- 已完成第二轮 real-world media corpus：9 张真实投影照片在 API 36 Emulator 上完成导入、增强、本地 OCR、关键页和全量重启持久化，9/9 PASS；2 段录音只做私有 inventory，不冒充外部录音导入能力。
+- 已完成 `0.5.x_visual_regression`：建立 5 个显示 profile、33 个逐张目检状态的 canonical golden，覆盖 normal/small/large-font/landscape/tablet；普通 compare run 不得自动覆盖 baseline。
+- 当前下一门槛为 `0.5.x_exploratory_stress`：fixed-seed Monkey、确定性压力路径和 API 29/36 device matrix；完成前不作新的 internal release 判断。
 - Mathpix 是高准确度付费云候选，但需要 authenticated API、billing 和 credential/backend/user-key 决策；live provider 暂不进入 APK。
 - PaddleOCR formula recognition 和 pix2tex/LaTeX-OCR 可作为自建/本地候选继续评估，但需要模型大小、Android packaging、性能、耗电、依赖和模型权重 license 审计。
 - 第一阶段优先实现 formula region selection data model、可编辑 LaTeX result、`FormulaOcrProvider` fake/manual contract、BibTeX/RIS deterministic export 和 export polish。

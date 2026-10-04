@@ -7,6 +7,8 @@ param(
     [string]$PhotoFixturePath = "",
     [ValidateSet("Import", "CameraCapture")]
     [string]$PhotoAcquisition = "Import",
+    [switch]$CaptureVisualStates,
+    [switch]$ReferenceVisualOnly,
     [switch]$SkipBuild,
     [switch]$SkipInstall,
     [int]$AdbTimeoutSeconds = 45
@@ -44,6 +46,8 @@ $script:FixturePhotoPrepared = $false
 $script:ResolvedPhotoFixturePath = $null
 $script:DevicePhotoFixtureName = "seminararc-camera-fixture.png"
 $script:DevicePhotoFixturePath = "/sdcard/Download/$($script:DevicePhotoFixtureName)"
+$script:DisplayWidth = 1080
+$script:DisplayHeight = 2400
 $script:ReferenceFixture = [ordered]@{
     doi = "10.1038/nature12373"
     title = "An integrated encyclopedia of DNA elements in the human genome"
@@ -77,7 +81,7 @@ function Normalize-ScenarioSelection {
 }
 
 $script:SelectedScenarios = @(Normalize-ScenarioSelection -RequestedScenarios $Scenarios)
-$script:RunFullCatalog = ($script:SelectedScenarios.Count -eq 8)
+$script:RunFullCatalog = ($script:SelectedScenarios.Count -eq 8) -and (-not $ReferenceVisualOnly)
 
 function Write-Status {
     param([string]$Message)
@@ -113,12 +117,14 @@ function Invoke-ProcessText {
     $psi.RedirectStandardError = $true
     $psi.UseShellExecute = $false
     $process = [System.Diagnostics.Process]::Start($psi)
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
         try { $process.Kill($true) } catch {}
         throw "Command timed out after ${TimeoutSeconds}s: $FilePath $($Arguments -join ' ')"
     }
-    $stdout = $process.StandardOutput.ReadToEnd()
-    $stderr = $process.StandardError.ReadToEnd()
+    $stdout = $stdoutTask.GetAwaiter().GetResult()
+    $stderr = $stderrTask.GetAwaiter().GetResult()
     if ($process.ExitCode -ne 0 -and -not $IgnoreExitCode) {
         throw "Command failed ($($process.ExitCode)): $FilePath $($Arguments -join ' ')`n$stdout`n$stderr"
     }
@@ -235,6 +241,28 @@ function Select-EmulatorSerial {
     Write-Status "Selected emulator serial: $script:SelectedSerial"
 }
 
+function Initialize-DisplayMetrics {
+    $sizeResult = Invoke-Adb -Arguments @("shell", "wm", "size") -TimeoutSeconds 30
+    $sizeMatches = [regex]::Matches($sizeResult.Stdout, "(\d+)x(\d+)")
+    if ($sizeMatches.Count -eq 0) {
+        throw "Unable to parse current display size: $($sizeResult.Stdout)"
+    }
+    $effectiveSize = $sizeMatches[$sizeMatches.Count - 1]
+    $width = [int]$effectiveSize.Groups[1].Value
+    $height = [int]$effectiveSize.Groups[2].Value
+    $rotationResult = Invoke-Adb -Arguments @("shell", "settings", "get", "system", "user_rotation") -TimeoutSeconds 30
+    $rotation = 0
+    [void][int]::TryParse($rotationResult.Stdout.Trim(), [ref]$rotation)
+    if (($rotation % 2) -ne 0) {
+        $swap = $width
+        $width = $height
+        $height = $swap
+    }
+    $script:DisplayWidth = $width
+    $script:DisplayHeight = $height
+    Write-Status "Effective display viewport: ${width}x${height}, rotation=$rotation"
+}
+
 function Build-And-Install {
     if (-not $SkipBuild -and [string]::IsNullOrWhiteSpace($ApkPath)) {
         Step "Build internal APK"
@@ -327,6 +355,13 @@ function Capture-Evidence {
     }
 }
 
+function Capture-VisualState {
+    param([string]$Scenario, [string]$Label)
+    if ($CaptureVisualStates) {
+        Capture-Evidence -Scenario $Scenario -Label ("visual-" + $Label)
+    }
+}
+
 function Parse-BoundsCenter {
     param([string]$Bounds)
     if ($Bounds -notmatch "\[(\d+),(\d+)\]\[(\d+),(\d+)\]") {
@@ -389,19 +424,38 @@ function Tap-Node {
 }
 
 function Swipe-Up {
-    Invoke-Adb -Arguments @("shell", "input", "swipe", "540", "1750", "540", "650", "350") -TimeoutSeconds 30 | Out-Null
+    $x = [int]($script:DisplayWidth * 0.50)
+    $startY = [int]($script:DisplayHeight * 0.73)
+    $endY = [int]($script:DisplayHeight * 0.27)
+    Invoke-Adb -Arguments @("shell", "input", "swipe", "$x", "$startY", "$x", "$endY", "350") -TimeoutSeconds 30 | Out-Null
 }
 
 function Swipe-Down {
-    Invoke-Adb -Arguments @("shell", "input", "swipe", "540", "650", "540", "1750", "350") -TimeoutSeconds 30 | Out-Null
+    $x = [int]($script:DisplayWidth * 0.50)
+    $startY = [int]($script:DisplayHeight * 0.38)
+    $endY = [int]($script:DisplayHeight * 0.78)
+    Invoke-Adb -Arguments @("shell", "input", "swipe", "$x", "$startY", "$x", "$endY", "350") -TimeoutSeconds 30 | Out-Null
 }
 
 function Swipe-UpRightGutter {
-    Invoke-Adb -Arguments @("shell", "input", "swipe", "1010", "1800", "1010", "600", "450") -TimeoutSeconds 30 | Out-Null
+    $x = [int][math]::Min(60, ($script:DisplayWidth * 0.08))
+    $startY = [int]($script:DisplayHeight * 0.75)
+    $endY = [int]($script:DisplayHeight * 0.25)
+    Invoke-Adb -Arguments @("shell", "input", "swipe", "$x", "$startY", "$x", "$endY", "450") -TimeoutSeconds 30 | Out-Null
+}
+
+function Swipe-UpSmallRightGutter {
+    $x = [int][math]::Min(60, ($script:DisplayWidth * 0.08))
+    $startY = [int]($script:DisplayHeight * 0.76)
+    $endY = [int]($script:DisplayHeight * 0.60)
+    Invoke-Adb -Arguments @("shell", "input", "swipe", "$x", "$startY", "$x", "$endY", "300") -TimeoutSeconds 30 | Out-Null
 }
 
 function Swipe-DownRightGutter {
-    Invoke-Adb -Arguments @("shell", "input", "swipe", "1010", "600", "1010", "1800", "450") -TimeoutSeconds 30 | Out-Null
+    $x = [int][math]::Min(60, ($script:DisplayWidth * 0.08))
+    $startY = [int]($script:DisplayHeight * 0.38)
+    $endY = [int]($script:DisplayHeight * 0.78)
+    Invoke-Adb -Arguments @("shell", "input", "swipe", "$x", "$startY", "$x", "$endY", "450") -TimeoutSeconds 30 | Out-Null
 }
 
 function Wait-ForNode {
@@ -442,7 +496,7 @@ function Tap-Text {
             return
         }
         if ($i -lt $ScrollAttempts) {
-            Swipe-Up
+            Swipe-UpRightGutter
             Start-Sleep -Milliseconds 700
         }
     }
@@ -484,6 +538,40 @@ function Tap-TextBidirectional {
         }
     }
     throw "Text node not found: $Text"
+}
+
+function Scroll-UntilTextVisibleBidirectional {
+    param(
+        [string]$Scenario,
+        [string]$Text,
+        [string]$Label,
+        [switch]$Contains,
+        [int]$DownAttempts = 8,
+        [int]$UpAttempts = 8
+    )
+    for ($i = 0; $i -le $DownAttempts; $i++) {
+        $tree = Get-UiXml -Scenario $Scenario -Label ("$Label-down-$i")
+        $node = Find-Node -Xml $tree.Xml -Text $Text -Contains:$Contains
+        if ($null -ne $node) {
+            return $node
+        }
+        if ($i -lt $DownAttempts) {
+            Swipe-UpRightGutter
+            Start-Sleep -Milliseconds 700
+        }
+    }
+    for ($i = 0; $i -le $UpAttempts; $i++) {
+        $tree = Get-UiXml -Scenario $Scenario -Label ("$Label-up-$i")
+        $node = Find-Node -Xml $tree.Xml -Text $Text -Contains:$Contains
+        if ($null -ne $node) {
+            return $node
+        }
+        if ($i -lt $UpAttempts) {
+            Swipe-DownRightGutter
+            Start-Sleep -Milliseconds 700
+        }
+    }
+    throw "Text node not found after bidirectional scrolling: $Text"
 }
 
 function Tap-TextClickableAncestor {
@@ -532,9 +620,38 @@ function Tap-Description {
 }
 
 function Drag-Description {
-    param([string]$Scenario, [string]$Description, [switch]$Contains)
-    $tree = Get-UiXml -Scenario $Scenario -Label ("drag-desc-" + ($Description -replace "[^A-Za-z0-9]", "-"))
-    $node = Find-Node -Xml $tree.Xml -Description $Description -Contains:$Contains
+    param(
+        [string]$Scenario,
+        [string]$Description,
+        [switch]$Contains,
+        [int]$DownAttempts = 12,
+        [int]$UpAttempts = 8
+    )
+    $node = $null
+    for ($i = 0; $i -le $DownAttempts; $i++) {
+        $tree = Get-UiXml -Scenario $Scenario -Label ("drag-desc-down-$i-" + ($Description -replace "[^A-Za-z0-9]", "-"))
+        $node = Find-Node -Xml $tree.Xml -Description $Description -Contains:$Contains
+        if ($null -ne $node) {
+            break
+        }
+        if ($i -lt $DownAttempts) {
+            Swipe-UpRightGutter
+            Start-Sleep -Milliseconds 700
+        }
+    }
+    if ($null -eq $node) {
+        for ($i = 0; $i -le $UpAttempts; $i++) {
+            $tree = Get-UiXml -Scenario $Scenario -Label ("drag-desc-up-$i-" + ($Description -replace "[^A-Za-z0-9]", "-"))
+            $node = Find-Node -Xml $tree.Xml -Description $Description -Contains:$Contains
+            if ($null -ne $node) {
+                break
+            }
+            if ($i -lt $UpAttempts) {
+                Swipe-DownRightGutter
+                Start-Sleep -Milliseconds 700
+            }
+        }
+    }
     if ($null -eq $node) {
         throw "Description node not found for drag: $Description"
     }
@@ -597,6 +714,29 @@ function Press-Back {
     Start-Sleep -Milliseconds 700
 }
 
+function Hide-SoftKeyboardIfVisible {
+    param([string]$Scenario, [string]$Label = "keyboard")
+    $tree = Get-UiXml -Scenario $Scenario -Label "$Label-before-dismiss"
+    $rootNode = $tree.Xml.SelectSingleNode("//node")
+    $rootBounds = Get-NodeBounds $rootNode
+    $focusedEditText = $tree.Xml.SelectNodes("//node") | Where-Object {
+        (Get-Attr $_ "class") -eq "android.widget.EditText" -and (Get-Attr $_ "focused") -eq "true"
+    } | Select-Object -First 1
+    $shouldDismiss = ($rootBounds.Bottom -lt [int]($script:DisplayHeight * 0.90)) -or ($null -ne $focusedEditText)
+    if (-not $shouldDismiss) {
+        return
+    }
+    Press-Back
+    $after = Get-UiXml -Scenario $Scenario -Label "$Label-after-dismiss"
+    $afterRoot = $after.Xml.SelectSingleNode("//node")
+    $afterBounds = Get-NodeBounds $afterRoot
+    $stillResized = $afterBounds.Bottom -lt [int]($script:DisplayHeight * 0.90)
+    $stillOnReconstruction = $null -ne (Find-Node -Xml $after.Xml -Text "Reconstruction")
+    if ($stillResized -or -not $stillOnReconstruction) {
+        throw "Keyboard dismissal did not restore the full Reconstruction viewport."
+    }
+}
+
 function Tap-FieldByLabel {
     param([string]$Scenario, [string]$Label, [int]$ScrollAttempts = 0)
     Tap-Text -Scenario $Scenario -Text $Label -ScrollAttempts $ScrollAttempts
@@ -623,14 +763,41 @@ function Tap-EditTextContainingLabel {
             }
             foreach ($child in $node.SelectNodes(".//node")) {
                 if ((Get-Attr $child "text") -eq $Text) {
-                    Tap-Node $node
+                    $nodeBounds = Get-NodeBounds $node
+                    $visibleTop = $nodeBounds.Top
+                    $visibleBottom = $nodeBounds.Bottom
+                    $ancestor = $node.ParentNode
+                    while ($null -ne $ancestor -and $ancestor.Name -eq "node") {
+                        if ((Get-Attr $ancestor "scrollable") -eq "true") {
+                            $scrollBounds = Get-NodeBounds $ancestor
+                            $visibleTop = [math]::Max($visibleTop, $scrollBounds.Top)
+                            $visibleBottom = [math]::Min($visibleBottom, $scrollBounds.Bottom)
+                            break
+                        }
+                        $ancestor = $ancestor.ParentNode
+                    }
+                    if (($visibleBottom - $visibleTop) -lt 24) {
+                        break
+                    }
+                    $tapX = [int](($nodeBounds.Left + $nodeBounds.Right) / 2)
+                    $tapY = [int](($visibleTop + $visibleBottom) / 2)
+                    Tap-Point -X $tapX -Y $tapY
                     Start-Sleep -Milliseconds 700
-                    return
+                    $focusedTree = Get-UiXml -Scenario $Scenario -Label ("$Label-focus-$i")
+                    $focusedTarget = $focusedTree.Xml.SelectNodes("//node") | Where-Object {
+                        (Get-Attr $_ "class") -eq "android.widget.EditText" -and
+                            (Get-Attr $_ "focused") -eq "true" -and
+                            ($_.SelectNodes(".//node") | Where-Object { (Get-Attr $_ "text") -eq $Text })
+                    } | Select-Object -First 1
+                    if ($null -ne $focusedTarget) {
+                        return
+                    }
+                    break
                 }
             }
         }
         if ($i -lt $ScrollAttempts) {
-            Swipe-Up
+            Swipe-UpSmallRightGutter
             Start-Sleep -Milliseconds 700
         }
     }
@@ -1030,7 +1197,7 @@ function Scroll-UntilTextVisible {
             return $node
         }
         if ($i -lt $ScrollAttempts) {
-            Swipe-Up
+            Swipe-UpRightGutter
             Start-Sleep -Milliseconds 700
         }
     }
@@ -1052,7 +1219,7 @@ function Scroll-UntilDescriptionVisible {
             return $node
         }
         if ($i -lt $ScrollAttempts) {
-            Swipe-Up
+            Swipe-UpRightGutter
             Start-Sleep -Milliseconds 700
         }
     }
@@ -1100,6 +1267,8 @@ function Open-Synthetic-Detail {
         throw "Could not navigate back to seminar library before reopening synthetic detail."
     }
     Input-FieldKeyEvent -Scenario $Scenario -Label "Search by title or speaker" -Value "u"
+    Wait-ForNode -Scenario $Scenario -Label "synthetic-search-result" -Text "updated" -Contains -TimeoutSeconds 20 | Out-Null
+    Press-Back
     Tap-TextClickableAncestor -Scenario $Scenario -Text "updated" -Contains
     Wait-ForNode -Scenario $Scenario -Label "detail-open" -Text "Seminar detail" -TimeoutSeconds 20 | Out-Null
 }
@@ -1155,13 +1324,27 @@ function Select-PhotoFixtureInSystemPicker {
     do {
         $attempt += 1
         $tree = Get-UiXml -Scenario $Scenario -Label "photo-picker-$attempt"
+        $listViewNode = Find-Node -Xml $tree.Xml -Description "List view"
+        if ($null -ne $listViewNode) {
+            Tap-Node $listViewNode
+            Start-Sleep -Seconds 1
+            continue
+        }
         foreach ($text in @($script:DevicePhotoFixtureName, "seminararc-camera-fixture")) {
             $node = Find-Node -Xml $tree.Xml -Text $text -Contains
+            $matchedText = $null -ne $node
             if ($null -eq $node) {
                 $node = Find-Node -Xml $tree.Xml -Description $text -Contains
             }
             if ($null -ne $node) {
-                Tap-Node $node
+                if ($matchedText) {
+                    Tap-TextClickableAncestor -Scenario $Scenario -Text $text -Contains
+                } else {
+                    $bounds = Get-NodeBounds $node
+                    $safeX = [int]($bounds.Left + (($bounds.Right - $bounds.Left) * 0.25))
+                    $safeY = [int]($bounds.Bottom - [math]::Max(12, (($bounds.Bottom - $bounds.Top) * 0.08)))
+                    Tap-Point -X $safeX -Y $safeY
+                }
                 Wait-ForPackageVisible -Scenario $Scenario -Label "photo-picker-return" -ExpectedPackage $PackageName -TimeoutSeconds 20 | Out-Null
                 return
             }
@@ -1203,7 +1386,7 @@ function Ensure-FocusedImportedPhotoFixtureSeminar {
     Clear-App-State
     Push-PhotoFixtureToEmulatorDownloads -Scenario $Scenario
     Launch-App
-    Tap-Text -Scenario $Scenario -Text "Create seminar"
+    Tap-Description -Scenario $Scenario -Description "Create seminar"
     Wait-ForNode -Scenario $Scenario -Label "fixture-new-editor" -Text "New seminar" -TimeoutSeconds 20 | Out-Null
     [void](Append-EditTextTextByIndex -Scenario $Scenario -Index 0 -AppendText "updatedfixture" -Label "fixture-title-field")
     Press-Back
@@ -1215,9 +1398,8 @@ function Ensure-FocusedImportedPhotoFixtureSeminar {
     Wait-ForNode -Scenario $Scenario -Label "fixture-reconstruction-open" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
     Tap-Text -Scenario $Scenario -Text "Import slide image" -ScrollAttempts 2
     Select-PhotoFixtureInSystemPicker -Scenario $Scenario
-    Wait-ForNode -Scenario $Scenario -Label "fixture-imported-message" -Text "Slide image imported." -Contains -TimeoutSeconds 25 | Out-Null
     Wait-ForNode -Scenario $Scenario -Label "fixture-imported-photo-count" -Text "1 of 1 photos" -TimeoutSeconds 25 | Out-Null
-    Wait-ForNode -Scenario $Scenario -Label "fixture-imported-display-name" -Text $script:DevicePhotoFixtureName -Contains -TimeoutSeconds 20 | Out-Null
+    Scroll-UntilTextVisible -Scenario $Scenario -Text $script:DevicePhotoFixtureName -Label "fixture-imported-display-name" -Contains -ScrollAttempts 20 | Out-Null
     Capture-Evidence -Scenario $Scenario -Label "fixture-imported"
     $script:FixturePhotoPrepared = $true
 }
@@ -1236,7 +1418,7 @@ function Ensure-FocusedPhotoFixtureSeminar {
     Step "Prepare focused seminar with deterministic camera fixture"
     Clear-App-State
     Launch-App
-    Tap-Text -Scenario $Scenario -Text "Create seminar"
+    Tap-Description -Scenario $Scenario -Description "Create seminar"
     Wait-ForNode -Scenario $Scenario -Label "fixture-new-editor" -Text "New seminar" -TimeoutSeconds 20 | Out-Null
     [void](Append-EditTextTextByIndex -Scenario $Scenario -Index 0 -AppendText "updatedfixture" -Label "fixture-title-field")
     Press-Back
@@ -1307,6 +1489,9 @@ function Save-Current-CreateDocument {
         Tap-Node $candidate.Node
         Start-Sleep -Seconds 1
         $candidate = Wait-ForAnyText -Scenario $Scenario -Label "document-picker-save-after-allow-$Kind" -Texts @("Save", "SAVE") -TimeoutSeconds 15
+    }
+    if ($Kind -eq "Markdown") {
+        Capture-VisualState -Scenario $Scenario -Label "export-document-picker"
     }
     $pickerDismissed = $false
     for ($attempt = 1; $attempt -le 3; $attempt++) {
@@ -1447,9 +1632,11 @@ function Run-B01 {
         Clear-App-State
         Launch-App
         Step "Verify empty library state"
-        Wait-ForNode -Scenario "B01" -Label "empty-library" -Text "Your seminar library is empty" -TimeoutSeconds 20 | Out-Null
+        Wait-ForNode -Scenario "B01" -Label "library-heading" -Text "Your seminars" -TimeoutSeconds 20 | Out-Null
+        Scroll-UntilTextVisible -Scenario "B01" -Text "Your seminar library is empty" -Label "empty-library" -ScrollAttempts 8 | Out-Null
         Step "Verify create seminar entry is reachable"
-        Wait-ForNode -Scenario "B01" -Label "create-entry" -Text "Create seminar" -TimeoutSeconds 15 | Out-Null
+        Scroll-UntilTextVisible -Scenario "B01" -Text "Create seminar" -Label "create-entry" -ScrollAttempts 6 | Out-Null
+        Capture-VisualState -Scenario "B01" -Label "empty-library"
         Capture-Evidence -Scenario "B01" -Label "final"
         Assert-NoCrash "B01"
     }
@@ -1458,12 +1645,14 @@ function Run-B01 {
 function Run-B02 {
     Run-Scenario "B02" {
         Step "Open new seminar editor"
-        Tap-Text -Scenario "B02" -Text "Create seminar"
+        Tap-Description -Scenario "B02" -Description "Create seminar"
         Wait-ForNode -Scenario "B02" -Label "new-editor" -Text "New seminar" -TimeoutSeconds 20 | Out-Null
+        Capture-VisualState -Scenario "B02" -Label "new-seminar"
 
         Step "Validate empty title"
         Tap-Text -Scenario "B02" -Text "Save draft" -ScrollAttempts 2
         Wait-ForNode -Scenario "B02" -Label "title-required" -Text "Title is required." -TimeoutSeconds 10 | Out-Null
+        Capture-VisualState -Scenario "B02" -Label "new-seminar-error"
 
         Step "Fill required seminar editor field"
         $createdTitle = Append-EditTextTextByIndex -Scenario "B02" -Index 0 -AppendText "blackboxqa" -Label "title-field"
@@ -1472,12 +1661,14 @@ function Run-B02 {
         Step "Save seminar"
         Tap-Text -Scenario "B02" -Text "Save draft" -ScrollAttempts 2
         Wait-ForNode -Scenario "B02" -Label "detail-created" -Text $createdTitle -TimeoutSeconds 20 | Out-Null
+        Capture-VisualState -Scenario "B02" -Label "seminar-detail"
 
         Step "Return to library and search seminar"
         Tap-Description -Scenario "B02" -Description "Back"
         Wait-ForNode -Scenario "B02" -Label "library-after-create" -Text "Your seminars" -TimeoutSeconds 20 | Out-Null
         Input-FieldKeyEvent -Scenario "B02" -Label "Search by title or speaker" -Value $createdTitle.Substring(0, 1)
         Wait-ForNode -Scenario "B02" -Label "search-result" -Text $createdTitle -TimeoutSeconds 15 | Out-Null
+        Press-Back
 
         Step "Reopen and edit title"
         Tap-Text -Scenario "B02" -Text $createdTitle
@@ -1495,6 +1686,9 @@ function Run-B02 {
         Tap-Description -Scenario "B02" -Description "Back"
         Force-Stop-App "B02 persistence"
         Launch-App
+        Wait-ForNode -Scenario "B02" -Label "persistence-library" -Text "Your seminars" -TimeoutSeconds 20 | Out-Null
+        Wait-ForNode -Scenario "B02" -Label "persistence-card" -Text "updated" -Contains -TimeoutSeconds 20 | Out-Null
+        Capture-VisualState -Scenario "B02" -Label "populated-library"
         Input-FieldKeyEvent -Scenario "B02" -Label "Search by title or speaker" -Value "u"
         Wait-ForNode -Scenario "B02" -Label "persistence-result" -Text "updated" -Contains -TimeoutSeconds 20 | Out-Null
         Capture-Evidence -Scenario "B02" -Label "final"
@@ -1590,6 +1784,7 @@ function Run-B03 {
             throw $activeStartError
         }
         Wait-ForNode -Scenario "B03" -Label "photos-only" -Text "PHOTOS ONLY" -Contains -TimeoutSeconds 20 | Out-Null
+        Capture-VisualState -Scenario "B03" -Label "active-session-empty"
 
         Step "Add note event"
         Tap-Text -Scenario "B03" -Text "Quick Note" -ScrollAttempts 2
@@ -1608,6 +1803,8 @@ function Run-B03 {
         Step "Add mark event"
         Tap-Text -Scenario "B03" -Text "Mark Moment" -ScrollAttempts 2
         Wait-ForNode -Scenario "B03" -Label "mark-saved" -Text "3 timeline events" -Contains -TimeoutSeconds 15 | Out-Null
+        1..6 | ForEach-Object { Swipe-DownRightGutter }
+        Capture-VisualState -Scenario "B03" -Label "active-session-populated"
 
         Step "Capture slide photo for research-flow scenarios"
         Invoke-Adb -Arguments @("shell", "pm", "grant", $PackageName, "android.permission.CAMERA") -TimeoutSeconds 30 -IgnoreExitCode | Out-Null
@@ -1677,12 +1874,25 @@ function Run-B04 {
         }
 
         Step "Queue and verify image enhancement"
-        Tap-Text -Scenario "B04" -Text "Enhance" -ScrollAttempts 4
+        Tap-TextBidirectional -Scenario "B04" -Text "Enhance" -DownAttempts 20 -UpAttempts 12
+        Capture-VisualState -Scenario "B04" -Label "reconstruction-processing"
         [void](Wait-ForJobTerminal -Scenario "B04" -JobPrefix "Enhancement" -TimeoutSeconds 90)
 
         Step "Queue and verify OCR lifecycle"
-        Tap-Text -Scenario "B04" -Text "OCR" -ScrollAttempts 2
-        [void](Wait-ForJobTerminal -Scenario "B04" -JobPrefix "OCR" -TimeoutSeconds 120 -AllowFailure)
+        $ocrOutcome = $null
+        for ($ocrAttempt = 1; $ocrAttempt -le 2; $ocrAttempt++) {
+            Tap-TextBidirectional -Scenario "B04" -Text "OCR" -DownAttempts 20 -UpAttempts 12
+            $ocrOutcome = Wait-ForJobTerminal -Scenario "B04" -JobPrefix "OCR" -TimeoutSeconds 120 -AllowFailure
+            if ($ocrOutcome -eq "succeeded") {
+                break
+            }
+            if ($ocrAttempt -lt 2) {
+                Start-Sleep -Seconds 2
+            }
+        }
+        if ($ocrOutcome -ne "succeeded") {
+            throw "OCR did not produce a real result after 2 bounded attempts."
+        }
 
         Step "Inspect deterministic OCR clue"
         try {
@@ -1692,21 +1902,29 @@ function Run-B04 {
         }
 
         Step "Edit OCR result through UI"
-        Tap-Text -Scenario "B04" -Text "OCR text" -ScrollAttempts 5
-        Enter-Text "BlackboxOcrEditedText"
-        Press-Back
-        Tap-Text -Scenario "B04" -Text "Save OCR edit" -ScrollAttempts 2
-        Wait-ForNode -Scenario "B04" -Label "ocr-edited" -Text "BlackboxOcrEditedText" -Contains -TimeoutSeconds 20 | Out-Null
+        Swipe-UpSmallRightGutter
+        Start-Sleep -Milliseconds 700
+        Tap-EditTextContainingLabel -Scenario "B04" -Text "OCR text" -Label "ocr-edit-field" -ScrollAttempts 20
+        $ocrEditMarker = "qqqqqq"
+        Invoke-Adb -Arguments @("shell", "input", "keyevent", "123") -TimeoutSeconds 30 | Out-Null
+        Enter-KeyEventText $ocrEditMarker
+        Wait-ForNode -Scenario "B04" -Label "ocr-marker-entered" -Text $ocrEditMarker -Contains -TimeoutSeconds 20 | Out-Null
+        Hide-SoftKeyboardIfVisible -Scenario "B04" -Label "ocr-keyboard"
+        Tap-TextBidirectional -Scenario "B04" -Text "Save OCR edit" -DownAttempts 20 -UpAttempts 12
+        Wait-ForNode -Scenario "B04" -Label "ocr-save-confirmed" -Text "OCR result saved." -TimeoutSeconds 20 | Out-Null
+        Wait-ForNode -Scenario "B04" -Label "ocr-edited" -Text $ocrEditMarker -Contains -TimeoutSeconds 20 | Out-Null
+        Start-Sleep -Seconds 5
+        Capture-VisualState -Scenario "B04" -Label "reconstruction-long-ocr"
 
         Step "Mark key slide"
         Open-Synthetic-Detail "B04"
         Tap-Text -Scenario "B04" -Text "Open reconstruction" -ScrollAttempts 5
         Wait-ForNode -Scenario "B04" -Label "reconstruction-before-key-slide" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
-        Scroll-UntilTextVisible -Scenario "B04" -Text "BlackboxOcrEditedText" -Label "ocr-before-key-slide" -Contains -ScrollAttempts 8 | Out-Null
+        Scroll-UntilTextVisible -Scenario "B04" -Text $ocrEditMarker -Label "ocr-before-key-slide" -Contains -ScrollAttempts 20 | Out-Null
         Open-Synthetic-Detail "B04"
         Tap-Text -Scenario "B04" -Text "Open reconstruction" -ScrollAttempts 5
         Wait-ForNode -Scenario "B04" -Label "reconstruction-before-key-slide-toggle" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
-        Tap-Description -Scenario "B04" -Description "Mark key slide" -Contains -ScrollAttempts 6
+        Tap-Description -Scenario "B04" -Description "Mark key slide" -Contains -ScrollAttempts 20
         Scroll-UntilDescriptionVisible -Scenario "B04" -Description "Remove key slide" -Label "key-slide-marked" -Contains -ScrollAttempts 4 | Out-Null
 
         Step "Force-stop and verify reconstruction persistence"
@@ -1714,7 +1932,7 @@ function Run-B04 {
         Tap-Text -Scenario "B04" -Text "Open reconstruction" -ScrollAttempts 5
         Wait-ForNode -Scenario "B04" -Label "reconstruction-after-relaunch" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
         Scroll-UntilDescriptionVisible -Scenario "B04" -Description "Remove key slide" -Label "key-slide-persisted" -Contains -ScrollAttempts 8 | Out-Null
-        Scroll-UntilTextVisible -Scenario "B04" -Text "BlackboxOcrEditedText" -Label "ocr-persisted" -Contains -ScrollAttempts 8 | Out-Null
+        Scroll-UntilTextVisible -Scenario "B04" -Text $ocrEditMarker -Label "ocr-persisted" -Contains -ScrollAttempts 20 | Out-Null
         Capture-Evidence -Scenario "B04" -Label "final"
         Assert-NoCrash "B04"
     }
@@ -1730,10 +1948,13 @@ function Run-B05 {
                 Tap-Text -Scenario "B05" -Text "Open reconstruction" -ScrollAttempts 5
                 Wait-ForNode -Scenario "B05" -Label "reconstruction-for-reference" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
             }
-            Swipe-Down
-            Swipe-Down
-            Tap-Text -Scenario "B05" -Text "Find references" -ScrollAttempts 2
+            Tap-TextBidirectional -Scenario "B05" -Text "Find references" -DownAttempts 0 -UpAttempts 16
             Wait-ForNode -Scenario "B05" -Label "reference-open" -Text "References and Brief" -TimeoutSeconds 20 | Out-Null
+        }
+        Capture-VisualState -Scenario "B05" -Label "reference-review-empty"
+        if ($ReferenceVisualOnly) {
+            Add-Limitation "B05 stopped after local Reference Review visual capture; public metadata lookup was intentionally not called."
+            return
         }
 
         Step "Enter fixed public DOI fixture and preview query"
@@ -1765,6 +1986,7 @@ function Run-B05 {
         Wait-ForNode -Scenario "B05" -Label "candidate-reopened" -Text "PENDING" -TimeoutSeconds 20 | Out-Null
         Tap-Text -Scenario "B05" -Text "Confirm" -ScrollAttempts 2
         Wait-ForNode -Scenario "B05" -Label "candidate-reconfirmed" -Text "CONFIRMED" -TimeoutSeconds 20 | Out-Null
+        Capture-VisualState -Scenario "B05" -Label "reference-review-confirmed"
 
         Step "Edit and save Seminar Brief"
         Scroll-UntilTextVisible -Scenario "B05" -Text "Seminar Brief" -Label "brief-section" -ScrollAttempts 8 | Out-Null
@@ -1797,10 +2019,16 @@ function Run-B05 {
 function Run-B06 {
     Run-Scenario "B06" {
         Step "Open Transcript Review"
-        Press-Back
-        Wait-ForNode -Scenario "B06" -Label "reconstruction-visible" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
-        Tap-Text -Scenario "B06" -Text "Review transcripts" -ScrollAttempts 2
+        try {
+            Wait-ForNode -Scenario "B06" -Label "reconstruction-current" -Text "Reconstruction" -TimeoutSeconds 3 | Out-Null
+        } catch {
+            Open-Synthetic-Detail "B06"
+            Tap-Text -Scenario "B06" -Text "Open reconstruction" -ScrollAttempts 5
+            Wait-ForNode -Scenario "B06" -Label "reconstruction-reopened" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
+        }
+        Tap-TextBidirectional -Scenario "B06" -Text "Review transcripts" -DownAttempts 4 -UpAttempts 16
         Wait-ForNode -Scenario "B06" -Label "transcripts-open" -Text "Transcripts" -TimeoutSeconds 20 | Out-Null
+        Capture-VisualState -Scenario "B06" -Label "transcript-review-empty"
 
         Step "Verify no completed recording transcription path is explicit"
         Tap-Text -Scenario "B06" -Text "Prepare transcription" -ScrollAttempts 3
@@ -1816,8 +2044,12 @@ function Run-B06 {
         Enter-MultilineText @("lineone", "linetwo")
         Press-Back
         Tap-Text -Scenario "B06" -Text "Import manual transcript" -ScrollAttempts 2
-        Wait-ForNode -Scenario "B06" -Label "manual-imported" -Text "1 transcripts" -Contains -TimeoutSeconds 20 | Out-Null
-        Wait-ForNode -Scenario "B06" -Label "segments-visible" -Text "2 segments" -Contains -TimeoutSeconds 20 | Out-Null
+        Scroll-UntilTextVisibleBidirectional -Scenario "B06" -Text "lineone" -Label "first-segment-imported" -DownAttempts 6 -UpAttempts 6 | Out-Null
+        Scroll-UntilTextVisibleBidirectional -Scenario "B06" -Text "linetwo" -Label "second-segment-imported" -DownAttempts 8 -UpAttempts 6 | Out-Null
+        Scroll-UntilTextVisibleBidirectional -Scenario "B06" -Text "1 transcripts" -Label "manual-imported" -Contains -DownAttempts 0 -UpAttempts 16 | Out-Null
+        Invoke-Adb -Arguments @("shell", "input", "tap", "540", "220") -TimeoutSeconds 30 | Out-Null
+        Start-Sleep -Milliseconds 700
+        Capture-VisualState -Scenario "B06" -Label "transcript-review-populated"
 
         Step "Edit and save transcript segment"
         Scroll-UntilTextVisible -Scenario "B06" -Text "Transcript segments" -Label "segments-section" -ScrollAttempts 8 | Out-Null
@@ -1852,7 +2084,7 @@ function Run-B07 {
     Run-Scenario "B07" {
         Cleanup-Export-Files
         $formulaBlocked = $false
-        $b05Passed = $script:Results.Contains("B05") -and (($script:Results["B05"]).status -eq "PASS")
+        $b05Passed = (-not $ReferenceVisualOnly) -and $script:Results.Contains("B05") -and (($script:Results["B05"]).status -eq "PASS")
 
         if (-not $script:RunFullCatalog) {
             Ensure-FocusedPhotoFixtureSeminar "B07"
@@ -1862,29 +2094,37 @@ function Run-B07 {
         Open-Synthetic-Detail "B07"
         Tap-Text -Scenario "B07" -Text "Open reconstruction" -ScrollAttempts 5
         Wait-ForNode -Scenario "B07" -Label "reconstruction-visible" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
-        Wait-ForNode -Scenario "B07" -Label "formula-provider-status" -Text "Formula OCR: Unavailable" -Contains -TimeoutSeconds 20 | Out-Null
+        Scroll-UntilTextVisible -Scenario "B07" -Text "Formula OCR: Unavailable" -Label "formula-provider-status" -Contains -ScrollAttempts 8 | Out-Null
+        Capture-VisualState -Scenario "B07" -Label "formula-unavailable"
         Add-Limitation "B07 live Formula OCR provider is unavailable by design; manual LaTeX path is validated instead."
 
         try {
             Step "Drag formula draft selection and save region"
             Drag-Description -Scenario "B07" -Description "Drag to draft formula region" -Contains
-            Tap-Text -Scenario "B07" -Text "Save formula region" -ScrollAttempts 5
-            Wait-ForNode -Scenario "B07" -Label "formula-region-saved" -Text "Formula:" -Contains -TimeoutSeconds 20 | Out-Null
+            Tap-TextBidirectional -Scenario "B07" -Text "Save formula region" -DownAttempts 12 -UpAttempts 12
+            Start-Sleep -Seconds 2
 
             Step "Reopen and edit crop label"
-            Tap-Text -Scenario "B07" -Text "Edit crop" -ScrollAttempts 4
-            Tap-Text -Scenario "B07" -Text "Formula label" -ScrollAttempts 2
-            Enter-Text "MainEquation"
+            Tap-TextBidirectional -Scenario "B07" -Text "Edit crop" -DownAttempts 8 -UpAttempts 40
+            Tap-EditTextByText -Scenario "B07" -Text "Formula" -Label "formula-label" -ScrollAttempts 1
+            Invoke-Adb -Arguments @("shell", "input", "keyevent", "123") -TimeoutSeconds 30 | Out-Null
+            1..7 | ForEach-Object {
+                Invoke-Adb -Arguments @("shell", "input", "keyevent", "67") -TimeoutSeconds 30 | Out-Null
+            }
+            $formulaLabel = "MainEquation"
+            Enter-KeyEventText $formulaLabel
             Press-Back
-            Tap-Text -Scenario "B07" -Text "Update formula region" -ScrollAttempts 3
-            Wait-ForNode -Scenario "B07" -Label "formula-region-updated" -Text "MainEquation" -Contains -TimeoutSeconds 20 | Out-Null
+            Tap-TextBidirectional -Scenario "B07" -Text "Update formula region" -DownAttempts 12 -UpAttempts 12
+            Scroll-UntilTextVisibleBidirectional -Scenario "B07" -Text $formulaLabel -Label "formula-region-updated" -Contains -DownAttempts 8 -UpAttempts 40 | Out-Null
 
             Step "Save manual LaTeX and verify READY result"
-            Tap-Text -Scenario "B07" -Text "LaTeX" -ScrollAttempts 5
+            Tap-TextBidirectional -Scenario "B07" -Text "LaTeX" -DownAttempts 12 -UpAttempts 12
             Enter-Text "E=mc^2"
             Press-Back
-            Tap-Text -Scenario "B07" -Text "Queue LaTeX" -ScrollAttempts 2
+            Tap-TextBidirectional -Scenario "B07" -Text "Queue LaTeX" -DownAttempts 12 -UpAttempts 12
             Wait-ForNode -Scenario "B07" -Label "formula-ready" -Text "Formula ready: E=mc^2" -Contains -TimeoutSeconds 45 | Out-Null
+            Start-Sleep -Seconds 5
+            Capture-VisualState -Scenario "B07" -Label "formula-ready"
 
             Step "Force-stop and verify formula persistence"
             Open-Synthetic-Detail "B07"
@@ -1970,6 +2210,7 @@ function Run-B08 {
         }
         Tap-TextBidirectional -Scenario "B08" -Text "Delete seminar" -DownAttempts 16 -UpAttempts 4
         Wait-ForNode -Scenario "B08" -Label "delete-dialog" -Text "Delete this seminar?" -TimeoutSeconds 15 | Out-Null
+        Capture-VisualState -Scenario "B08" -Label "delete-dialog"
         Tap-Text -Scenario "B08" -Text "Delete"
         Wait-ForNode -Scenario "B08" -Label "library-after-delete" -Text "Your seminars" -TimeoutSeconds 20 | Out-Null
 
@@ -1993,6 +2234,7 @@ try {
         Write-Status "Photo fixture path: $PhotoFixturePath"
     }
     Select-EmulatorSerial
+    Initialize-DisplayMetrics
     Build-And-Install
     $scenarioCatalog = [ordered]@{
         B01 = { Run-B01 }

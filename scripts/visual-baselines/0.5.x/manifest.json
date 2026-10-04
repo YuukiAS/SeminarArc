@@ -1,0 +1,314 @@
+{
+  "version": 1,
+  "acceptedAtUtc": "2026-10-04T22:22:21.8583010Z",
+  "sourceRunId": "20261004T222016038Z-reviewed-merge",
+  "initial": true,
+  "profiles": [
+    {
+      "profile": "phone-normal",
+      "scenarios": "B01,B02,B03,B04,B05,B06,B07,B08",
+      "size": "reset",
+      "density": "reset",
+      "fontScale": "1.0",
+      "rotation": "0"
+    },
+    {
+      "profile": "phone-small",
+      "scenarios": "B01,B02,B04,B06,B07",
+      "size": "900x2000",
+      "density": "420",
+      "fontScale": "1.0",
+      "rotation": "0"
+    },
+    {
+      "profile": "phone-large-font",
+      "scenarios": "B01,B02,B04,B06,B07",
+      "size": "reset",
+      "density": "reset",
+      "fontScale": "1.3",
+      "rotation": "0"
+    },
+    {
+      "profile": "phone-landscape",
+      "scenarios": "B01,B02,B04,B07",
+      "size": "reset",
+      "density": "reset",
+      "fontScale": "1.0",
+      "rotation": "1"
+    },
+    {
+      "profile": "tablet",
+      "scenarios": "B01,B02,B04,B06,B07",
+      "size": "1600x2560",
+      "density": "320",
+      "fontScale": "1.0",
+      "rotation": "0"
+    }
+  ],
+  "captures": [
+    {
+      "profile": "phone-normal",
+      "scenario": "B01",
+      "label": "visual-empty-library",
+      "relativePath": "phone-normal\\B01-visual-empty-library.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B02",
+      "label": "visual-new-seminar-error",
+      "relativePath": "phone-normal\\B02-visual-new-seminar-error.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B02",
+      "label": "visual-new-seminar",
+      "relativePath": "phone-normal\\B02-visual-new-seminar.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B02",
+      "label": "visual-populated-library",
+      "relativePath": "phone-normal\\B02-visual-populated-library.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B02",
+      "label": "visual-seminar-detail",
+      "relativePath": "phone-normal\\B02-visual-seminar-detail.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B03",
+      "label": "visual-active-session-empty",
+      "relativePath": "phone-normal\\B03-visual-active-session-empty.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B03",
+      "label": "visual-active-session-populated",
+      "relativePath": "phone-normal\\B03-visual-active-session-populated.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B04",
+      "label": "visual-reconstruction-long-ocr",
+      "relativePath": "phone-normal\\B04-visual-reconstruction-long-ocr.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B04",
+      "label": "visual-reconstruction-processing",
+      "relativePath": "phone-normal\\B04-visual-reconstruction-processing.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B05",
+      "label": "visual-reference-review-empty",
+      "relativePath": "phone-normal\\B05-visual-reference-review-empty.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B06",
+      "label": "visual-transcript-review-empty",
+      "relativePath": "phone-normal\\B06-visual-transcript-review-empty.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B06",
+      "label": "visual-transcript-review-populated",
+      "relativePath": "phone-normal\\B06-visual-transcript-review-populated.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B07",
+      "label": "visual-export-document-picker",
+      "relativePath": "phone-normal\\B07-visual-export-document-picker.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B07",
+      "label": "visual-formula-ready",
+      "relativePath": "phone-normal\\B07-visual-formula-ready.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B07",
+      "label": "visual-formula-unavailable",
+      "relativePath": "phone-normal\\B07-visual-formula-unavailable.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-normal",
+      "scenario": "B08",
+      "label": "visual-delete-dialog",
+      "relativePath": "phone-normal\\B08-visual-delete-dialog.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-small",
+      "scenario": "B01",
+      "label": "visual-empty-library",
+      "relativePath": "phone-small\\B01-visual-empty-library.png",
+      "width": 900,
+      "height": 2000
+    },
+    {
+      "profile": "phone-small",
+      "scenario": "B02",
+      "label": "visual-new-seminar-error",
+      "relativePath": "phone-small\\B02-visual-new-seminar-error.png",
+      "width": 900,
+      "height": 2000
+    },
+    {
+      "profile": "phone-small",
+      "scenario": "B04",
+      "label": "visual-reconstruction-long-ocr",
+      "relativePath": "phone-small\\B04-visual-reconstruction-long-ocr.png",
+      "width": 900,
+      "height": 2000
+    },
+    {
+      "profile": "phone-small",
+      "scenario": "B06",
+      "label": "visual-transcript-review-populated",
+      "relativePath": "phone-small\\B06-visual-transcript-review-populated.png",
+      "width": 900,
+      "height": 2000
+    },
+    {
+      "profile": "phone-small",
+      "scenario": "B07",
+      "label": "visual-formula-ready",
+      "relativePath": "phone-small\\B07-visual-formula-ready.png",
+      "width": 900,
+      "height": 2000
+    },
+    {
+      "profile": "phone-large-font",
+      "scenario": "B02",
+      "label": "visual-new-seminar-error",
+      "relativePath": "phone-large-font\\B02-visual-new-seminar-error.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-large-font",
+      "scenario": "B04",
+      "label": "visual-reconstruction-long-ocr",
+      "relativePath": "phone-large-font\\B04-visual-reconstruction-long-ocr.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-large-font",
+      "scenario": "B06",
+      "label": "visual-transcript-review-populated",
+      "relativePath": "phone-large-font\\B06-visual-transcript-review-populated.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-large-font",
+      "scenario": "B07",
+      "label": "visual-formula-ready",
+      "relativePath": "phone-large-font\\B07-visual-formula-ready.png",
+      "width": 1080,
+      "height": 2400
+    },
+    {
+      "profile": "phone-landscape",
+      "scenario": "B02",
+      "label": "visual-seminar-detail",
+      "relativePath": "phone-landscape\\B02-visual-seminar-detail.png",
+      "width": 2400,
+      "height": 1080
+    },
+    {
+      "profile": "phone-landscape",
+      "scenario": "B04",
+      "label": "visual-reconstruction-long-ocr",
+      "relativePath": "phone-landscape\\B04-visual-reconstruction-long-ocr.png",
+      "width": 2400,
+      "height": 1080
+    },
+    {
+      "profile": "phone-landscape",
+      "scenario": "B07",
+      "label": "visual-export-document-picker",
+      "relativePath": "phone-landscape\\B07-visual-export-document-picker.png",
+      "width": 2400,
+      "height": 1080
+    },
+    {
+      "profile": "phone-landscape",
+      "scenario": "B07",
+      "label": "visual-formula-ready",
+      "relativePath": "phone-landscape\\B07-visual-formula-ready.png",
+      "width": 2400,
+      "height": 1080
+    },
+    {
+      "profile": "tablet",
+      "scenario": "B02",
+      "label": "visual-populated-library",
+      "relativePath": "tablet\\B02-visual-populated-library.png",
+      "width": 1600,
+      "height": 2560
+    },
+    {
+      "profile": "tablet",
+      "scenario": "B04",
+      "label": "visual-reconstruction-long-ocr",
+      "relativePath": "tablet\\B04-visual-reconstruction-long-ocr.png",
+      "width": 1600,
+      "height": 2560
+    },
+    {
+      "profile": "tablet",
+      "scenario": "B06",
+      "label": "visual-transcript-review-populated",
+      "relativePath": "tablet\\B06-visual-transcript-review-populated.png",
+      "width": 1600,
+      "height": 2560
+    },
+    {
+      "profile": "tablet",
+      "scenario": "B07",
+      "label": "visual-formula-ready",
+      "relativePath": "tablet\\B07-visual-formula-ready.png",
+      "width": 1600,
+      "height": 2560
+    }
+  ]
+}
