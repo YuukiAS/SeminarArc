@@ -84,6 +84,8 @@ profiling/
 exports/private/
 private/blackbox-acceptance/
 private/blackbox-fixtures/
+private/android-sdk-tools/
+private/exploratory-stress/
 private/visual-regression/
 release/
 

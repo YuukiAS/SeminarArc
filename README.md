@@ -16,10 +16,11 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.4.x` Transcription / Summary / Notion-ready local-safe foundation：COMPLETE
 - `0.5.x` Formula / Research Export local-safe alpha：COMPLETE
 - 当前 Room schema：**v7**
-- 当前主动工程阶段：**0.5.x automated black-box QA hardening**
+- `0.5.x` automated black-box QA hardening：**COMPLETE**
+- 当前主动工程阶段：**真实硬件 dogfood + workstation-local ASR benchmark 准备**
 - `0.9.x` release readiness audit：`AUDIT_COMPLETE_NOT_READY_FOR_PRODUCTION_RELEASE`
 
-这意味着当前版本适合 **个人 dogfood / 内测**，但还不是 Google Play production release。当前优先级不是继续扩展 provider 或新产品功能，而是把大部分“真实用户路径是否能走通”的验收自动化，减少用户逐页逐按钮手工测试。
+这意味着当前版本适合 **个人 dogfood / 内测**，但还不是 Google Play production release。核心真实用户路径的自动验收、视觉回归、固定种子压力和 API 29/36 矩阵已经关闭；后续人工验收应集中在真实麦克风、CameraX、锁屏/后台和连续使用手感。
 
 ## 下载与安装
 
@@ -121,15 +122,15 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 
 Windows ADB 即使同时能看到受保护真机，所有非 inventory ADB 操作也只允许显式 targeting Emulator；远程真机不承担日常 connected/instrumentation 测试。
 
-## 当前 QA 阶段：先自动验收，再让用户做少量真机验收
+## Automated QA 已完成，人工只保留真实硬件边界
 
-当前主动阶段是 **0.5.x automated black-box QA hardening**。目标是把已安装的 `SeminarArc Internal` 当成真实用户看到的黑盒 App，通过 Windows Emulator 自动完成 CRUD、navigation、persistence、session lifecycle、cleanup，以及后续 Reconstruction / Reference / Transcript / Formula / export 用户流。
+`0.5.x automated black-box QA hardening` 已完成。Harness 把已安装的 `SeminarArc Internal` 当成真实用户看到的黑盒 App，通过 Windows Emulator 自动完成 CRUD、navigation、persistence、session lifecycle、cleanup、Reconstruction、Reference、Transcript、Formula 和 export 用户流。
 
 长期计划：[`docs/plans/0.5.x-blackbox-acceptance-plan.md`](docs/plans/0.5.x-blackbox-acceptance-plan.md)
 
-当前已完成 visual regression：[`prompts/tasks/0.5.x_visual_regression_result.md`](prompts/tasks/0.5.x_visual_regression_result.md)
+QA closeout：[`prompts/tasks/0.5.x_qa_closeout_result.md`](prompts/tasks/0.5.x_qa_closeout_result.md)
 
-下一张执行任务：`prompts/tasks/0.5.x_exploratory_stress_task.md`
+ASR 下一步评估：[`docs/notes/0.5.x-asr-next-step-assessment.md`](docs/notes/0.5.x-asr-next-step-assessment.md)
 
 第一阶段先建立 `scripts/run-blackbox-acceptance.ps1`，并自动覆盖：
 
@@ -150,13 +151,11 @@ CameraX 在 Windows Emulator 上的 deterministic camera fixture 仍单独记录
 - 第二轮真实 seminar 私有语料：9 张照片的导入、增强、OCR、关键页和重启持久化均为 9/9 PASS；2 段录音完成私有 inventory，不伪装成产品录音导入能力；
 - 首套 visual golden：5 个显示 profile、33 个逐张目检状态，覆盖 normal/small/large-font/landscape/tablet；
 - visual comparator：baseline 缺失/尺寸不符/显著差异会失败，普通运行不能自动覆盖 golden。
+- bounded fixed-seed stress：API 36 normal/small 与 API 29 共 3,750 个计入验收的事件，无未解释 crash/ANR，强停恢复全部 PASS；
+- device matrix：API 36 与 API 29 分别完成关键黑盒路径，API 29 覆盖 B01/B02/B04/B07 imported-photo/formula/export；
+- release 决策：`NO_NEW_RELEASE`，继续使用 `v0.5.0-alpha.2`。
 
-后续再依次扩展：
-
-1. fixed-seed Monkey 与确定性压力路径；
-2. API 29/36 关键流程 device matrix；
-3. internal release 决策；
-4. major alpha / `0.9.x` 再评估 Firebase Test Lab Robo / 小型真实设备矩阵。
+下一阶段优先执行 workstation-local whisper.cpp benchmark，再根据私有真实录音的准确度、速度、内存和时间戳证据决定是否创建 Android provider task。major alpha / `0.9.x` 才评估 Firebase Test Lab Robo、小型真实设备矩阵和 production readiness。
 
 每个自动 scenario 应输出 PASS/FAIL、screenshot、UI tree、scoped logcat 和耗时证据。普通 navigation、layout、accessibility semantics、persistence、cleanup bug 由 Codex 自动修复并复测，不要求用户逐项证明按钮是否工作。
 
@@ -170,7 +169,7 @@ CameraX 在 Windows Emulator 上的 deterministic camera fixture 仍单独记录
 - 一次低风险真实 seminar 的连续操作手感；
 - 主观 UI/UX 判断。
 
-因此当前 **不要求用户手工把所有页面和按钮逐项点完**。现有 APK 可以安装留在手机上，但大范围 dogfood 应等第一轮 black-box harness 把基础路径跑过后再做。
+因此当前 **不要求用户手工把所有页面和按钮逐项点完**。现有 APK 可以继续用于个人 dogfood；如发现问题，只需优先报告真实硬件、后台/锁屏或主观体验差异。
 
 发现真实硬件问题时，优先记录：操作步骤、实际结果 vs 预期、是否可复现、Android 版本/机型，以及是否涉及录音、相机、后台/锁屏、导出或联网 lookup。不要在 bug report 中上传真实 seminar 的敏感录音、照片或完整 OCR 文本。
 

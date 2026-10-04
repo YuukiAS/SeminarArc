@@ -8,6 +8,11 @@
 
 ### 新增
 
+- 完成 `0.5.x` automated black-box QA hardening：API 36 normal/small 与 API 29 device matrix 共 3,750 个计入验收的 fixed-seed Monkey 事件，全部无未解释 crash/ANR，强停恢复 PASS。
+- 新增 `scripts/run-exploratory-stress.ps1`：提供 package-scoped fixed seed、事件上限、crash/ANR 证据、外部系统 Activity 归位、恢复检查、small profile 恢复和 ignored private summary。
+- 新增 task-owned `SeminarArc_API29` 验证 lane：API 29 Google APIs x86_64 上 B01/B02/B04/B07 imported-photo/formula/export 关键路径 PASS；验证结束后仅关闭独立 API 29 AVD。
+- 完成 ASR 下一步评估：先做 workstation 完全离线 whisper.cpp benchmark，再决定 Android provider integration；当前不下载模型、不上传真实录音，也不把大型模型打入 APK。
+- 完成 QA release 决策：未发现达到新 alpha 阈值的 P0/P1 或 dogfood blocker，保持 `v0.5.0-alpha.2`，不创建无意义的 `0.5.1-alpha.*`。
 - 新增首套 `0.5.x` visual regression baseline：5 个显示 profile、33 个逐张目检状态，覆盖 normal/small/large-font/landscape/tablet，以及 empty/error/processing/long-text/formula/export/delete 等关键状态；普通 compare run 不得自动覆盖 golden。
 - 新增 `scripts/run-visual-regression.ps1` 与图片比较器：显式管理并恢复 Emulator size/density/font scale/rotation，baseline 缺失、viewport 尺寸不符或显著视觉差异会失败，candidate/diff 只保存在 ignored private 证据目录。
 - 新增第二轮真实 seminar 私有语料验收：按 `round-*` 递归盘点照片、PDF 和录音，记录录音容器元数据，并在 Windows Emulator 上完成 9 张真实投影照片的导入、增强、本地 OCR、关键页、公式代表流程和全量重启持久化。

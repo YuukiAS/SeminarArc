@@ -2,7 +2,7 @@
 
 Status: active roadmap
 
-Updated: 2026-09-13
+Updated: 2026-10-05
 
 ## Goal
 
@@ -19,7 +19,8 @@ Updated: 2026-09-13
 - `0.5.x` Formula + Research Export local-safe alpha: COMPLETE.
 - Current Room schema: v7.
 - Current installable prerelease: `v0.5.0-alpha.2`.
-- Current active engineering phase: **0.5.x automated black-box QA hardening**.
+- `0.5.x` automated black-box QA hardening: COMPLETE.
+- Current active engineering phase: **real-device dogfood boundary + workstation-local ASR benchmark preparation**.
 - `0.9.x` audit: `AUDIT_COMPLETE_NOT_READY_FOR_PRODUCTION_RELEASE`.
 - Default connected/instrumentation target: Windows Pixel 8 API 36 Emulator.
 - Protected GM1910 is not a daily automated test target.
@@ -106,7 +107,7 @@ Deferred：
 
 ## Milestone D — 0.5.x Automated Black-box QA Hardening
 
-Status: ACTIVE.
+Status: COMPLETE.
 
 Plan:
 
@@ -169,7 +170,7 @@ Golden 更新必须显式批准，测试失败不能自动接受新截图。
 
 ### D4 — Exploratory / device matrix
 
-Status: ACTIVE. 下一执行入口为 `prompts/tasks/0.5.x_exploratory_stress_task.md`。
+Status: COMPLETE. 结果见 `prompts/tasks/0.5.x_exploratory_stress_result.md`。
 
 在核心 E2E 稳定后：
 
@@ -180,6 +181,16 @@ Status: ACTIVE. 下一执行入口为 `prompts/tasks/0.5.x_exploratory_stress_ta
 - major alpha / 0.9 再评估 Firebase Test Lab Robo / 小型真实设备矩阵。
 
 没有现成 Firebase 配置时，不自动创建付费资源。
+
+完成证据：
+
+- API 36 normal：`505001` / `505002` / `505003`，每枚 750 events，PASS；
+- API 36 small：`505101`，500 events，PASS，显示参数已恢复；
+- API 29 Google APIs x86_64：B01/B02/B04/B07 与 `505201` 500 events，PASS；
+- API 36 post-fix B07 与 seed recovery regression，PASS；
+- 没有未解释 crash/ANR，physical serial 从未成为目标。
+
+QA 总收口见 `prompts/tasks/0.5.x_qa_closeout_result.md`。Release 决策为 `NO_NEW_RELEASE`，继续使用 `v0.5.0-alpha.2`。
 
 ### Human-only acceptance after automation
 
@@ -230,14 +241,12 @@ Before release work require：
 
 Current default sequence：
 
-1. execute current black-box task；
-2. review result；
-3. continue research-flow black-box if foundation is stable；
-4. visual regression；
-5. exploratory/multi-device；
-6. user performs only remaining human-only hardware/usability checks；
-7. if serious bug fixes justify it, publish a new internal alpha；
-8. only then revisit `0.9.x` production-readiness decisions。
+1. keep the completed black-box/visual/stress baseline as regression infrastructure；
+2. run the proposed workstation-local ASR benchmark without changing the APK；
+3. user performs only remaining human-only hardware/usability checks；
+4. create an Android ASR integration task only if benchmark evidence supports it；
+5. publish a new internal alpha only when serious product fixes justify it；
+6. revisit `0.9.x` production-readiness decisions separately。
 
 Codex may automatically fix ordinary navigation/layout/accessibility/persistence/export/testability bugs discovered by QA and add regression coverage without repeatedly asking the user.
 
@@ -257,6 +266,6 @@ Current dogfood build:
 
 `v0.5.0-alpha.2`
 
-用户可从 GitHub Releases 直接下载 APK。现阶段可以保留安装在手机上，但不要求用户在 automated black-box foundation 完成前手工逐项走完整功能清单。
+用户可从 GitHub Releases 直接下载 APK，并继续用于个人 dogfood。Automated black-box foundation 已完成，不要求用户手工逐项走完整功能清单；人工反馈应集中在真实麦克风、CameraX、后台/锁屏和连续使用体验。
 
 后续同 applicationId + 同 signing key + 更高 versionCode 的 Release APK 可以直接覆盖升级并保留数据。production Play build 使用独立 release identity/signing 计划。

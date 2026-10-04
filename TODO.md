@@ -425,7 +425,9 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已完成 `0.5.x_emulator_explicit_serial_resume`：2026-09-10 Windows ADB 同时看到 `8cc54656 unauthorized` 和 `emulator-5554 device` 时，按 mixed-inventory explicit-emulator lane 禁用 unscoped connected Gradle task，改用 `adb -s emulator-5554` 显式 install + `am instrument`；完整 instrumentation `OK (24 tests)`，internal APK 从 `0.3.1-internal.1` 覆盖升级到 `0.5.0-alpha.1` 并启动成功。
 - 已完成第二轮 real-world media corpus：9 张真实投影照片在 API 36 Emulator 上完成导入、增强、本地 OCR、关键页和全量重启持久化，9/9 PASS；2 段录音只做私有 inventory，不冒充外部录音导入能力。
 - 已完成 `0.5.x_visual_regression`：建立 5 个显示 profile、33 个逐张目检状态的 canonical golden，覆盖 normal/small/large-font/landscape/tablet；普通 compare run 不得自动覆盖 baseline。
-- 当前下一门槛为 `0.5.x_exploratory_stress`：fixed-seed Monkey、确定性压力路径和 API 29/36 device matrix；完成前不作新的 internal release 判断。
+- 已完成 `0.5.x_exploratory_stress`：API 36 normal/small 与 API 29 device matrix 共 3,750 个计入验收的 fixed-seed Monkey 事件，全部无未解释 crash/ANR，恢复 PASS；API 29 B01/B02/B04/B07 关键路径 PASS。
+- 已完成 `0.5.x_qa_closeout`：automated black-box QA hardening COMPLETE；没有发现达到新 alpha 阈值的 P0/P1 或 dogfood blocker，release 决策为 `NO_NEW_RELEASE`，继续使用 `v0.5.0-alpha.2`。
+- 已完成 bounded ASR next-step assessment：先做 workstation 完全离线 whisper.cpp benchmark，再决定是否创建 Android provider integration task；本阶段不下载模型、不接云 ASR、不把大型模型打入 APK。
 - Mathpix 是高准确度付费云候选，但需要 authenticated API、billing 和 credential/backend/user-key 决策；live provider 暂不进入 APK。
 - PaddleOCR formula recognition 和 pix2tex/LaTeX-OCR 可作为自建/本地候选继续评估，但需要模型大小、Android packaging、性能、耗电、依赖和模型权重 license 审计。
 - 第一阶段优先实现 formula region selection data model、可编辑 LaTeX result、`FormulaOcrProvider` fake/manual contract、BibTeX/RIS deterministic export 和 export polish。
