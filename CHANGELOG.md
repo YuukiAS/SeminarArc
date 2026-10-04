@@ -8,6 +8,7 @@
 
 ### 新增
 
+- 新增第二轮真实 seminar 私有语料验收：按 `round-*` 递归盘点照片、PDF 和录音，记录录音容器元数据，并在 Windows Emulator 上完成 9 张真实投影照片的导入、增强、本地 OCR、关键页、公式代表流程和全量重启持久化。
 - 新增 Reconstruction workspace 的 `Import slide image` 正式用户入口：通过 Android system picker 选择已有 slide/photo，复制到 app-private seminar media storage，并登记为 seminar-scoped `PHOTO_ORIGINAL` asset，不伪造 timeline event 或 recording offset。
 - 新增 black-box harness 的 imported-photo acquisition mode：focused B04/B07 可将 deterministic PNG 推送到 Emulator Downloads，再经系统 picker 完成真实 UI 导入，保留 CameraX fixture limitation 为独立 hardware/emulator boundary。
 - 完成 `0.5.0-alpha.2` 版本元数据：默认 `versionName = 0.5.0-alpha.2`、`versionCode = 50002`，用于替代远端 CI 未通过的 `v0.5.0-alpha.1` 候选。
@@ -84,6 +85,7 @@
 
 ### 修复
 
+- 修复真实语料与确定性 black-box harness 的多项假失败：正确定位包含 `OCR text` 标签的 Compose `EditText`，不再用文件名测试 OCR 搜索，将长列表手势移出可拖拽图片区域，延后公式编辑流程，并通过 DocumentsUI `Show roots` 返回 `Downloads`。
 - 修复 deterministic B04/B07 black-box closeout 被 Windows Emulator CameraX fixture 阻塞的问题：Reconstruction/Formula 的 deterministic QA 改由正式 imported-photo 用户路径完成，CameraX capture quality 仍留给真实硬件专项验收。
 - 修复 black-box harness 多处 selective-run 稳定性问题：单场景 selection 数组 unwrap、DocumentsUI 文件名只在 content description 中暴露、key-slide/OCR/formula persistence 需要滚动后的 UI tree 验证，以及 B07 formula label 输入断言过窄。
 - 修复 GitHub Actions Linux runner 解析默认 Windows internal signing properties 路径时抛出的 `URISyntaxException`；非 Windows 环境默认不再解析 `D:\Code\_secrets\...`，Windows 本地 internal signer 行为保持不变。

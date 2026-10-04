@@ -2,8 +2,12 @@ param(
     [string]$PackageName = "com.yuukias.seminararc.internal",
     [string]$Serial = "",
     [string]$FixtureRoot = "",
+    [string]$CorpusRoundId = "",
     [int]$MaxPhotos = 10,
     [int]$MaxPdfs = 2,
+    [int]$MaxRecordings = 10,
+    [switch]$InventoryOnly,
+    [switch]$PersistenceOnly,
     [switch]$SkipBuild,
     [switch]$SkipInstall,
     [int]$AdbTimeoutSeconds = 45
@@ -32,7 +36,7 @@ if ([string]::IsNullOrWhiteSpace($FixtureRoot)) {
 
 $adb = Join-Path $env:ANDROID_HOME "platform-tools\adb.exe"
 $gradlew = Join-Path $repoRoot "gradlew.bat"
-$runId = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
+$runId = "{0}-{1}" -f (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssfffZ"), $PID
 $evidenceRoot = Join-Path $repoRoot "private\blackbox-acceptance\real-world-$runId"
 $manifestPath = Join-Path $evidenceRoot "local-manifest.json"
 $summaryPath = Join-Path $evidenceRoot "summary.json"
@@ -44,9 +48,14 @@ $script:StepCount = 0
 $script:SelectedSerial = $null
 $script:Limitations = New-Object System.Collections.Generic.List[string]
 $script:RunStatus = "RUNNING"
+$script:RunMode = "full"
+$script:ResolvedCorpusRoot = $null
+$script:ResolvedCorpusRoundId = $null
 $script:PhotoSamples = @()
 $script:PdfSamples = @()
+$script:RecordingSamples = @()
 $script:FormulaSampleId = $null
+$script:OcrEditSampleId = $null
 $script:PdfLifecycle = [ordered]@{
     attempted = $false
     import = "NOT_RUN"
@@ -195,33 +204,125 @@ function Get-ImageSize {
     }
 }
 
+function Resolve-CorpusSelection {
+    $fixtureRootPath = [System.IO.Path]::GetFullPath($FixtureRoot)
+    if ([string]::IsNullOrWhiteSpace($CorpusRoundId)) {
+        $script:ResolvedCorpusRoot = $fixtureRootPath
+        $script:ResolvedCorpusRoundId = "all"
+        return
+    }
+    if ($CorpusRoundId -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$') {
+        throw "CorpusRoundId must be a single safe directory name."
+    }
+    $selectedRoot = [System.IO.Path]::GetFullPath((Join-Path $fixtureRootPath $CorpusRoundId))
+    $rootPrefix = $fixtureRootPath.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+    if (-not $selectedRoot.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "CorpusRoundId resolved outside FixtureRoot."
+    }
+    if (-not (Test-Path -LiteralPath $selectedRoot -PathType Container)) {
+        throw "Corpus round not found: $CorpusRoundId"
+    }
+    $script:ResolvedCorpusRoot = $selectedRoot
+    $script:ResolvedCorpusRoundId = $CorpusRoundId
+}
+
+function Test-MediaDirectory {
+    param(
+        [System.IO.FileInfo]$File,
+        [string]$DirectoryName
+    )
+    $relativeDirectory = [System.IO.Path]::GetRelativePath($script:ResolvedCorpusRoot, $File.DirectoryName)
+    return (($relativeDirectory -split '[\\/]') -contains $DirectoryName)
+}
+
+function Get-SampleRoundId {
+    param([System.IO.FileInfo]$File)
+    if ($script:ResolvedCorpusRoundId -ne "all") {
+        return $script:ResolvedCorpusRoundId
+    }
+    $relativePath = [System.IO.Path]::GetRelativePath($script:ResolvedCorpusRoot, $File.FullName)
+    $segments = @($relativePath -split '[\\/]')
+    if ($segments.Count -gt 1 -and @("photos", "pdfs", "recordings") -notcontains $segments[0]) {
+        return $segments[0]
+    }
+    return "legacy"
+}
+
+function Get-AudioMetadata {
+    param([System.IO.FileInfo]$File)
+    $metadata = [ordered]@{
+        container = $File.Extension.TrimStart('.').ToLowerInvariant()
+        codec = if ($File.Extension -ieq '.mp3') { "mp3" } else { "unknown" }
+        durationMs = $null
+        bitrateBitsPerSecond = $null
+        sampleRateHz = $null
+        channels = $null
+        readError = $null
+    }
+    $shell = $null
+    $folder = $null
+    $item = $null
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $folder = $shell.Namespace($File.DirectoryName)
+        $item = $folder.ParseName($File.Name)
+        if ($null -eq $item) {
+            throw "Windows Shell could not parse the audio file."
+        }
+        $durationRaw = $item.ExtendedProperty("System.Media.Duration")
+        if ($null -ne $durationRaw -and [long]$durationRaw -gt 0) {
+            $metadata.durationMs = [long]([double]$durationRaw / 10000.0)
+        }
+        foreach ($property in @(
+            @{ Key = "bitrateBitsPerSecond"; Name = "System.Audio.EncodingBitrate" },
+            @{ Key = "sampleRateHz"; Name = "System.Audio.SampleRate" },
+            @{ Key = "channels"; Name = "System.Audio.ChannelCount" }
+        )) {
+            $value = $item.ExtendedProperty($property.Name)
+            if ($null -ne $value -and [long]$value -gt 0) {
+                $metadata[$property.Key] = [long]$value
+            }
+        }
+    } catch {
+        $metadata.readError = $_.Exception.Message
+    } finally {
+        foreach ($comObject in @($item, $folder, $shell)) {
+            if ($null -ne $comObject -and [System.Runtime.InteropServices.Marshal]::IsComObject($comObject)) {
+                [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($comObject)
+            }
+        }
+    }
+    return $metadata
+}
+
 function New-SampleInventory {
     Step "Scan private real-world fixtures and create local manifest"
     if (-not (Test-Path -LiteralPath $FixtureRoot)) {
         throw "Fixture root not found: $FixtureRoot"
     }
-    $photoRoot = Join-Path $FixtureRoot "photos"
-    $pdfRoot = Join-Path $FixtureRoot "pdfs"
+    Resolve-CorpusSelection
     $photoExtensions = @(".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif")
-    $photos = @()
-    if (Test-Path -LiteralPath $photoRoot) {
-        $photos = @(Get-ChildItem -LiteralPath $photoRoot -Recurse -File | Where-Object {
-            $photoExtensions -contains $_.Extension.ToLowerInvariant()
-        } | Sort-Object FullName | Select-Object -First $MaxPhotos)
-    }
-    $pdfs = @()
-    if (Test-Path -LiteralPath $pdfRoot) {
-        $pdfs = @(Get-ChildItem -LiteralPath $pdfRoot -Recurse -File | Where-Object {
-            $_.Extension.ToLowerInvariant() -eq ".pdf"
-        } | Sort-Object FullName | Select-Object -First $MaxPdfs)
-    }
+    $recordingExtensions = @(".mp3", ".m4a", ".aac", ".wav", ".flac", ".ogg", ".opus", ".webm")
+    $allFiles = @(Get-ChildItem -LiteralPath $script:ResolvedCorpusRoot -Recurse -File)
+    $photos = @($allFiles | Where-Object {
+        ($photoExtensions -contains $_.Extension.ToLowerInvariant()) -and (Test-MediaDirectory -File $_ -DirectoryName "photos")
+    } | Sort-Object FullName | Select-Object -First $MaxPhotos)
+    $pdfs = @($allFiles | Where-Object {
+        ($_.Extension.ToLowerInvariant() -eq ".pdf") -and (Test-MediaDirectory -File $_ -DirectoryName "pdfs")
+    } | Sort-Object FullName | Select-Object -First $MaxPdfs)
+    $recordings = @($allFiles | Where-Object {
+        ($recordingExtensions -contains $_.Extension.ToLowerInvariant()) -and (Test-MediaDirectory -File $_ -DirectoryName "recordings")
+    } | Sort-Object FullName | Select-Object -First $MaxRecordings)
     if ($photos.Count -lt 5) {
         $script:RunStatus = "NEEDS_PRIVATE_FIXTURES"
         $need = [ordered]@{
             status = $script:RunStatus
             fixtureRoot = $FixtureRoot
+            corpusRoot = $script:ResolvedCorpusRoot
+            corpusRoundId = $script:ResolvedCorpusRoundId
             photoCount = $photos.Count
             pdfCount = $pdfs.Count
+            recordingCount = $recordings.Count
             requiredPhotoCount = 5
         }
         ($need | ConvertTo-Json -Depth 8) | Set-Content -Encoding UTF8 -Path $summaryPath
@@ -238,6 +339,7 @@ function New-SampleInventory {
         $photoSamples.Add([pscustomobject]@{
             id = $id
             kind = "photo"
+            corpusRoundId = Get-SampleRoundId -File $file
             localPath = $file.FullName
             originalName = $file.Name
             sha256 = $hash.Hash
@@ -256,8 +358,10 @@ function New-SampleInventory {
             ocrCharCount = 0
             ocrLineCount = 0
             clueCategory = "none"
+            ocrEditSearch = "NOT_RUN"
             keySlide = "NOT_RUN"
             formula = "NOT_RUN"
+            persistence = "NOT_RUN"
             failureCategory = $null
         }) | Out-Null
         $index += 1
@@ -272,6 +376,7 @@ function New-SampleInventory {
         $pdfSamples.Add([pscustomobject]@{
             id = $id
             kind = "pdf"
+            corpusRoundId = Get-SampleRoundId -File $file
             localPath = $file.FullName
             originalName = $file.Name
             sha256 = $hash.Hash
@@ -285,17 +390,47 @@ function New-SampleInventory {
     $script:PhotoSamples = @($photoSamples.ToArray())
     $script:PdfSamples = @($pdfSamples.ToArray())
 
+    $recordingSamples = New-Object System.Collections.Generic.List[object]
+    $index = 1
+    foreach ($file in $recordings) {
+        $id = "RW-A{0:000}" -f $index
+        $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName
+        $audio = Get-AudioMetadata -File $file
+        $recordingSamples.Add([pscustomobject]@{
+            id = $id
+            kind = "recording"
+            corpusRoundId = Get-SampleRoundId -File $file
+            localPath = $file.FullName
+            originalName = $file.Name
+            sha256 = $hash.Hash
+            bytes = $file.Length
+            container = $audio.container
+            codec = $audio.codec
+            durationMs = $audio.durationMs
+            bitrateBitsPerSecond = $audio.bitrateBitsPerSecond
+            sampleRateHz = $audio.sampleRateHz
+            channels = $audio.channels
+            metadataReadError = $audio.readError
+            productPath = "inventory-only-external-recording"
+        }) | Out-Null
+        $index += 1
+    }
+    $script:RecordingSamples = @($recordingSamples.ToArray())
+
     $manifest = [ordered]@{
         runId = $runId
         createdAtUtc = (Get-Date).ToUniversalTime().ToString("o")
         fixtureRoot = $FixtureRoot
+        corpusRoot = $script:ResolvedCorpusRoot
+        corpusRoundId = $script:ResolvedCorpusRoundId
         evidenceRoot = $evidenceRoot
         privacy = "local-only ignored manifest; do not commit"
         photos = $script:PhotoSamples
         pdfs = $script:PdfSamples
+        recordings = $script:RecordingSamples
     }
     ($manifest | ConvertTo-Json -Depth 12) | Set-Content -Encoding UTF8 -Path $manifestPath
-    Write-Status "Selected $($script:PhotoSamples.Count) photo(s), $($script:PdfSamples.Count) PDF(s)."
+    Write-Status "Selected $($script:PhotoSamples.Count) photo(s), $($script:PdfSamples.Count) PDF(s), $($script:RecordingSamples.Count) recording(s) from corpus '$($script:ResolvedCorpusRoundId)'."
 }
 
 function Select-EmulatorSerial {
@@ -472,11 +607,11 @@ function Tap-Node {
 }
 
 function Swipe-Up {
-    Invoke-Adb -Arguments @("shell", "input", "swipe", "540", "1750", "540", "650", "350") -TimeoutSeconds 30 | Out-Null
+    Invoke-Adb -Arguments @("shell", "input", "swipe", "70", "1750", "70", "650", "350") -TimeoutSeconds 30 | Out-Null
 }
 
 function Swipe-Down {
-    Invoke-Adb -Arguments @("shell", "input", "swipe", "540", "650", "540", "1750", "350") -TimeoutSeconds 30 | Out-Null
+    Invoke-Adb -Arguments @("shell", "input", "swipe", "70", "650", "70", "1750", "350") -TimeoutSeconds 30 | Out-Null
 }
 
 function Press-Back {
@@ -723,19 +858,7 @@ function Scroll-UntilDescriptionVisible {
 function Filter-ReconstructionToSample {
     param($Sample)
     Swipe-ToTop -Attempts 5
-    try {
-        $searchKey = if ($Sample.id -match '(\d{3})$') { $Matches[1] } else { $Sample.id }
-        Tap-EditTextByIndex -Area $Sample.id -Index 0 -Label "search-field"
-        Enter-Text $searchKey
-        Press-Back
-        Wait-ForNode -Area $Sample.id -Label "search-result" -Text $Sample.deviceName -Contains -TimeoutSeconds 20 | Out-Null
-        return
-    } catch {
-        Write-Status "$($Sample.id) search filter fallback: $($_.Exception.Message)"
-        Press-Back
-        Swipe-ToTop -Attempts 5
-        Scroll-UntilTextVisible -Area $Sample.id -Text $Sample.deviceName -Label "locate-sample" -Contains -ScrollAttempts 30 | Out-Null
-    }
+    Scroll-UntilTextVisible -Area $Sample.id -Text $Sample.deviceName -Label "locate-sample" -Contains -ScrollAttempts 30 | Out-Null
 }
 
 function Find-FirstEditTextBelowText {
@@ -763,6 +886,22 @@ function Find-FirstEditTextBelowText {
     return $bestNode
 }
 
+function Find-EditTextContainingText {
+    param([xml]$Xml, [string]$AnchorText)
+    $anchor = Find-Node -Xml $Xml -Text $AnchorText
+    if ($null -eq $anchor) {
+        throw "Anchor text not found: $AnchorText"
+    }
+    $candidate = $anchor
+    while ($null -ne $candidate -and $candidate.Name -eq "node") {
+        if ((Get-Attr $candidate "class") -eq "android.widget.EditText") {
+            return $candidate
+        }
+        $candidate = $candidate.ParentNode
+    }
+    return Find-FirstEditTextBelowText -Xml $Xml -AnchorText $AnchorText
+}
+
 function Get-NodeBounds {
     param($Node)
     $bounds = Get-Attr $Node "bounds"
@@ -782,7 +921,7 @@ function Get-VisibleOcrTextStats {
     for ($i = 0; $i -le 6; $i++) {
         $tree = Get-UiXml -Area $Area -Label "$Label-$i"
         try {
-            $node = Find-FirstEditTextBelowText -Xml $tree.Xml -AnchorText "OCR text"
+            $node = Find-EditTextContainingText -Xml $tree.Xml -AnchorText "OCR text"
             $text = Get-Attr $node "text"
             $lineCount = if ([string]::IsNullOrWhiteSpace($text)) { 0 } else { @($text -split "`r?`n" | Where-Object { $_.Trim().Length -gt 0 }).Count }
             $clue = "none"
@@ -828,6 +967,36 @@ function Drag-Description {
     $endY = [int]($bounds.Top + (($bounds.Bottom - $bounds.Top) * 0.58))
     Invoke-Adb -Arguments @("shell", "input", "swipe", "$startX", "$startY", "$endX", "$endY", "500") -TimeoutSeconds 30 | Out-Null
     Start-Sleep -Milliseconds 700
+}
+
+function Invoke-OcrEditAndSearchRepresentative {
+    param($Sample)
+    Step "Run OCR edit/save/search representative flow on $($Sample.id)"
+    $script:OcrEditSampleId = $Sample.id
+    $marker = "qqqqqq"
+    try {
+        $tree = Get-UiXml -Area $Sample.id -Label "ocr-edit-field"
+        $field = Find-EditTextContainingText -Xml $tree.Xml -AnchorText "OCR text"
+        Tap-Node $field
+        Invoke-Adb -Arguments @("shell", "input", "keyevent", "123") -TimeoutSeconds 30 | Out-Null
+        Enter-KeyEventText $marker
+        Press-Back
+        Tap-Text -Area $Sample.id -Text "Save OCR edit" -ScrollAttempts 4
+        Start-Sleep -Seconds 2
+        Wait-ForNode -Area $Sample.id -Label "ocr-edit-saved" -Text $marker -Contains -TimeoutSeconds 20 | Out-Null
+
+        Open-CorpusReconstruction -Area $Sample.id
+        Swipe-ToTop -Attempts 5
+        Tap-EditTextByIndex -Area $Sample.id -Index 0 -Label "ocr-search-field"
+        Enter-KeyEventText $marker
+        Press-Back
+        Wait-ForNode -Area $Sample.id -Label "ocr-search-result" -Text $Sample.deviceName -Contains -TimeoutSeconds 20 | Out-Null
+        $Sample.ocrEditSearch = "PASS"
+    } catch {
+        $Sample.ocrEditSearch = "FAIL"
+        if ($null -eq $Sample.failureCategory) { $Sample.failureCategory = "ocr-edit-search" }
+        throw
+    }
 }
 
 function Wait-ForPackageVisible {
@@ -1039,7 +1208,7 @@ function Import-PhotoSample {
 }
 
 function Process-PhotoSample {
-    param($Sample, [switch]$DoFormula)
+    param($Sample, [switch]$DoOcrEdit)
     if ($Sample.import -ne "PASS") {
         return
     }
@@ -1070,8 +1239,13 @@ function Process-PhotoSample {
         $Sample.ocrLineCount = $stats.lineCount
         $Sample.clueCategory = $stats.clueCategory
 
-        if ($DoFormula) {
-            Invoke-FormulaRepresentative -Sample $Sample
+        if ($DoOcrEdit) {
+            try {
+                Invoke-OcrEditAndSearchRepresentative -Sample $Sample
+            } catch {
+                $script:Limitations.Add("$($Sample.id) OCR edit/save/search representative flow failed: $($_.Exception.Message)") | Out-Null
+                Write-Status "$($Sample.id) OCR edit/save/search flow failed: $($_.Exception.Message)"
+            }
         }
         Capture-Evidence -Area $Sample.id -Label "processed" -WithLogcat
     } catch {
@@ -1088,18 +1262,22 @@ function Invoke-FormulaRepresentative {
     Step "Run formula representative flow on $($Sample.id)"
     $script:FormulaSampleId = $Sample.id
     try {
+        Open-CorpusReconstruction -Area $Sample.id
+        Filter-ReconstructionToSample -Sample $Sample
         Scroll-UntilDescriptionVisible -Area $Sample.id -Description "Drag to draft formula region" -Label "formula-locate-region" -Contains -ScrollAttempts 8 | Out-Null
         Drag-Description -Area $Sample.id -Description "Drag to draft formula region" -Contains
         Tap-Text -Area $Sample.id -Text "Save formula region" -ScrollAttempts 5
         Wait-ForNode -Area $Sample.id -Label "formula-saved" -Text "Formula:" -Contains -TimeoutSeconds 20 | Out-Null
         Tap-Text -Area $Sample.id -Text "Edit crop" -ScrollAttempts 4
         Tap-Text -Area $Sample.id -Text "Formula label" -ScrollAttempts 2
-        Enter-Text "RWFormula"
+        Invoke-Adb -Arguments @("shell", "input", "keyevent", "123") -TimeoutSeconds 30 | Out-Null
+        Enter-KeyEventText "qq"
         Press-Back
         Tap-Text -Area $Sample.id -Text "Update formula region" -ScrollAttempts 3
-        Wait-ForNode -Area $Sample.id -Label "formula-updated" -Text "RWFormula" -Contains -TimeoutSeconds 20 | Out-Null
+        Wait-ForNode -Area $Sample.id -Label "formula-updated" -Text "Formulaqq" -Contains -TimeoutSeconds 20 | Out-Null
         Tap-Text -Area $Sample.id -Text "LaTeX" -ScrollAttempts 5
-        Enter-Text "x"
+        Enter-KeyEventText "q"
+        Press-Back
         Tap-Text -Area $Sample.id -Text "Queue LaTeX" -ScrollAttempts 2
         Wait-ForNode -Area $Sample.id -Label "formula-ready" -Text "Formula ready:" -Contains -TimeoutSeconds 45 | Out-Null
         $Sample.formula = "PASS"
@@ -1126,14 +1304,22 @@ function Verify-PostRelaunchPersistence {
         }
     }
     Open-Reconstruction
-    foreach ($sample in $script:PhotoSamples | Where-Object { $_.import -eq "PASS" } | Select-Object -First 3) {
+    Swipe-ToTop -Attempts 5
+    $persistenceFailures = 0
+    foreach ($sample in $script:PhotoSamples | Where-Object { @("PASS", "EXISTING_STATE") -contains $_.import }) {
         try {
-            Scroll-UntilTextVisible -Area "persistence" -Text $sample.deviceName -Label "photo-$($sample.id)-persisted" -Contains -ScrollAttempts 12 | Out-Null
+            Scroll-UntilTextVisible -Area "persistence" -Text $sample.deviceName -Label "photo-$($sample.id)-persisted" -Contains -ScrollAttempts 30 | Out-Null
+            $sample.persistence = "PASS"
         } catch {
+            $sample.persistence = "FAIL"
+            $persistenceFailures += 1
             if ($null -eq $sample.failureCategory) { $sample.failureCategory = "persistence" }
         }
     }
     Capture-Evidence -Area "persistence" -Label "after-relaunch" -WithLogcat
+    if ($persistenceFailures -gt 0) {
+        throw "$persistenceFailures imported photo(s) were not found after app relaunch."
+    }
 }
 
 function Exercise-PdfReplaceRemove {
@@ -1180,28 +1366,45 @@ function Write-PrivateSummary {
         ocrNonEmpty = @($script:PhotoSamples | Where-Object { $_.ocrNonEmpty }).Count
         clueUsable = @($script:PhotoSamples | Where-Object { $_.clueCategory -ne "none" }).Count
         keySlidePass = @($script:PhotoSamples | Where-Object { $_.keySlide -eq "PASS" }).Count
+        ocrEditSearchPass = @($script:PhotoSamples | Where-Object { $_.ocrEditSearch -eq "PASS" }).Count
+        persistencePass = @($script:PhotoSamples | Where-Object { $_.persistence -eq "PASS" }).Count
     }
     $latencies = [ordered]@{
         enhancementMs = @($script:PhotoSamples | Where-Object { $_.enhancementLatencyMs -ne $null } | ForEach-Object { $_.enhancementLatencyMs })
         ocrMs = @($script:PhotoSamples | Where-Object { $_.ocrLatencyMs -ne $null } | ForEach-Object { $_.ocrLatencyMs })
     }
+    $recordingStats = [ordered]@{
+        total = $script:RecordingSamples.Count
+        metadataComplete = @($script:RecordingSamples | Where-Object {
+            $_.durationMs -ne $null -and $_.bitrateBitsPerSecond -ne $null -and $_.sampleRateHz -ne $null -and $_.channels -ne $null
+        }).Count
+        totalBytes = [long](($script:RecordingSamples | Measure-Object bytes -Sum).Sum)
+        totalDurationMs = [long](($script:RecordingSamples | Where-Object { $_.durationMs -ne $null } | Measure-Object durationMs -Sum).Sum)
+        productPath = "inventory-only; no supported external recording import path"
+    }
     $summary = [ordered]@{
         status = $script:RunStatus
+        runMode = $script:RunMode
         runId = $runId
         evidenceRoot = $evidenceRoot
         package = $PackageName
         emulatorSerial = $script:SelectedSerial
         stepCount = $script:StepCount
         fixtureRoot = $FixtureRoot
+        corpusRoot = $script:ResolvedCorpusRoot
+        corpusRoundId = $script:ResolvedCorpusRoundId
         manifest = $manifestPath
         photoStats = $photoStats
         latencies = $latencies
+        recordingStats = $recordingStats
+        ocrEditSampleId = $script:OcrEditSampleId
         formulaSampleId = $script:FormulaSampleId
         pdfCount = $script:PdfSamples.Count
         pdfLifecycle = $script:PdfLifecycle
         limitations = @($script:Limitations)
         photos = $script:PhotoSamples
         pdfs = $script:PdfSamples
+        recordings = $script:RecordingSamples
     }
     ($summary | ConvertTo-Json -Depth 14) | Set-Content -Encoding UTF8 -Path $summaryPath
 
@@ -1209,10 +1412,13 @@ function Write-PrivateSummary {
         "# SeminarArc Real-world Media Corpus $runId",
         "",
         "- status: $script:RunStatus",
+        "- run mode: $script:RunMode",
         "- package: $PackageName",
         "- emulator: $script:SelectedSerial",
         "- photos: $($script:PhotoSamples.Count)",
         "- pdfs: $($script:PdfSamples.Count)",
+        "- recordings: $($script:RecordingSamples.Count)",
+        "- corpusRoundId: $($script:ResolvedCorpusRoundId)",
         "- steps: $script:StepCount",
         "- manifest: $manifestPath",
         "",
@@ -1223,7 +1429,10 @@ function Write-PrivateSummary {
         "- OCR non-empty: $($photoStats.ocrNonEmpty)/$($photoStats.total)",
         "- clue usable: $($photoStats.clueUsable)/$($photoStats.total)",
         "- key slide: $($photoStats.keySlidePass)/$($photoStats.total)",
+        "- persistence after relaunch: $($photoStats.persistencePass)/$($photoStats.total)",
+        "- OCR edit/save/search sample: $script:OcrEditSampleId ($($photoStats.ocrEditSearchPass) pass)",
         "- formula sample: $script:FormulaSampleId",
+        "- recording metadata: $($recordingStats.metadataComplete)/$($recordingStats.total) complete; inventory only",
         "- PDF lifecycle: import=$($script:PdfLifecycle.import), persistence=$($script:PdfLifecycle.persistence), replace=$($script:PdfLifecycle.replace), remove=$($script:PdfLifecycle.remove)",
         "",
         "## Privacy",
@@ -1234,6 +1443,21 @@ function Write-PrivateSummary {
 
 try {
     New-SampleInventory
+    if ($InventoryOnly) {
+        $script:RunMode = "inventory"
+        $script:RunStatus = "INVENTORY_PASS"
+        return
+    }
+    if ($PersistenceOnly) {
+        $script:RunMode = "persistence"
+        Select-EmulatorSerial
+        foreach ($sample in $script:PhotoSamples) {
+            $sample.import = "EXISTING_STATE"
+        }
+        Verify-PostRelaunchPersistence
+        $script:RunStatus = "PERSISTENCE_PASS"
+        return
+    }
     Select-EmulatorSerial
     Build-And-Install
     Push-Fixtures
@@ -1241,13 +1465,24 @@ try {
     Create-CorpusSeminar
     Open-Reconstruction
 
-    $formulaDone = $false
+    $ocrEditDone = $false
     foreach ($sample in $script:PhotoSamples) {
         Import-PhotoSample -Sample $sample
-        $doFormula = -not $formulaDone
-        Process-PhotoSample -Sample $sample -DoFormula:$doFormula
-        if ($sample.formula -eq "PASS") {
-            $formulaDone = $true
+        $doOcrEdit = -not $ocrEditDone
+        Process-PhotoSample -Sample $sample -DoOcrEdit:$doOcrEdit
+        if ($sample.ocrEditSearch -eq "PASS") {
+            $ocrEditDone = $true
+        }
+    }
+
+    $formulaSample = $script:PhotoSamples | Where-Object { $_.import -eq "PASS" } | Select-Object -First 1
+    if ($null -ne $formulaSample) {
+        try {
+            Invoke-FormulaRepresentative -Sample $formulaSample
+            Capture-Evidence -Area $formulaSample.id -Label "formula-processed" -WithLogcat
+        } catch {
+            $script:Limitations.Add("$($formulaSample.id) formula representative flow failed: $($_.Exception.Message)") | Out-Null
+            Write-Status "$($formulaSample.id) formula representative flow failed: $($_.Exception.Message)"
         }
     }
 

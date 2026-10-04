@@ -1166,7 +1166,19 @@ function Select-PhotoFixtureInSystemPicker {
                 return
             }
         }
-        foreach ($text in @("Allow", "Downloads", "Images", "Recent")) {
+        $downloadsNode = Find-Node -Xml $tree.Xml -Text "Downloads"
+        if ($null -ne $downloadsNode) {
+            Tap-Node $downloadsNode
+            Start-Sleep -Seconds 1
+            continue
+        }
+        $showRootsNode = Find-Node -Xml $tree.Xml -Description "Show roots"
+        if ($null -ne $showRootsNode) {
+            Tap-Node $showRootsNode
+            Start-Sleep -Seconds 1
+            continue
+        }
+        foreach ($text in @("Allow", "Images", "Recent")) {
             $node = Find-Node -Xml $tree.Xml -Text $text -Contains
             if ($null -ne $node) {
                 Tap-Node $node
