@@ -8,6 +8,7 @@
 
 ### 新增
 
+- 新增 GPT Work 独立 Android 黑盒验收子系统：冻结 `64b5321` candidate，提供独立 API 36 AVD、S00–S08 可重复 UI recipe、synthetic academic fixture、P01–P08 串行 reviewer、证据/结果合同、launcher/reset/verifier 和自包含 Parent；当前仅完成 producer-side delivery gate，不执行 GPT Work campaign。
 - 完成 `0.5.x` automated black-box QA hardening：API 36 normal/small 与 API 29 device matrix 共 3,750 个计入验收的 fixed-seed Monkey 事件，全部无未解释 crash/ANR，强停恢复 PASS。
 - 新增 `scripts/run-exploratory-stress.ps1`：提供 package-scoped fixed seed、事件上限、crash/ANR 证据、外部系统 Activity 归位、恢复检查、small profile 恢复和 ignored private summary。
 - 新增 task-owned `SeminarArc_API29` 验证 lane：API 29 Google APIs x86_64 上 B01/B02/B04/B07 imported-photo/formula/export 关键路径 PASS；验证结束后仅关闭独立 API 29 AVD。

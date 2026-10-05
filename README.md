@@ -17,10 +17,10 @@ Prepare -> Capture -> Reconstruct -> Research -> Export
 - `0.5.x` Formula / Research Export local-safe alpha：COMPLETE
 - 当前 Room schema：**v7**
 - `0.5.x` automated black-box QA hardening：**COMPLETE**
-- 当前主动工程阶段：**真实硬件 dogfood + workstation-local ASR benchmark 准备**
+- 当前主动工程阶段：**独立 GPT Work Android 黑盒验收待执行**
 - `0.9.x` release readiness audit：`AUDIT_COMPLETE_NOT_READY_FOR_PRODUCTION_RELEASE`
 
-这意味着当前版本适合 **个人 dogfood / 内测**，但还不是 Google Play production release。核心真实用户路径的自动验收、视觉回归、固定种子压力和 API 29/36 矩阵已经关闭；后续人工验收应集中在真实麦克风、CameraX、锁屏/后台和连续使用手感。
+这意味着当前版本适合 **个人 dogfood / 内测**，但还不是 Google Play production release。producer-side 自动验收、视觉回归、固定种子压力和 API 29/36 矩阵已经关闭；独立 GPT Work 产品审查尚未执行。在其 PASS 前，不进入用户真机验收。
 
 ## 下载与安装
 
@@ -155,13 +155,13 @@ CameraX 在 Windows Emulator 上的 deterministic camera fixture 仍单独记录
 - device matrix：API 36 与 API 29 分别完成关键黑盒路径，API 29 覆盖 B01/B02/B04/B07 imported-photo/formula/export；
 - release 决策：`NO_NEW_RELEASE`，继续使用 `v0.5.0-alpha.2`。
 
-下一阶段优先执行 workstation-local whisper.cpp benchmark，再根据私有真实录音的准确度、速度、内存和时间戳证据决定是否创建 Android provider task。major alpha / `0.9.x` 才评估 Firebase Test Lab Robo、小型真实设备矩阵和 production readiness。
+下一阶段先把冻结 candidate 交给 GPT Work，按 P01–P08 严格串行完成独立 Android 黑盒审查。ready-to-paste Parent 位于 [`prompts/gpt-work/SEMINARARC_GPT_WORK_ACCEPTANCE_PARENT.md`](prompts/gpt-work/SEMINARARC_GPT_WORK_ACCEPTANCE_PARENT.md)；本仓库只准备环境、reset seam 和证据合同，不提前执行该 campaign。workstation-local ASR benchmark 仍是后续独立工作，不在本轮验收范围内。
 
 每个自动 scenario 应输出 PASS/FAIL、screenshot、UI tree、scoped logcat 和耗时证据。普通 navigation、layout、accessibility semantics、persistence、cleanup bug 由 Codex 自动修复并复测，不要求用户逐项证明按钮是否工作。
 
 ### 最终仍需要用户亲自验证的内容
 
-自动 QA 稳定后，人工验收应压缩到以下真实硬件/主观项目：
+只有独立 GPT Work 验收 PASS 后，人工验收才压缩到以下真实硬件/主观项目：
 
 - 真手机麦克风录音质量；
 - CameraX 拍真实投影/PPT 的质量、方向和速度；

@@ -1,0 +1,15 @@
+{
+  "candidate_id": "seminararc-64b5321-56d99be5-api36",
+  "git_commit": "64b5321893a8d79399c38cf85b0cf4256ffb0d63",
+  "apk_path": "private/gpt-work-acceptance/candidates/seminararc-64b5321-56d99be5-api36/SeminarArc-0.5.0-alpha.2-internal.apk",
+  "apk_sha256": "56D99BE575766823E92BB84E86E2AD6A09F4F4124614423953C5BD9F2E1CE8E3",
+  "application_id": "com.yuukias.seminararc.internal",
+  "version_name": "0.5.0-alpha.2",
+  "version_code": 50002,
+  "signer_fingerprint_sha256": "7555BF92FB796C6209F353F66C156C6F65E0312F18EE918557B572014B2DB28A",
+  "build_time_utc": "2026-10-05T01:55:41.1861407Z",
+  "room_schema_version": 7,
+  "avd_profile": "SeminarArc_GPT_Work_API36",
+  "android_api": 36,
+  "default_emulator_serial": "emulator-5558"
+}

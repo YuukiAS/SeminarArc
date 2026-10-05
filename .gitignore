@@ -87,6 +87,7 @@ private/blackbox-fixtures/
 private/android-sdk-tools/
 private/exploratory-stress/
 private/visual-regression/
+private/gpt-work-acceptance/
 release/
 
 # Python helper bytecode

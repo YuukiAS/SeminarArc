@@ -2,7 +2,7 @@
 
 Status: canonical product roadmap
 
-Last updated: 2026-09-10
+Last updated: 2026-10-05
 
 ## 0. 文档地位与旧计划关系
 
@@ -427,6 +427,7 @@ internal signer 只用于 dogfood APK，不是 Google Play production signing ke
 - 已完成 `0.5.x_visual_regression`：建立 5 个显示 profile、33 个逐张目检状态的 canonical golden，覆盖 normal/small/large-font/landscape/tablet；普通 compare run 不得自动覆盖 baseline。
 - 已完成 `0.5.x_exploratory_stress`：API 36 normal/small 与 API 29 device matrix 共 3,750 个计入验收的 fixed-seed Monkey 事件，全部无未解释 crash/ANR，恢复 PASS；API 29 B01/B02/B04/B07 关键路径 PASS。
 - 已完成 `0.5.x_qa_closeout`：automated black-box QA hardening COMPLETE；没有发现达到新 alpha 阈值的 P0/P1 或 dogfood blocker，release 决策为 `NO_NEW_RELEASE`，继续使用 `v0.5.0-alpha.2`。
+- 已完成 `0.5.x_gpt_work_acceptance_infrastructure`：冻结 `64b5321` candidate 与 APK identity，建立独立 API 36 AVD、九个可重复 UI recipe state、synthetic academic fixture、P01–P08 串行 reviewer、证据/结果合同和 ready-to-paste Parent。GPT Work campaign 尚未执行；在独立 PASS 前不进入用户真机验收，也不启动 ASR 集成。
 - 已完成 bounded ASR next-step assessment：先做 workstation 完全离线 whisper.cpp benchmark，再决定是否创建 Android provider integration task；本阶段不下载模型、不接云 ASR、不把大型模型打入 APK。
 - Mathpix 是高准确度付费云候选，但需要 authenticated API、billing 和 credential/backend/user-key 决策；live provider 暂不进入 APK。
 - PaddleOCR formula recognition 和 pix2tex/LaTeX-OCR 可作为自建/本地候选继续评估，但需要模型大小、Android packaging、性能、耗电、依赖和模型权重 license 审计。

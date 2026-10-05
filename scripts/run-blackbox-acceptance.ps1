@@ -9,6 +9,7 @@ param(
     [string]$PhotoAcquisition = "Import",
     [switch]$CaptureVisualStates,
     [switch]$ReferenceVisualOnly,
+    [switch]$UseAcademicAcceptanceFixture,
     [switch]$SkipBuild,
     [switch]$SkipInstall,
     [int]$AdbTimeoutSeconds = 45
@@ -44,7 +45,7 @@ $script:Exports = New-Object System.Collections.Generic.List[object]
 $script:BriefText = $null
 $script:FixturePhotoPrepared = $false
 $script:ResolvedPhotoFixturePath = $null
-$script:DevicePhotoFixtureName = "seminararc-camera-fixture.png"
+$script:DevicePhotoFixtureName = if ($UseAcademicAcceptanceFixture) { "geometric-neural-fields-method.png" } else { "seminararc-camera-fixture.png" }
 $script:DevicePhotoFixturePath = "/sdcard/Download/$($script:DevicePhotoFixtureName)"
 $script:DisplayWidth = 1080
 $script:DisplayHeight = 2400
@@ -52,6 +53,34 @@ $script:ReferenceFixture = [ordered]@{
     doi = "10.1038/nature12373"
     title = "An integrated encyclopedia of DNA elements in the human genome"
     provider = "Crossref/OpenAlex/DataCite public metadata"
+}
+$script:AcademicFixture = if ($UseAcademicAcceptanceFixture) {
+    [ordered]@{
+        title = "Geometry and Neural Fields"
+        titleEditSuffix = " Archive"
+        identityContains = "Geometry"
+        searchPrefix = "g"
+        note = "Compare the boundary condition with the earlier variational argument"
+        question = "How sensitive is the stability result to sparse observations"
+        ocrEditMarker = "Verified attendee note"
+        briefMethods = "The speaker combined geometric regularization with a sparse neural field model and evaluated stability under incomplete observations."
+        transcriptLines = @(
+            "The first result separates geometric bias from sampling noise",
+            "The discussion then connects the stability bound to practical reconstruction"
+        )
+    }
+} else {
+    [ordered]@{
+        title = "blackboxqa"
+        titleEditSuffix = "updated"
+        identityContains = "updated"
+        searchPrefix = "u"
+        note = "noteqa"
+        question = "questionqa"
+        ocrEditMarker = "qqqqqq"
+        briefMethods = "briefbg"
+        transcriptLines = @("lineone", "linetwo")
+    }
 }
 
 function Normalize-ScenarioSelection {
@@ -1266,10 +1295,10 @@ function Open-Synthetic-Detail {
     if (-not $libraryReady) {
         throw "Could not navigate back to seminar library before reopening synthetic detail."
     }
-    Input-FieldKeyEvent -Scenario $Scenario -Label "Search by title or speaker" -Value "u"
-    Wait-ForNode -Scenario $Scenario -Label "synthetic-search-result" -Text "updated" -Contains -TimeoutSeconds 20 | Out-Null
+    Input-FieldKeyEvent -Scenario $Scenario -Label "Search by title or speaker" -Value $script:AcademicFixture.searchPrefix
+    Wait-ForNode -Scenario $Scenario -Label "synthetic-search-result" -Text $script:AcademicFixture.identityContains -Contains -TimeoutSeconds 20 | Out-Null
     Press-Back
-    Tap-TextClickableAncestor -Scenario $Scenario -Text "updated" -Contains
+    Tap-TextClickableAncestor -Scenario $Scenario -Text $script:AcademicFixture.identityContains -Contains
     Wait-ForNode -Scenario $Scenario -Label "detail-open" -Text "Seminar detail" -TimeoutSeconds 20 | Out-Null
 }
 
@@ -1388,10 +1417,10 @@ function Ensure-FocusedImportedPhotoFixtureSeminar {
     Launch-App
     Tap-Description -Scenario $Scenario -Description "Create seminar"
     Wait-ForNode -Scenario $Scenario -Label "fixture-new-editor" -Text "New seminar" -TimeoutSeconds 20 | Out-Null
-    [void](Append-EditTextTextByIndex -Scenario $Scenario -Index 0 -AppendText "updatedfixture" -Label "fixture-title-field")
+    [void](Append-EditTextTextByIndex -Scenario $Scenario -Index 0 -AppendText $script:AcademicFixture.title -Label "fixture-title-field")
     Press-Back
     Tap-Text -Scenario $Scenario -Text "Save draft" -ScrollAttempts 2
-    Wait-ForNode -Scenario $Scenario -Label "fixture-detail-created" -Text "updatedfixture" -Contains -TimeoutSeconds 20 | Out-Null
+    Wait-ForNode -Scenario $Scenario -Label "fixture-detail-created" -Text $script:AcademicFixture.identityContains -Contains -TimeoutSeconds 20 | Out-Null
 
     Step "Import deterministic slide image through system picker"
     Tap-Text -Scenario $Scenario -Text "Open reconstruction" -ScrollAttempts 5
@@ -1420,10 +1449,10 @@ function Ensure-FocusedPhotoFixtureSeminar {
     Launch-App
     Tap-Description -Scenario $Scenario -Description "Create seminar"
     Wait-ForNode -Scenario $Scenario -Label "fixture-new-editor" -Text "New seminar" -TimeoutSeconds 20 | Out-Null
-    [void](Append-EditTextTextByIndex -Scenario $Scenario -Index 0 -AppendText "updatedfixture" -Label "fixture-title-field")
+    [void](Append-EditTextTextByIndex -Scenario $Scenario -Index 0 -AppendText $script:AcademicFixture.title -Label "fixture-title-field")
     Press-Back
     Tap-Text -Scenario $Scenario -Text "Save draft" -ScrollAttempts 2
-    Wait-ForNode -Scenario $Scenario -Label "fixture-detail-created" -Text "updatedfixture" -Contains -TimeoutSeconds 20 | Out-Null
+    Wait-ForNode -Scenario $Scenario -Label "fixture-detail-created" -Text $script:AcademicFixture.identityContains -Contains -TimeoutSeconds 20 | Out-Null
 
     Step "Start photos-only session for deterministic fixture"
     Invoke-Adb -Arguments @("shell", "pm", "revoke", $PackageName, "android.permission.RECORD_AUDIO") -TimeoutSeconds 30 -IgnoreExitCode | Out-Null
@@ -1655,7 +1684,7 @@ function Run-B02 {
         Capture-VisualState -Scenario "B02" -Label "new-seminar-error"
 
         Step "Fill required seminar editor field"
-        $createdTitle = Append-EditTextTextByIndex -Scenario "B02" -Index 0 -AppendText "blackboxqa" -Label "title-field"
+        $createdTitle = Append-EditTextTextByIndex -Scenario "B02" -Index 0 -AppendText $script:AcademicFixture.title -Label "title-field"
         Press-Back
 
         Step "Save seminar"
@@ -1677,20 +1706,20 @@ function Run-B02 {
         Wait-ForNode -Scenario "B02" -Label "edit-editor" -Text "Edit seminar" -TimeoutSeconds 20 | Out-Null
         Tap-EditTextByIndex -Scenario "B02" -Index 0 -Label "edit-title-field"
         Invoke-Adb -Arguments @("shell", "input", "keyevent", "123") -TimeoutSeconds 30 | Out-Null
-        Enter-KeyEventText "updated"
+        Enter-Text $script:AcademicFixture.titleEditSuffix
         Press-Back
         Tap-Text -Scenario "B02" -Text "Save draft" -ScrollAttempts 2
-        Wait-ForNode -Scenario "B02" -Label "updated-detail" -Text "updated" -Contains -TimeoutSeconds 20 | Out-Null
+        Wait-ForNode -Scenario "B02" -Label "updated-detail" -Text $script:AcademicFixture.identityContains -Contains -TimeoutSeconds 20 | Out-Null
 
         Step "Force-stop and verify persistence"
         Tap-Description -Scenario "B02" -Description "Back"
         Force-Stop-App "B02 persistence"
         Launch-App
         Wait-ForNode -Scenario "B02" -Label "persistence-library" -Text "Your seminars" -TimeoutSeconds 20 | Out-Null
-        Wait-ForNode -Scenario "B02" -Label "persistence-card" -Text "updated" -Contains -TimeoutSeconds 20 | Out-Null
+        Wait-ForNode -Scenario "B02" -Label "persistence-card" -Text $script:AcademicFixture.identityContains -Contains -TimeoutSeconds 20 | Out-Null
         Capture-VisualState -Scenario "B02" -Label "populated-library"
-        Input-FieldKeyEvent -Scenario "B02" -Label "Search by title or speaker" -Value "u"
-        Wait-ForNode -Scenario "B02" -Label "persistence-result" -Text "updated" -Contains -TimeoutSeconds 20 | Out-Null
+        Input-FieldKeyEvent -Scenario "B02" -Label "Search by title or speaker" -Value $script:AcademicFixture.searchPrefix
+        Wait-ForNode -Scenario "B02" -Label "persistence-result" -Text $script:AcademicFixture.identityContains -Contains -TimeoutSeconds 20 | Out-Null
         Capture-Evidence -Scenario "B02" -Label "final"
         Assert-NoCrash "B02"
     }
@@ -1743,7 +1772,7 @@ function Deny-Permission-IfVisible {
 function Run-B03 {
     Run-Scenario "B03" {
         Step "Open persisted seminar detail"
-        Tap-Text -Scenario "B03" -Text "updated" -Contains
+        Tap-Text -Scenario "B03" -Text $script:AcademicFixture.identityContains -Contains
         Wait-ForNode -Scenario "B03" -Label "detail-open" -Text "Seminar detail" -TimeoutSeconds 20 | Out-Null
 
         Step "Exercise microphone permission denied path"
@@ -1789,14 +1818,14 @@ function Run-B03 {
         Step "Add note event"
         Tap-Text -Scenario "B03" -Text "Quick Note" -ScrollAttempts 2
         Wait-ForNode -Scenario "B03" -Label "note-dialog" -Text "Quick note" -TimeoutSeconds 15 | Out-Null
-        [void](Append-EditTextTextByIndex -Scenario "B03" -Index 0 -AppendText "noteqa" -Label "note-field")
+        [void](Append-EditTextTextByIndex -Scenario "B03" -Index 0 -AppendText $script:AcademicFixture.note -Label "note-field")
         Tap-Text -Scenario "B03" -Text "Save"
         Wait-ForAnyText -Scenario "B03" -Label "note-saved" -Texts @("1 timeline events", "1 timeline event") -Contains -TimeoutSeconds 20 | Out-Null
 
         Step "Add question event"
         Tap-Text -Scenario "B03" -Text "Add Question" -ScrollAttempts 2
         Wait-ForNode -Scenario "B03" -Label "question-dialog" -Text "Add question" -TimeoutSeconds 15 | Out-Null
-        [void](Append-EditTextTextByIndex -Scenario "B03" -Index 0 -AppendText "questionqa" -Label "question-field")
+        [void](Append-EditTextTextByIndex -Scenario "B03" -Index 0 -AppendText $script:AcademicFixture.question -Label "question-field")
         Tap-Text -Scenario "B03" -Text "Save"
         Wait-ForNode -Scenario "B03" -Label "question-saved" -Text "2 timeline events" -Contains -TimeoutSeconds 15 | Out-Null
 
@@ -1845,8 +1874,8 @@ function Run-B03 {
         Step "Force-stop and verify completed detail remains reachable"
         Force-Stop-App "B03 completed persistence"
         Launch-App
-        Input-FieldKeyEvent -Scenario "B03" -Label "Search by title or speaker" -Value "u"
-        Tap-Text -Scenario "B03" -Text "updated" -Contains
+        Input-FieldKeyEvent -Scenario "B03" -Label "Search by title or speaker" -Value $script:AcademicFixture.searchPrefix
+        Tap-Text -Scenario "B03" -Text $script:AcademicFixture.identityContains -Contains
         Wait-ForNode -Scenario "B03" -Label "completed-after-relaunch" -Text "This seminar is completed." -Contains -TimeoutSeconds 25 | Out-Null
         Capture-Evidence -Scenario "B03" -Label "final"
         Assert-NoCrash "B03"
@@ -1905,7 +1934,7 @@ function Run-B04 {
         Swipe-UpSmallRightGutter
         Start-Sleep -Milliseconds 700
         Tap-EditTextContainingLabel -Scenario "B04" -Text "OCR text" -Label "ocr-edit-field" -ScrollAttempts 20
-        $ocrEditMarker = "qqqqqq"
+        $ocrEditMarker = $script:AcademicFixture.ocrEditMarker
         Invoke-Adb -Arguments @("shell", "input", "keyevent", "123") -TimeoutSeconds 30 | Out-Null
         Enter-KeyEventText $ocrEditMarker
         Wait-ForNode -Scenario "B04" -Label "ocr-marker-entered" -Text $ocrEditMarker -Contains -TimeoutSeconds 20 | Out-Null
@@ -1996,7 +2025,7 @@ function Run-B05 {
         }
         Scroll-UntilTextVisible -Scenario "B05" -Text "Methods" -Label "brief-editor" -ScrollAttempts 8 | Out-Null
         Tap-EditTextContainingLabel -Scenario "B05" -Text "Methods" -Label "brief-methods-field" -ScrollAttempts 1
-        $script:BriefText = "briefbg"
+        $script:BriefText = $script:AcademicFixture.briefMethods
         Enter-Text $script:BriefText
         Press-Back
         Wait-ForNode -Scenario "B05" -Label "brief-field-entered" -Text $script:BriefText -Contains -TimeoutSeconds 20 | Out-Null
@@ -2008,7 +2037,7 @@ function Run-B05 {
         Tap-Text -Scenario "B05" -Text "Open reconstruction" -ScrollAttempts 5
         Wait-ForNode -Scenario "B05" -Label "reconstruction-reopen" -Text "Reconstruction" -TimeoutSeconds 20 | Out-Null
         Tap-Text -Scenario "B05" -Text "Find references" -ScrollAttempts 2
-        Wait-ForNode -Scenario "B05" -Label "reference-after-relaunch" -Text "CONFIRMED" -Contains -TimeoutSeconds 20 | Out-Null
+        Scroll-UntilTextVisible -Scenario "B05" -Text "CONFIRMED" -Label "reference-after-relaunch" -Contains -ScrollAttempts 16 | Out-Null
         Scroll-UntilTextVisible -Scenario "B05" -Text $script:BriefText -Label "brief-after-relaunch-section" -ScrollAttempts 8 | Out-Null
         Wait-ForNode -Scenario "B05" -Label "brief-after-relaunch" -Text $script:BriefText -Contains -TimeoutSeconds 20 | Out-Null
         Capture-Evidence -Scenario "B05" -Label "final"
@@ -2041,11 +2070,11 @@ function Run-B06 {
 
         Step "Import multiline manual transcript"
         Tap-Text -Scenario "B06" -Text "Transcript text" -ScrollAttempts 3
-        Enter-MultilineText @("lineone", "linetwo")
+        Enter-MultilineText $script:AcademicFixture.transcriptLines
         Press-Back
         Tap-Text -Scenario "B06" -Text "Import manual transcript" -ScrollAttempts 2
-        Scroll-UntilTextVisibleBidirectional -Scenario "B06" -Text "lineone" -Label "first-segment-imported" -DownAttempts 6 -UpAttempts 6 | Out-Null
-        Scroll-UntilTextVisibleBidirectional -Scenario "B06" -Text "linetwo" -Label "second-segment-imported" -DownAttempts 8 -UpAttempts 6 | Out-Null
+        Scroll-UntilTextVisibleBidirectional -Scenario "B06" -Text $script:AcademicFixture.transcriptLines[0] -Label "first-segment-imported" -DownAttempts 6 -UpAttempts 6 | Out-Null
+        Scroll-UntilTextVisibleBidirectional -Scenario "B06" -Text $script:AcademicFixture.transcriptLines[1] -Label "second-segment-imported" -DownAttempts 8 -UpAttempts 6 | Out-Null
         Scroll-UntilTextVisibleBidirectional -Scenario "B06" -Text "1 transcripts" -Label "manual-imported" -Contains -DownAttempts 0 -UpAttempts 16 | Out-Null
         Invoke-Adb -Arguments @("shell", "input", "tap", "540", "220") -TimeoutSeconds 30 | Out-Null
         Start-Sleep -Milliseconds 700
@@ -2165,7 +2194,7 @@ function Run-B07 {
             Wait-ForNode -Scenario "B07" -Label "detail-for-export" -Text "Seminar detail" -TimeoutSeconds 20 | Out-Null
         }
         Tap-Text -Scenario "B07" -Text "Markdown" -ScrollAttempts 8
-        $markdownSnippets = @("updated")
+        $markdownSnippets = @($script:AcademicFixture.identityContains)
         if ($b05Passed -and -not [string]::IsNullOrWhiteSpace($script:BriefText)) {
             $markdownSnippets += $script:BriefText
         }
@@ -2182,7 +2211,7 @@ function Run-B07 {
             return
         }
         Tap-Text -Scenario "B07" -Text "Save Notion-ready Markdown" -ScrollAttempts 8
-        $notionSnippets = @("updated")
+        $notionSnippets = @($script:AcademicFixture.identityContains)
         if ($b05Passed -and -not [string]::IsNullOrWhiteSpace($script:BriefText)) {
             $notionSnippets += $script:BriefText
         }
@@ -2214,16 +2243,16 @@ function Run-B08 {
         Step "Force-stop and relaunch before cleanup"
         Force-Stop-App "B08 recovery start"
         Launch-App
-        Input-FieldKeyEvent -Scenario "B08" -Label "Search by title or speaker" -Value "u"
-        Wait-ForNode -Scenario "B08" -Label "seminar-before-delete" -Text "updated" -Contains -TimeoutSeconds 20 | Out-Null
+        Input-FieldKeyEvent -Scenario "B08" -Label "Search by title or speaker" -Value $script:AcademicFixture.searchPrefix
+        Wait-ForNode -Scenario "B08" -Label "seminar-before-delete" -Text $script:AcademicFixture.identityContains -Contains -TimeoutSeconds 20 | Out-Null
 
         Step "Delete synthetic seminar through UI"
         Press-Back
-        Tap-Text -Scenario "B08" -Text "updated" -Contains
+        Tap-Text -Scenario "B08" -Text $script:AcademicFixture.identityContains -Contains
         try {
             Wait-ForNode -Scenario "B08" -Label "detail-before-delete" -Text "Seminar detail" -TimeoutSeconds 10 | Out-Null
         } catch {
-            Tap-Text -Scenario "B08" -Text "updated" -Contains
+            Tap-Text -Scenario "B08" -Text $script:AcademicFixture.identityContains -Contains
             Wait-ForNode -Scenario "B08" -Label "detail-before-delete-retry" -Text "Seminar detail" -TimeoutSeconds 20 | Out-Null
         }
         Tap-TextBidirectional -Scenario "B08" -Text "Delete seminar" -DownAttempts 16 -UpAttempts 4

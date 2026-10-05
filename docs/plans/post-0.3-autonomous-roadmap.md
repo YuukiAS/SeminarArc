@@ -20,7 +20,7 @@ Updated: 2026-10-05
 - Current Room schema: v7.
 - Current installable prerelease: `v0.5.0-alpha.2`.
 - `0.5.x` automated black-box QA hardening: COMPLETE.
-- Current active engineering phase: **real-device dogfood boundary + workstation-local ASR benchmark preparation**.
+- Current active engineering phase: **independent GPT Work Android black-box acceptance pending execution**.
 - `0.9.x` audit: `AUDIT_COMPLETE_NOT_READY_FOR_PRODUCTION_RELEASE`.
 - Default connected/instrumentation target: Windows Pixel 8 API 36 Emulator.
 - Protected GM1910 is not a daily automated test target.
@@ -192,9 +192,17 @@ Status: COMPLETE. 结果见 `prompts/tasks/0.5.x_exploratory_stress_result.md`�
 
 QA 总收口见 `prompts/tasks/0.5.x_qa_closeout_result.md`。Release 决策为 `NO_NEW_RELEASE`，继续使用 `v0.5.0-alpha.2`。
 
+### Independent GPT Work acceptance handoff
+
+Status: INFRASTRUCTURE COMPLETE, CAMPAIGN NOT EXECUTED.
+
+在 producer-side QA 之后增加一层相互隔离的产品审查：冻结同一 candidate，在独立 `SeminarArc_GPT_Work_API36` AVD 上通过真实可见 UI 构造 S00–S08；P01–P08 分别审查首次使用、核心流程、语言、视觉、健壮性、无障碍、学术信任/隐私和最终完整旅程。Parent 必须先通过 `scripts/verify-gpt-work-acceptance.ps1`，之后才可交给 GPT Work 严格串行执行。
+
+该层不读取 producer 结论，不修产品，也不接触 protected physical device。只有独立 verdict 为 PASS 后，才允许进入下述用户真机边界；当前 `READY_FOR_USER_REVIEW = NO`。
+
 ### Human-only acceptance after automation
 
-自动 QA 稳定后，用户人工验收应只剩：
+producer-side 自动 QA 与独立 GPT Work 验收都 PASS 后，用户人工验收应只剩：
 
 1. 真手机麦克风录音质量；
 2. CameraX 拍真实投影/PPT 的质量和方向；
